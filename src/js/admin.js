@@ -5,47 +5,62 @@ let currentProfile = null;
 let turnoutChartInstance = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Auth Check
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        window.location.href = '/pages/login.html';
-        return;
+    try {
+        // 1. Auth Check
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+            window.location.href = '/pages/login.html';
+            return;
+        }
+        currentUser = session.user;
+
+        // 2. Load Profile and verify Admin
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+
+        if (profileError || !profile || profile.role !== 'admin') {
+            console.error('Admin profile error:', profileError);
+            window.location.href = '/pages/member/dashboard.html';
+            return;
+        }
+        currentProfile = profile;
+        document.getElementById('admin-name').textContent = profile.full_name;
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            window.location.href = '/';
+        });
+
+        setupTabs();
+        loadAnalytics();
+        setupForms();
+
+        // Subscribe to realtime updates for live analytics
+        supabase.channel('public:profiles')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, payload => {
+                loadAnalytics();
+                if(!document.getElementById('tab-members').classList.contains('hidden')){
+                    loadMembers();
+                }
+            })
+            .subscribe();
+
+        supabase.channel('public:votes')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'votes' }, payload => {
+                loadAnalytics();
+            })
+            .subscribe();
+    } catch (err) {
+        console.error('Admin dashboard init error:', err);
+        const main = document.querySelector('main') || document.body;
+        const errDiv = document.createElement('div');
+        errDiv.style.cssText = 'padding:40px;text-align:center;color:#dc2626;font-weight:600;font-family:sans-serif;';
+        errDiv.innerHTML = `Failed to load admin dashboard: ${err.message}.<br>Please try <a style="text-decoration:underline" href="/pages/login.html">logging in again</a>.`;
+        main.prepend(errDiv);
     }
-    currentUser = session.user;
-
-    // 2. Load Profile and verify Admin
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-    if (!profile || profile.role !== 'admin') {
-        window.location.href = '/pages/member/dashboard.html';
-        return;
-    }
-    currentProfile = profile;
-    document.getElementById('admin-name').textContent = profile.full_name;
-
-    document.getElementById('logout-btn').addEventListener('click', async () => {
-        await supabase.auth.signOut();
-        window.location.href = '/';
-    });
-
-    setupTabs();
-    loadAnalytics();
-    setupForms();
-
-    // Subscribe to realtime updates for live analytics
-    supabase.channel('public:profiles')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, payload => {
-            loadAnalytics();
-            if(!document.getElementById('tab-members').classList.contains('hidden')){
-                loadMembers();
-            }
-        })
-        .subscribe();
-        
-    supabase.channel('public:votes')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'votes' }, payload => {
-            loadAnalytics();
-        })
-        .subscribe();
 });
 
 function setupTabs() {

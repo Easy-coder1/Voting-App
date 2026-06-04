@@ -30,32 +30,67 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = document.getElementById('submit-btn');
             btn.disabled = true;
             btn.textContent = 'Signing in...';
-            
+
             const email = document.getElementById('email-address').value;
             const password = document.getElementById('password').value;
-            
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-            
-            if (error) {
-                showAlert('error', error.message);
-                btn.disabled = false;
-                btn.textContent = 'Sign in';
-            } else {
-                // Determine redirect based on role
-                const { data: profile } = await supabase
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+
+                if (error) {
+                    showAlert('error', error.message);
+                    btn.disabled = false;
+                    btn.textContent = 'Sign in';
+                    return;
+                }
+
+                // Fetch profile to determine role
+                btn.textContent = 'Loading profile...';
+                const { data: profile, error: profileError } = await supabase
                     .from('profiles')
                     .select('role')
                     .eq('id', data.user.id)
                     .single();
-                    
-                if (profile?.role === 'admin') {
+
+                if (profileError || !profile) {
+                    // Profile may not exist yet — wait briefly and retry once
+                    await new Promise(r => setTimeout(r, 1500));
+                    const { data: retryProfile, error: retryError } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', data.user.id)
+                        .single();
+
+                    if (retryError || !retryProfile) {
+                        showAlert('error', 'Your account profile could not be found. Please contact the administrator.');
+                        await supabase.auth.signOut();
+                        btn.disabled = false;
+                        btn.textContent = 'Sign in';
+                        return;
+                    }
+
+                    // Redirect based on retried profile
+                    if (retryProfile.role === 'admin') {
+                        window.location.href = '/pages/admin/dashboard.html';
+                    } else {
+                        window.location.href = '/pages/member/dashboard.html';
+                    }
+                    return;
+                }
+
+                // Redirect based on role
+                if (profile.role === 'admin') {
                     window.location.href = '/pages/admin/dashboard.html';
                 } else {
                     window.location.href = '/pages/member/dashboard.html';
                 }
+            } catch (err) {
+                showAlert('error', 'An unexpected error occurred: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Sign in';
             }
         });
     }

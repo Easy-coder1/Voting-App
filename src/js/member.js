@@ -11,74 +11,89 @@ let countdownInterval = null;
 let pendingVote = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Auth Check
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        window.location.href = '/pages/login.html';
-        return;
-    }
-    currentUser = session.user;
+    try {
+        // 1. Auth Check
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+            window.location.href = '/pages/login.html';
+            return;
+        }
+        currentUser = session.user;
 
-    // 2. Load Profile
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-    if (!profile) {
-        window.location.href = '/pages/login.html';
-        return;
-    }
-    currentProfile = profile;
-    if (profile.role === 'admin') {
-        window.location.href = '/pages/admin/dashboard.html';
-        return;
-    }
+        // 2. Load Profile
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
 
-    document.getElementById('user-name').textContent = profile.full_name;
+        if (profileError || !profile) {
+            console.error('Profile load error:', profileError);
+            window.location.href = '/pages/login.html';
+            return;
+        }
+        currentProfile = profile;
+        if (profile.role === 'admin') {
+            window.location.href = '/pages/admin/dashboard.html';
+            return;
+        }
 
-    // Logout logic
-    document.getElementById('logout-btn').addEventListener('click', async () => {
-        await supabase.auth.signOut();
-        window.location.href = '/';
-    });
+        document.getElementById('user-name').textContent = profile.full_name;
 
-    // 3. Load Election Data
-    await loadDashboardData();
-    
-    // Modal Listeners
-    document.getElementById('modal-cancel').addEventListener('click', () => {
-        document.getElementById('vote-modal').classList.add('hidden');
-        document.getElementById('vote-modal').classList.remove('flex');
-        pendingVote = null;
-    });
+        // Logout logic
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            window.location.href = '/';
+        });
 
-    document.getElementById('modal-confirm').addEventListener('click', async () => {
-        if (!pendingVote) return;
-        
-        const btn = document.getElementById('modal-confirm');
-        btn.disabled = true;
-        btn.textContent = 'Submitting...';
-        
-        try {
-            const { error } = await supabase.from('votes').insert([{
-                voter_id: currentUser.id,
-                candidate_id: pendingVote.candidateId,
-                position_id: pendingVote.positionId
-            }]);
-            
-            if (error) throw error;
-            
-            // Reload votes and update UI
-            await loadUserVotes();
-            renderBallot();
-            renderProgress();
-        } catch (error) {
-            alert('Failed to cast vote: ' + error.message);
-        } finally {
+        // 3. Load Election Data
+        await loadDashboardData();
+
+        // Modal Listeners
+        document.getElementById('modal-cancel').addEventListener('click', () => {
             document.getElementById('vote-modal').classList.add('hidden');
             document.getElementById('vote-modal').classList.remove('flex');
-            btn.disabled = false;
-            btn.textContent = 'Confirm Vote';
             pendingVote = null;
+        });
+
+        document.getElementById('modal-confirm').addEventListener('click', async () => {
+            if (!pendingVote) return;
+
+            const btn = document.getElementById('modal-confirm');
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+
+            try {
+                const { error } = await supabase.from('votes').insert([{
+                    voter_id: currentUser.id,
+                    candidate_id: pendingVote.candidateId,
+                    position_id: pendingVote.positionId
+                }]);
+
+                if (error) throw error;
+
+                // Reload votes and update UI
+                await loadUserVotes();
+                renderBallot();
+                renderProgress();
+            } catch (error) {
+                alert('Failed to cast vote: ' + error.message);
+            } finally {
+                document.getElementById('vote-modal').classList.add('hidden');
+                document.getElementById('vote-modal').classList.remove('flex');
+                btn.disabled = false;
+                btn.textContent = 'Confirm Vote';
+                pendingVote = null;
+            }
+        });
+    } catch (err) {
+        console.error('Dashboard init error:', err);
+        // Show a visible error so the user is not stuck on a spinner
+        const panel = document.getElementById('panel-content');
+        if (panel) {
+            panel.innerHTML = `<div class="text-center py-12 text-red-600 font-semibold">Failed to load dashboard: ${err.message}.<br>Please try refreshing the page or <a class="underline" href="/pages/login.html">log in again</a>.</div>`;
         }
-    });
+    }
 });
 
 async function loadDashboardData() {
