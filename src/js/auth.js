@@ -143,11 +143,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (data.session) {
-                    // Email confirmation is OFF — user is logged in immediately, go straight to dashboard
+                    // Email confirmation is OFF — user is logged in immediately
+
+                    // Fallback: manually create profile if the DB trigger didn't fire
+                    const { error: profileCheckError, data: existingProfile } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('id', data.user.id)
+                        .single();
+
+                    if (profileCheckError || !existingProfile) {
+                        // Trigger didn't run — insert the profile manually
+                        const { error: insertError } = await supabase
+                            .from('profiles')
+                            .insert([{
+                                id: data.user.id,
+                                full_name: name || 'Member',
+                                email: email,
+                                phone: phone || null,
+                            }]);
+
+                        if (insertError) {
+                            console.error('Profile creation fallback failed:', insertError.message);
+                            // Still proceed — user is authenticated, profile may appear via trigger shortly
+                        }
+                    }
+
                     showAlert('success', 'Registration successful! Redirecting to your dashboard...');
                     setTimeout(() => {
                         window.location.href = '/pages/member/dashboard.html';
                     }, 1500);
+
                 } else if (data.user && !data.session) {
                     // Email confirmation is ON — user must verify their email before they can log in
                     showAlert('success',
