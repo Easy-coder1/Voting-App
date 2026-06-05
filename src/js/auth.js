@@ -143,10 +143,20 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
             btn.textContent = 'Registering...';
 
-            const name  = document.getElementById('full-name').value.trim();
+            const firstName = document.getElementById('first-name').value.trim();
+            const lastName  = document.getElementById('last-name').value.trim();
             const email = document.getElementById('email-address').value.trim();
-            const phone = document.getElementById('phone-number').value.trim();
             const password = document.getElementById('password').value;
+            const verifyPassword = document.getElementById('verify-password').value;
+
+            if (password !== verifyPassword) {
+                showAlert('error', 'Passwords do not match. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Complete Registration';
+                return;
+            }
+
+            const name = `${firstName} ${lastName}`.trim();
 
             try {
                 const { data, error } = await supabase.auth.signUp({
@@ -155,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     options: {
                         data: {
                             full_name: name,
-                            phone: phone,
+                            phone: null,
                         }
                     }
                 });
