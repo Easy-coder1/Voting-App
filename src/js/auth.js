@@ -184,8 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Email confirmation is ON
                     showAlert('success',
                         'Registration submitted! Please check your email inbox (and spam folder) ' +
-                        'for a confirmation link. You can log in after confirming your email address.');
+                        'for a confirmation link. You will be redirected to the login page shortly.');
                     btn.textContent = 'Check your email';
+                    setTimeout(() => {
+                        window.location.href = '/pages/login.html';
+                    }, 3000);
                 } else {
                     showAlert('warning', 'Registration may have succeeded. Please try logging in.');
                     setTimeout(() => {
