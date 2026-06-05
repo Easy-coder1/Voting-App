@@ -87,43 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 3. Load Election Data
         await loadDashboardData();
 
-        // Modal Listeners
-        document.getElementById('modal-cancel').addEventListener('click', () => {
-            document.getElementById('vote-modal').classList.add('hidden');
-            document.getElementById('vote-modal').classList.remove('flex');
-            pendingVote = null;
-        });
 
-        document.getElementById('modal-confirm').addEventListener('click', async () => {
-            if (!pendingVote) return;
-
-            const btn = document.getElementById('modal-confirm');
-            btn.disabled = true;
-            btn.textContent = 'Submitting...';
-
-            try {
-                const { error } = await supabase.from('votes').insert([{
-                    voter_id: currentUser.id,
-                    candidate_id: pendingVote.candidateId,
-                    position_id: pendingVote.positionId
-                }]);
-
-                if (error) throw error;
-
-                // Reload votes and update UI
-                await loadUserVotes();
-                renderBallot();
-                renderProgress();
-            } catch (error) {
-                alert('Failed to cast vote: ' + error.message);
-            } finally {
-                document.getElementById('vote-modal').classList.add('hidden');
-                document.getElementById('vote-modal').classList.remove('flex');
-                btn.disabled = false;
-                btn.textContent = 'Confirm Vote';
-                pendingVote = null;
-            }
-        });
     } catch (err) {
         console.error('Dashboard init error:', err);
         // Show a visible error so the user is not stuck on a spinner
@@ -278,68 +242,52 @@ function renderMessage(msg) {
 }
 
 function renderBallot() {
-    document.getElementById('panel-title').textContent = "Ballot";
+    document.getElementById('panel-title').textContent = "Election Active";
     const content = document.getElementById('panel-content');
-    content.innerHTML = '';
     
+    const total = positions.length;
+    const cast = userVotes.length;
     const isEligible = currentProfile.account_status === 'approved' && currentProfile.voting_rights;
-    
-    positions.forEach(pos => {
-        const hasVoted = userVotes.includes(pos.id);
-        const posCandidates = candidates.filter(c => c.position_id === pos.id);
-        
-        const section = document.createElement('div');
-        section.className = 'mb-12 last:mb-0 border-b border-slate-100 pb-10 last:border-b-0 last:pb-0';
-        
-        let headerHtml = `
-            <div class="flex items-center justify-between mb-6">
-                <h4 class="text-xl font-bold text-slate-900 tracking-tight">${pos.position_name}</h4>
-                ${hasVoted 
-                    ? '<span class="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 border border-emerald-100 text-emerald-700"><span>✓ Completed</span></span>' 
-                    : '<span class="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 border border-indigo-100 text-indigo-700"><span>Pending Vote</span></span>'}
+
+    if (!isEligible) {
+        content.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-3">
+                <svg class="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <span class="text-sm font-bold text-slate-800">Voting Restricted</span>
+                <span class="text-xs text-slate-450 max-w-xs leading-relaxed">Your account must be approved with active voting rights to enter the voting booth.</span>
             </div>
         `;
-        
-        let candidatesHtml = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">';
-        
-        posCandidates.forEach(c => {
-            const hasPhoto = c.photo_url && c.photo_url.trim() !== '' && !c.photo_url.includes('placeholder');
-            const initials = c.full_name.split(' ').map(n => n[0]).join('').substring(0, 2);
-            
-            let photoElement = '';
-            if (hasPhoto) {
-                photoElement = `<img src="${c.photo_url}" alt="${c.full_name}" class="w-24 h-24 rounded-full object-cover mb-4 border-4 border-white shadow-md">`;
-            } else {
-                photoElement = `<div class="w-24 h-24 rounded-full bg-gradient-to-tr from-church-600 via-indigo-500 to-violet-500 text-white font-black text-2xl flex items-center justify-center shadow-md uppercase border-4 border-white mb-4">${initials}</div>`;
-            }
+        return;
+    }
 
-            candidatesHtml += `
-                <div class="rounded-3xl p-6 bg-slate-50 border border-slate-100 flex flex-col items-center transition-all duration-300 ${hasVoted ? 'opacity-55 cursor-not-allowed' : 'hover:bg-white hover:border-slate-200/80 hover:shadow-premium hover:-translate-y-1 transform'}">
-                    ${photoElement}
-                    <span class="font-extrabold text-lg text-slate-800 text-center mb-6 leading-tight">${c.full_name}</span>
-                    ${!hasVoted && isEligible ? `
-                        <button onclick="window.confirmVote('${c.id}', '${c.full_name}', '${pos.id}', '${pos.position_name}')" 
-                            class="w-full bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 text-white py-3 rounded-full hover:shadow-premium text-base font-bold transition-all duration-300 active:scale-95">
-                            Vote
-                        </button>
-                    ` : ''}
+    if (cast >= total && total > 0) {
+        content.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-4">
+                <div class="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 font-extrabold text-2xl shadow-sm">✓</div>
+                <div class="space-y-1 bg-white">
+                    <span class="text-lg font-black text-slate-900 block">All Votes Submitted!</span>
+                    <span class="text-xs text-slate-400 max-w-xs leading-relaxed block">Thank you for participating. You have voted in all ${total} positions. Results will be published once the election closes.</span>
                 </div>
-            `;
-        });
-        candidatesHtml += '</div>';
-        
-        section.innerHTML = headerHtml + candidatesHtml;
-        content.appendChild(section);
-    });
+            </div>
+        `;
+    } else {
+        content.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-10 text-center space-y-6">
+                <div class="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-church-600 font-extrabold text-2xl shadow-sm">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <div class="space-y-1.5 max-w-sm">
+                    <span class="text-xl font-black text-slate-900 block">Voting is Live</span>
+                    <p class="text-sm text-slate-500 leading-relaxed">Cast your secure ballot today. You have completed <span class="font-black text-slate-800">${cast} of ${total}</span> positions.</p>
+                </div>
+                <a href="/pages/member/voting.html" class="inline-flex justify-center items-center px-8 py-4 bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 text-white rounded-full text-base font-bold shadow-premium hover:shadow-premium-lg transition-all duration-300 active:scale-95">
+                    Enter Voting Booth
+                    <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </a>
+            </div>
+        `;
+    }
 }
-
-// Attach to window so onclick can reach it
-window.confirmVote = (candidateId, candidateName, positionId, positionName) => {
-    pendingVote = { candidateId, positionId };
-    document.getElementById('modal-text').innerHTML = `Are you sure you want to vote for <span class="font-bold text-slate-900">${candidateName}</span> as <span class="font-bold text-slate-900">${positionName}</span>?<br><span class="text-xs text-amber-600 font-semibold mt-2 block">This action cannot be undone.</span>`;
-    document.getElementById('vote-modal').classList.remove('hidden');
-    document.getElementById('vote-modal').classList.add('flex');
-};
 
 async function renderResults() {
     document.getElementById('panel-title').textContent = "Election Results";
