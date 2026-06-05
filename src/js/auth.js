@@ -3,24 +3,31 @@ import { supabase } from './supabase.js';
 export function showAlert(type, message) {
     const container = document.getElementById('alert-container');
     const msgEl = document.getElementById('alert-message');
+    const iconContainer = document.getElementById('alert-icon-container');
 
     if (!container || !msgEl) return;
 
-    container.classList.remove('hidden', 'bg-red-50', 'bg-green-50', 'bg-yellow-50');
-    msgEl.classList.remove('text-red-800', 'text-green-800', 'text-yellow-800');
-
+    // Reset classes
+    container.classList.remove('hidden', 'bg-red-950/40', 'border-red-500/20', 'text-red-300', 'bg-emerald-950/40', 'border-emerald-500/20', 'text-emerald-300', 'bg-amber-950/40', 'border-amber-500/20', 'text-amber-300');
+    
+    let iconHtml = '';
+    
     if (type === 'error') {
-        container.classList.add('bg-red-50');
-        msgEl.classList.add('text-red-800');
+        container.classList.add('bg-red-950/40', 'border-red-500/20', 'text-red-300');
+        iconHtml = `<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
     } else if (type === 'warning') {
-        container.classList.add('bg-yellow-50');
-        msgEl.classList.add('text-yellow-800');
+        container.classList.add('bg-amber-950/40', 'border-amber-500/20', 'text-amber-300');
+        iconHtml = `<svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
     } else {
-        container.classList.add('bg-green-50');
-        msgEl.classList.add('text-green-800');
+        container.classList.add('bg-emerald-950/40', 'border-emerald-500/20', 'text-emerald-300');
+        iconHtml = `<svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
     }
 
+    if (iconContainer) {
+        iconContainer.innerHTML = iconHtml;
+    }
     msgEl.textContent = message;
+    container.classList.remove('hidden');
 }
 
 async function ensureProfile(user) {
