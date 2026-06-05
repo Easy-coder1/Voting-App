@@ -257,6 +257,8 @@ window.toggleVotingRights = async (id, right) => {
 
 // Election Management
 function setupForms() {
+    setupImageUpload();
+
     document.getElementById('create-election-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const title = document.getElementById('el-title').value;
@@ -276,8 +278,113 @@ function setupForms() {
 
         await supabase.from('candidates').insert([{ full_name: name, position_id: pos, photo_url: photo }]);
         e.target.reset();
+        resetImageUpload();
         loadCandidates();
     });
+}
+
+function resetImageUpload() {
+    const photoInput = document.getElementById('can-photo');
+    const fileInput = document.getElementById('can-photo-file');
+    const preview = document.getElementById('upload-preview');
+    const previewContainer = document.getElementById('upload-preview-container');
+    
+    if (photoInput) photoInput.value = '';
+    if (fileInput) fileInput.value = '';
+    if (preview) preview.src = '';
+    if (previewContainer) previewContainer.classList.add('hidden');
+}
+
+function setupImageUpload() {
+    const zone = document.getElementById('image-upload-zone');
+    const fileInput = document.getElementById('can-photo-file');
+    const removeBtn = document.getElementById('remove-preview-btn');
+
+    if (!zone || !fileInput) return;
+
+    zone.addEventListener('click', (e) => {
+        // Prevent trigger loop when clicking within preview/buttons
+        if (e.target.closest('#remove-preview-btn') || e.target.closest('#upload-preview')) return;
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+            handleSelectedFile(e.target.files[0]);
+        }
+    });
+
+    zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('border-church-500', 'bg-white');
+    });
+
+    ['dragleave', 'dragend'].forEach(evt => {
+        zone.addEventListener(evt, () => {
+            zone.classList.remove('border-church-500', 'bg-white');
+        });
+    });
+
+    zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('border-church-500', 'bg-white');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleSelectedFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    if (removeBtn) {
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetImageUpload();
+        });
+    }
+}
+
+function handleSelectedFile(file) {
+    if (!file || !file.type.startsWith('image/')) {
+        alert('Please select a valid image file.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 300;
+            const MAX_HEIGHT = 300;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const base64 = canvas.toDataURL('image/jpeg', 0.8);
+            document.getElementById('can-photo').value = base64;
+            
+            const preview = document.getElementById('upload-preview');
+            const previewContainer = document.getElementById('upload-preview-container');
+            if (preview) preview.src = base64;
+            if (previewContainer) previewContainer.classList.remove('hidden');
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
 async function loadElections() {
