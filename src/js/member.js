@@ -141,7 +141,12 @@ async function loadDashboardData() {
 }
 
 async function loadUserVotes() {
-    const { data } = await supabase.from('votes').select('position_id').eq('voter_id', currentUser.id);
+    if (!activeElection) return;
+    const { data } = await supabase
+        .from('votes')
+        .select('position_id')
+        .eq('voter_id', currentUser.id)
+        .eq('election_id', activeElection.id);
     userVotes = (data || []).map(v => v.position_id);
 }
 

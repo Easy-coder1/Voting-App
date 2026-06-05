@@ -28,7 +28,7 @@ BEGIN
     JOIN 
         candidates c ON c.position_id = p.id
     LEFT JOIN 
-        votes v ON v.candidate_id = c.id
+        votes v ON v.candidate_id = c.id AND v.election_id = election_id
     GROUP BY 
         p.id, p.position_name, c.id, c.full_name
     ORDER BY 

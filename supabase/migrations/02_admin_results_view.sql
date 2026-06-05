@@ -24,7 +24,7 @@ BEGIN
             p.id AS pos_id,
             COUNT(v.id)::BIGINT AS total
         FROM positions p
-        LEFT JOIN votes v ON v.position_id = p.id
+        LEFT JOIN votes v ON v.position_id = p.id AND v.election_id = election_id
         GROUP BY p.id
     )
     SELECT 
@@ -39,7 +39,7 @@ BEGIN
     JOIN 
         candidates c ON c.position_id = p.id
     LEFT JOIN 
-        votes v ON v.candidate_id = c.id
+        votes v ON v.candidate_id = c.id AND v.election_id = election_id
     LEFT JOIN 
         pos_totals pt ON pt.pos_id = p.id
     WHERE 
@@ -72,9 +72,9 @@ BEGIN
     SELECT
         (SELECT COUNT(*)::BIGINT FROM profiles WHERE role = 'member') AS total_members,
         (SELECT COUNT(*)::BIGINT FROM profiles WHERE role = 'member' AND account_status = 'approved' AND voting_rights = true) AS approved_voters,
-        (SELECT COUNT(DISTINCT voter_id)::BIGINT FROM votes) AS votes_cast,
+        (SELECT COUNT(DISTINCT voter_id)::BIGINT FROM votes WHERE election_id = $1) AS votes_cast,
         ROUND(
-            (SELECT COUNT(DISTINCT voter_id)::NUMERIC FROM votes) / 
+            (SELECT COUNT(DISTINCT voter_id)::NUMERIC FROM votes WHERE election_id = $1) / 
             NULLIF((SELECT COUNT(*)::NUMERIC FROM profiles WHERE role = 'member' AND account_status = 'approved' AND voting_rights = true), 0) 
             * 100, 1
         ) AS turnout_percentage;
