@@ -6,7 +6,13 @@ let activeElection = null;
 let positions = [];
 let candidates = [];
 let userVotes = [];
-let pendingVote = null;
+let pendingSubmission = null;
+
+// Tracks user's free selections per position { [positionId]: candidateId }
+let ballotSelections = {};
+
+// Once submitted, this flag locks the booth permanently for the session
+let hasSubmitted = false;
 
 async function ensureProfile(user) {
     const { data: profile, error: fetchError } = await supabase
@@ -69,38 +75,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Modal Listeners
         document.getElementById('modal-cancel').addEventListener('click', () => {
-            document.getElementById('vote-modal').classList.add('hidden');
-            document.getElementById('vote-modal').classList.remove('flex');
-            pendingVote = null;
+            hideModal();
         });
 
         document.getElementById('modal-confirm').addEventListener('click', async () => {
-            if (!pendingVote) return;
+            if (!pendingSubmission || pendingSubmission.length === 0) return;
 
             const btn = document.getElementById('modal-confirm');
             btn.disabled = true;
             btn.textContent = 'Submitting...';
 
             try {
-                const { error } = await supabase.from('votes').insert([{
+                const votesToInsert = pendingSubmission.map(v => ({
                     voter_id: currentUser.id,
-                    candidate_id: pendingVote.candidateId,
-                    position_id: pendingVote.positionId
-                }]);
+                    candidate_id: v.candidateId,
+                    position_id: v.positionId
+                }));
+
+                const { error } = await supabase.from('votes').insert(votesToInsert);
 
                 if (error) throw error;
 
+                // Mark as submitted and lock the booth
+                hasSubmitted = true;
                 await loadUserVotes();
                 renderBallot();
                 updateBoothProgress();
+                showSuccessBanner('Your votes have been submitted. No more changes can be made.');
             } catch (error) {
-                alert('Failed to cast vote: ' + error.message);
+                alert('Failed to submit votes: ' + error.message);
             } finally {
-                document.getElementById('vote-modal').classList.add('hidden');
-                document.getElementById('vote-modal').classList.remove('flex');
+                hideModal();
                 btn.disabled = false;
-                btn.textContent = 'Confirm Vote';
-                pendingVote = null;
+                btn.textContent = 'Confirm & Submit';
+                pendingSubmission = null;
             }
         });
 
@@ -145,6 +153,12 @@ async function loadBoothData() {
         
         await loadUserVotes();
         updateBoothProgress();
+
+        // If the user already voted for ALL positions (previous session), lock immediately
+        if (userVotes.length >= positions.length && positions.length > 0) {
+            hasSubmitted = true;
+        }
+
         renderBallot();
     } else {
         document.getElementById('election-title-sub').textContent = 'No active election';
@@ -154,8 +168,16 @@ async function loadBoothData() {
 }
 
 async function loadUserVotes() {
-    const { data } = await supabase.from('votes').select('position_id').eq('voter_id', currentUser.id);
+    const { data } = await supabase
+        .from('votes')
+        .select('position_id, candidate_id')
+        .eq('voter_id', currentUser.id);
+    // For progress tracking, map position_ids
     userVotes = (data || []).map(v => v.position_id);
+    // Also seed selections from already-submitted votes (so locked view shows correct picks)
+    (data || []).forEach(v => {
+        ballotSelections[v.position_id] = v.candidate_id;
+    });
 }
 
 function updateStatusBanner() {
@@ -178,6 +200,16 @@ function updateBoothProgress() {
     document.getElementById('booth-progress-text').textContent = `${cast} / ${total}`;
 }
 
+function showSuccessBanner(message) {
+    const banner = document.getElementById('status-banner');
+    banner.className = "flex items-start space-x-3 rounded-2xl p-4 mb-6 text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60 shadow-sm";
+    banner.innerHTML = `
+        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span>${message}</span>
+    `;
+    banner.classList.remove('hidden');
+}
+
 function renderMessage(msg) {
     document.getElementById('panel-content').innerHTML = `
         <div class="flex flex-col items-center justify-center py-12 text-center text-slate-450 space-y-3">
@@ -192,10 +224,23 @@ function renderBallot() {
     content.innerHTML = '';
 
     const isEligible = currentProfile.account_status === 'approved' && currentProfile.voting_rights;
+    const isLocked = hasSubmitted || (positions.length > 0 && userVotes.length >= positions.length);
+
+    // If locked, show a banner at the top of the ballot
+    if (isLocked) {
+        const lockBanner = document.createElement('div');
+        lockBanner.className = "flex items-center justify-center space-x-2 rounded-2xl p-4 mb-8 text-sm font-bold bg-slate-50 border border-slate-200 text-slate-600";
+        lockBanner.innerHTML = `
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            <span>🔒 Ballot Locked — No further changes allowed</span>
+        `;
+        content.appendChild(lockBanner);
+    }
 
     positions.forEach(pos => {
         const hasVoted = userVotes.includes(pos.id);
         const posCandidates = candidates.filter(c => c.position_id === pos.id);
+        const selectedId = ballotSelections[pos.id] || null;
 
         const section = document.createElement('div');
         section.className = 'mb-12 last:mb-0 border-b border-slate-100 pb-10 last:border-b-0 last:pb-0';
@@ -205,7 +250,9 @@ function renderBallot() {
                 <h4 class="text-xl font-bold text-slate-900 tracking-tight">${pos.position_name}</h4>
                 ${hasVoted 
                     ? '<span class="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 border border-emerald-100 text-emerald-700"><span>✓ Completed</span></span>' 
-                    : '<span class="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 border border-indigo-100 text-indigo-700"><span>Pending Vote</span></span>'}
+                    : isLocked
+                        ? '<span class="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 border border-slate-200 text-slate-500"><span>Locked</span></span>'
+                        : '<span class="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 border border-indigo-100 text-indigo-700"><span>Pending Vote</span></span>'}
             </div>
         `;
 
@@ -214,6 +261,7 @@ function renderBallot() {
         posCandidates.forEach(c => {
             const hasPhoto = c.photo_url && c.photo_url.trim() !== '' && !c.photo_url.includes('placeholder');
             const initials = c.full_name.split(' ').map(n => n[0]).join('').substring(0, 2);
+            const isSelected = selectedId === c.id;
 
             let photoElement = '';
             if (hasPhoto) {
@@ -222,16 +270,56 @@ function renderBallot() {
                 photoElement = `<div class="w-24 h-24 rounded-full bg-gradient-to-tr from-church-600 via-indigo-500 to-violet-500 text-white font-black text-2xl flex items-center justify-center shadow-md uppercase border-4 border-white mb-4">${initials}</div>`;
             }
 
+            // Card style — highlight if selected
+            let cardClass = "rounded-3xl p-6 bg-slate-50 border flex flex-col items-center transition-all duration-300";
+            if (isSelected && !isLocked) {
+                cardClass += " border-church-400 bg-church-50/40 shadow-premium ring-2 ring-church-400/30";
+            } else if (isSelected && isLocked) {
+                cardClass += " border-church-300 bg-church-50/30";
+            } else if (isLocked || hasVoted) {
+                cardClass += " border-slate-100 opacity-60 cursor-not-allowed";
+            } else {
+                cardClass += " border-slate-100 hover:bg-white hover:border-slate-200/80 hover:shadow-premium hover:-translate-y-1 transform";
+            }
+
+            let buttonHtml = '';
+            if (hasVoted) {
+                // Already voted — show "Voted" badge
+                buttonHtml = `
+                    <span class="w-full block text-center py-3 rounded-full text-base font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                        ✓ Voted
+                    </span>
+                `;
+            } else if (isLocked) {
+                // Locked — no button
+                buttonHtml = `
+                    <span class="w-full block text-center py-3 rounded-full text-base font-bold bg-slate-100 text-slate-400">
+                        Locked
+                    </span>
+                `;
+            } else if (isSelected) {
+                // Selected — show "Deselect" 
+                buttonHtml = `
+                    <button onclick="window.toggleSelection('${c.id}', '${pos.id}')" 
+                        class="w-full bg-white border-2 border-church-400 text-church-700 hover:bg-church-50 py-3 rounded-full text-base font-bold transition-all duration-300 active:scale-95">
+                        Deselect
+                    </button>
+                `;
+            } else {
+                // Free to select
+                buttonHtml = `
+                    <button onclick="window.toggleSelection('${c.id}', '${pos.id}')" 
+                        class="w-full bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 text-white py-3 rounded-full hover:shadow-premium text-base font-bold transition-all duration-300 active:scale-95">
+                        Select
+                    </button>
+                `;
+            }
+
             candidatesHtml += `
-                <div class="rounded-3xl p-6 bg-slate-50 border border-slate-100 flex flex-col items-center transition-all duration-300 ${hasVoted ? 'opacity-55 cursor-not-allowed' : 'hover:bg-white hover:border-slate-200/80 hover:shadow-premium hover:-translate-y-1 transform'}">
+                <div class="${cardClass}">
                     ${photoElement}
                     <span class="font-extrabold text-lg text-slate-800 text-center mb-6 leading-tight">${c.full_name}</span>
-                    ${!hasVoted && isEligible ? `
-                        <button onclick="window.confirmVote('${c.id}', '${c.full_name}', '${pos.id}', '${pos.position_name}')" 
-                            class="w-full bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 text-white py-3 rounded-full hover:shadow-premium text-base font-bold transition-all duration-300 active:scale-95">
-                            Vote
-                        </button>
-                    ` : ''}
+                    ${buttonHtml}
                 </div>
             `;
         });
@@ -240,11 +328,96 @@ function renderBallot() {
         section.innerHTML = headerHtml + candidatesHtml;
         content.appendChild(section);
     });
+
+    // If not locked and eligible, show the "Submit All Votes" button
+    if (!isLocked && isEligible && positions.length > 0) {
+        const submitContainer = document.createElement('div');
+        submitContainer.className = 'flex flex-col items-center pt-8 border-t border-slate-100 mt-8';
+
+        const selectionCount = Object.keys(ballotSelections).length;
+        const isComplete = selectionCount >= positions.length;
+
+        submitContainer.innerHTML = `
+            <div class="text-sm text-slate-500 mb-4 font-semibold text-center">
+                ${isComplete 
+                    ? 'You have made selections for all positions.' 
+                    : `Selected ${selectionCount} of ${positions.length} positions.`}
+            </div>
+            <button id="submit-all-btn" ${selectionCount === 0 ? 'disabled' : ''}
+                class="px-10 py-4 rounded-full text-base font-bold shadow-premium transition-all duration-300 active:scale-95
+                ${selectionCount > 0 
+                    ? 'bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 text-white hover:shadow-premium-lg cursor-pointer' 
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'}">
+                Submit All Votes
+            </button>
+            <p class="text-xs text-slate-400 mt-3 font-medium">Review your selections carefully. This action is final.</p>
+        `;
+
+        content.appendChild(submitContainer);
+
+        // Attach event listener to submit button
+        document.getElementById('submit-all-btn').addEventListener('click', () => {
+            showConfirmModal();
+        });
+    }
 }
 
-window.confirmVote = (candidateId, candidateName, positionId, positionName) => {
-    pendingVote = { candidateId, positionId };
-    document.getElementById('modal-text').innerHTML = `Are you sure you want to vote for <span class="font-bold text-slate-900">${candidateName}</span> as <span class="font-bold text-slate-900">${positionName}</span>?<br><span class="text-xs text-amber-600 font-semibold mt-2 block">This action cannot be undone.</span>`;
+// Toggle selection — called from inline onclick
+window.toggleSelection = (candidateId, positionId) => {
+    if (hasSubmitted) return;
+
+    if (ballotSelections[positionId] === candidateId) {
+        // Deselect
+        delete ballotSelections[positionId];
+    } else {
+        // Select (replaces any prior selection for this position)
+        ballotSelections[positionId] = candidateId;
+    }
+
+    renderBallot();
+};
+
+function showConfirmModal() {
+    const selections = Object.entries(ballotSelections);
+
+    if (selections.length === 0) return;
+
+    pendingSubmission = selections.map(([posId, candId]) => {
+        const pos = positions.find(p => p.id === posId);
+        const cand = candidates.find(c => c.id === candId);
+        return {
+            positionId: posId,
+            candidateId: candId,
+            positionName: pos ? pos.position_name : 'Unknown Position',
+            candidateName: cand ? cand.full_name : 'Unknown Candidate'
+        };
+    });
+
+    // Build modal summary
+    let summaryHtml = '<div class="space-y-3 mb-6">';
+    pendingSubmission.forEach(v => {
+        summaryHtml += `
+            <div class="flex justify-between items-center bg-slate-50 rounded-2xl px-4 py-3 border border-slate-100">
+                <span class="font-semibold text-slate-600 text-sm">${v.positionName}</span>
+                <span class="font-bold text-slate-900 text-sm">${v.candidateName}</span>
+            </div>
+        `;
+    });
+    summaryHtml += '</div>';
+
+    summaryHtml += `
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+            <p class="text-sm font-bold text-amber-800">⚠️ This action is final. No more changes will be allowed.</p>
+        </div>
+    `;
+
+    document.getElementById('modal-text').innerHTML = summaryHtml;
     document.getElementById('vote-modal').classList.remove('hidden');
     document.getElementById('vote-modal').classList.add('flex');
-};
+    document.getElementById('modal-confirm').textContent = 'Confirm & Submit';
+}
+
+function hideModal() {
+    document.getElementById('vote-modal').classList.add('hidden');
+    document.getElementById('vote-modal').classList.remove('flex');
+}
