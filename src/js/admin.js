@@ -3,6 +3,7 @@ import { supabase } from './supabase.js';
 let currentUser = null;
 let currentProfile = null;
 let turnoutChartInstance = null;
+let selectedResultsElection = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -41,6 +42,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupTabs();
         loadAnalytics();
         setupForms();
+        setupResultsTab();
+        setupPublishModal();
 
         // Subscribe to realtime updates for live analytics
         supabase.channel('public:profiles')
@@ -55,6 +58,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         supabase.channel('public:votes')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'votes' }, payload => {
                 loadAnalytics();
+                // If results tab is open and we're viewing an open election, refresh live
+                if (!document.getElementById('tab-results').classList.contains('hidden') && selectedResultsElection && selectedResultsElection.status === 'open') {
+                    renderResults(selectedResultsElection);
+                }
             })
             .subscribe();
     } catch (err) {
@@ -79,7 +86,7 @@ function setupTabs() {
             // Loop through all buttons to apply correct responsive classes
             btns.forEach(b => {
                 const targetTab = b.getAttribute('data-tab');
-                const isMobile = b.closest('nav') !== null; // inside mobile bottom nav container
+                const isMobile = b.closest('nav') !== null;
                 
                 if (targetTab === tabId) {
                     if (isMobile) {
@@ -100,19 +107,30 @@ function setupTabs() {
             contents.forEach(c => c.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
 
-            // Title and Data Loaders
-            title.textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+            // Format tab name
+            const tabNames = {
+                'analytics': 'Analytics',
+                'members': 'Member Management',
+                'elections': 'Election Management',
+                'candidates': 'Candidate Management',
+                'results': 'Election Results'
+            };
+            title.textContent = tabNames[tabId] || tabId.charAt(0).toUpperCase() + tabId.slice(1);
+
             if (tabId === 'members') loadMembers();
             if (tabId === 'elections') loadElections();
             if (tabId === 'candidates') {
                 loadPositions();
                 loadCandidates();
             }
+            if (tabId === 'results') loadResultsTab();
         });
     });
 }
 
-// Analytics Logic
+// ----------------------
+// ANALYTICS
+// ----------------------
 async function loadAnalytics() {
     const [ {count: totalMembers}, {count: pending}, {count: approved}, {count: totalVotes} ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
@@ -143,6 +161,9 @@ async function loadAnalytics() {
                         <span>Closing Date</span>
                         <span class="text-slate-700 font-bold">${new Date(elections[0].end_date).toLocaleString(undefined, {dateStyle: 'medium', timeStyle: 'short'})}</span>
                     </div>
+                    <button onclick="window.switchToResultsTab('${elections[0].id}')" class="mt-3 w-full bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
+                        View Live Results →
+                    </button>
                 </div>
             `;
         } else {
@@ -198,7 +219,9 @@ function renderChart(approved, others) {
     });
 }
 
-// Member Management
+// ----------------------
+// MEMBER MANAGEMENT
+// ----------------------
 async function loadMembers() {
     const { data: members, error } = await supabase.from('profiles').select('*').eq('role', 'member').order('created_at', { ascending: false });
     const list = document.getElementById('members-list');
@@ -287,7 +310,9 @@ window.toggleVotingRights = async (id, right) => {
     }
 };
 
-// Election Management
+// ----------------------
+// ELECTION MANAGEMENT
+// ----------------------
 function setupForms() {
     setupImageUpload();
 
@@ -335,7 +360,6 @@ function setupImageUpload() {
     if (!zone || !fileInput) return;
 
     zone.addEventListener('click', (e) => {
-        // Prevent trigger loop when clicking within preview/buttons
         if (e.target.closest('#remove-preview-btn') || e.target.closest('#upload-preview')) return;
         fileInput.click();
     });
@@ -443,19 +467,22 @@ async function loadElections() {
                     <svg class="w-4 h-4 text-slate-350" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     <span>${new Date(el.start_date).toLocaleDateString()} - ${new Date(el.end_date).toLocaleDateString()}</span>
                 </p>
-                <div class="mt-3 text-xs font-bold flex items-center space-x-2">
+                <div class="mt-3 text-xs font-bold flex items-center space-x-2 flex-wrap gap-2">
                     <span class="px-2.5 py-1 rounded-full border uppercase ${statusColors[el.status] || ''}">${el.status}</span>
                     <span class="px-2.5 py-1 ${el.results_published ? 'bg-indigo-50 text-indigo-700 border-indigo-150' : 'bg-slate-100 text-slate-500 border-slate-200'} rounded-full border uppercase text-[10px]">Results: ${el.results_published ? 'Published ✓' : 'Hidden'}</span>
                 </div>
             </div>
-            <div class="space-x-2 mt-6 md:mt-0 flex items-center w-full md:w-auto">
+            <div class="space-x-2 mt-6 md:mt-0 flex items-center w-full md:w-auto flex-wrap gap-2">
                 <select onchange="window.updateElectionStatus('${el.id}', this.value)" class="text-xs border border-slate-200 bg-white shadow-sm rounded-full px-4 py-2.5 font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-church-500">
                     <option value="upcoming" ${el.status === 'upcoming' ? 'selected' : ''}>Upcoming</option>
                     <option value="open" ${el.status === 'open' ? 'selected' : ''}>Open</option>
                     <option value="closed" ${el.status === 'closed' ? 'selected' : ''}>Closed</option>
                 </select>
+                <button onclick="window.viewElectionResults('${el.id}')" class="text-xs bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full font-bold transition-all duration-300 active:scale-95">
+                    View Results
+                </button>
                 <button onclick="window.toggleResults('${el.id}', ${!el.results_published})" class="text-xs bg-slate-100 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-full font-bold hover:bg-slate-200 hover:text-slate-900 transition-all duration-300 active:scale-95">
-                    Toggle Results
+                    Toggle Publish
                 </button>
             </div>
         `;
@@ -490,7 +517,39 @@ window.toggleResults = async (id, pub) => {
     }
 };
 
-// Candidate Management
+window.viewElectionResults = (electionId) => {
+    // Switch to results tab and select this election
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        const isMobile = b.closest('nav') !== null;
+        if (b.getAttribute('data-tab') === 'results') {
+            if (isMobile) {
+                b.className = 'tab-btn flex flex-col items-center p-2 text-church-600 transition duration-300';
+            } else {
+                b.className = 'tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl bg-church-600 text-white font-semibold transition-all duration-300';
+            }
+        } else {
+            if (isMobile) {
+                b.className = 'tab-btn flex flex-col items-center p-2 text-slate-400 hover:text-church-600 transition duration-300';
+            } else {
+                b.className = 'tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-900 font-semibold transition-all duration-300';
+            }
+        }
+    });
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById('tab-results').classList.remove('hidden');
+    document.getElementById('page-title').textContent = 'Election Results';
+    
+    // Trigger results load with this election pre-selected
+    loadResultsTab(electionId);
+};
+
+window.switchToResultsTab = (electionId) => {
+    window.viewElectionResults(electionId);
+};
+
+// ----------------------
+// CANDIDATE MANAGEMENT
+// ----------------------
 async function loadPositions() {
     const { data: pos } = await supabase.from('positions').select('*');
     const select = document.getElementById('can-position');
@@ -537,4 +596,330 @@ window.deleteCandidate = async (id) => {
         await supabase.from('candidates').delete().eq('id', id);
         loadCandidates();
     }
+};
+
+// ======================================================================
+// RESULTS TAB
+// ======================================================================
+
+function setupResultsTab() {
+    // Listen for election selector change
+    const selector = document.getElementById('results-election-select');
+    if (selector) {
+        selector.addEventListener('change', async (e) => {
+            const electionId = e.target.value;
+            if (!electionId) {
+                selectedResultsElection = null;
+                document.getElementById('results-content').innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-3">
+                        <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span class="text-sm font-semibold">Select an election to view results</span>
+                    </div>
+                `;
+                document.getElementById('results-turnout').innerHTML = '';
+                document.getElementById('results-election-status').innerHTML = '';
+                document.getElementById('results-publish-area').innerHTML = '';
+                return;
+            }
+            
+            // Fetch election and render
+            const { data: elections } = await supabase.from('elections').select('*').eq('id', electionId);
+            if (elections && elections.length > 0) {
+                selectedResultsElection = elections[0];
+                renderResults(selectedResultsElection);
+            }
+        });
+    }
+}
+
+function setupPublishModal() {
+    const modal = document.getElementById('publish-modal');
+    const cancelBtn = document.getElementById('publish-modal-cancel');
+    const confirmBtn = document.getElementById('publish-modal-confirm');
+
+    if (!modal || !cancelBtn || !confirmBtn) return;
+
+    // Close on backdrop click
+    modal.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    });
+
+    cancelBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+        const action = confirmBtn.getAttribute('data-action');
+        const electionId = confirmBtn.getAttribute('data-eid');
+        
+        if (!electionId) return;
+
+        let updateData = {};
+        if (action === 'publish') {
+            updateData.results_published = true;
+        } else if (action === 'unpublish') {
+            updateData.results_published = false;
+        }
+
+        const { error } = await supabase.from('elections').update(updateData).eq('id', electionId);
+        if (error) {
+            alert('Error updating results visibility: ' + error.message);
+        }
+
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+
+        // Refresh the results view
+        const { data: elections } = await supabase.from('elections').select('*').eq('id', electionId);
+        if (elections && elections.length > 0) {
+            selectedResultsElection = elections[0];
+            renderResults(selectedResultsElection);
+        }
+    });
+}
+
+async function loadResultsTab(preSelectedId = null) {
+    // Fetch all elections for the selector
+    const { data: elections } = await supabase.from('elections').select('*').order('created_at', { ascending: false });
+    const selector = document.getElementById('results-election-select');
+    if (!selector) return;
+
+    selector.innerHTML = '<option value="">— Choose an election —</option>';
+    if (!elections) return;
+
+    let openElectionId = null;
+    elections.forEach(el => {
+        const label = `${el.title} (${el.status}${el.results_published ? ', Published' : ''})`;
+        const opt = document.createElement('option');
+        opt.value = el.id;
+        opt.textContent = label;
+        selector.appendChild(opt);
+        if (el.status === 'open') openElectionId = el.id;
+    });
+
+    // Determine which election to select
+    let selectId = preSelectedId || openElectionId || (elections.length > 0 ? elections[0].id : null);
+    if (selectId) {
+        selector.value = selectId;
+        // Trigger change
+        const { data: elData } = await supabase.from('elections').select('*').eq('id', selectId);
+        if (elData && elData.length > 0) {
+            selectedResultsElection = elData[0];
+            renderResults(selectedResultsElection);
+        }
+    }
+}
+
+async function renderResults(election) {
+    const contentEl = document.getElementById('results-content');
+    const turnoutEl = document.getElementById('results-turnout');
+    const statusEl = document.getElementById('results-election-status');
+    const publishArea = document.getElementById('results-publish-area');
+
+    // Update status pill
+    const statusColors = {
+        'upcoming': 'bg-blue-50 text-blue-700 border-blue-100',
+        'open': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+        'closed': 'bg-slate-150 text-slate-600 border-slate-200'
+    };
+    statusEl.className = `inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${statusColors[election.status] || 'bg-slate-100 text-slate-500'}`;
+    statusEl.innerHTML = `${election.status}${election.status === 'open' ? ' <span class="animate-pulse">🔴</span>' : ''}`;
+
+    // Publish button
+    publishArea.innerHTML = '';
+    if (election.status === 'closed') {
+        if (!election.results_published) {
+            publishArea.innerHTML = `
+                <button onclick="window.showPublishModal('${election.id}', 'publish')" class="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white px-5 py-2.5 rounded-full text-xs font-bold transition active:scale-95 shadow-sm">
+                    Publish Results
+                </button>
+            `;
+        } else {
+            publishArea.innerHTML = `
+                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 mr-2">Published ✓</span>
+                <button onclick="window.showPublishModal('${election.id}', 'unpublish')" class="bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 px-5 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
+                    Unpublish
+                </button>
+            `;
+        }
+    } else if (election.status === 'open') {
+        // Don't show publish button for open elections
+        publishArea.innerHTML = `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100">Results show live during voting</span>`;
+    } else {
+        publishArea.innerHTML = `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">Voting has not started</span>`;
+    }
+
+    // Show loading state
+    contentEl.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-2">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-400"></div>
+            <span class="text-xs font-semibold">Loading results...</span>
+        </div>
+    `;
+
+    try {
+        // Fetch summary results
+        const { data: results, error } = await supabase.rpc('get_admin_election_summary', { election_id: election.id });
+
+        if (error) {
+            throw error;
+        }
+
+        // Fetch turnout data
+        const { data: turnout } = await supabase.rpc('get_election_turnout', { election_id: election.id });
+
+        // Render turnout cards
+        renderTurnoutCards(turnoutEl, turnout, election);
+
+        if (!results || results.length === 0) {
+            contentEl.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-3">
+                    <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    <span class="text-sm font-semibold">No candidates or votes found for this election yet.</span>
+                </div>
+            `;
+            return;
+        }
+
+        // Group by position
+        const grouped = {};
+        results.forEach(r => {
+            if (!grouped[r.position_name]) grouped[r.position_name] = [];
+            grouped[r.position_name].push(r);
+        });
+
+        // Render tallies
+        let html = '';
+        for (const [posName, cans] of Object.entries(grouped)) {
+            const totalInPos = cans[0]?.total_votes_in_position || 0;
+            
+            html += `
+                <div class="mb-10 last:mb-0 border-b border-slate-100 pb-8 last:border-b-0 last:pb-0">
+                    <div class="flex items-center justify-between mb-5">
+                        <h4 class="text-xl font-bold text-slate-900 tracking-tight">${posName}</h4>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">${totalInPos} vote${totalInPos !== 1 ? 's' : ''} cast</span>
+                    </div>
+                    <div class="space-y-4">`;
+
+            cans.forEach((c, index) => {
+                const isWinner = index === 0 && c.vote_count > 0 && c.vote_count > (cans[1]?.vote_count || 0);
+                const pct = totalInPos > 0 ? Math.round((c.vote_count / totalInPos) * 100) : 0;
+
+                html += `
+                    <div class="bg-slate-50 border border-slate-100 hover:shadow-soft rounded-2xl p-5 transition duration-300 relative overflow-hidden ${isWinner ? 'ring-2 ring-gold-500/50 bg-gold-50/20' : ''}">
+                        <div class="flex justify-between items-center mb-3 relative z-10">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-extrabold text-base ${isWinner ? 'text-slate-900' : 'text-slate-700'}">${c.candidate_name}</span>
+                                ${isWinner ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gold-100 text-gold-800 uppercase tracking-wider">Winner 👑</span>' : ''}
+                            </div>
+                            <div class="text-right">
+                                <span class="font-black text-slate-900">${c.vote_count} votes</span>
+                                <span class="text-xs text-slate-400 font-semibold ml-1.5">(${pct}%)</span>
+                            </div>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-200/60 rounded-full relative overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-1000 ${isWinner ? 'bg-gradient-to-r from-gold-500 to-amber-500' : 'bg-gradient-to-r from-church-600 to-indigo-500'}" style="width: ${pct}%"></div>
+                        </div>
+                    </div>`;
+            });
+
+            html += `</div></div>`;
+        }
+
+        // If election is open, show a live banner
+        if (election.status === 'open') {
+            html = `
+                <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-6 flex items-center space-x-3">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-sm font-bold text-emerald-800">Live Results — updating in real time as votes are cast.</span>
+                </div>
+            ` + html;
+        } else if (election.status === 'closed' && !election.results_published) {
+            html = `
+                <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-6 flex items-center space-x-3">
+                    <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <span class="text-sm font-bold text-amber-800">Results are not yet published. Members cannot see them.</span>
+                </div>
+            ` + html;
+        } else if (election.status === 'closed' && election.results_published) {
+            html = `
+                <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-6 flex items-center space-x-3">
+                    <svg class="w-5 h-5 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="text-sm font-bold text-indigo-800">Results are published. Members can view them.</span>
+                </div>
+            ` + html;
+        }
+
+        contentEl.innerHTML = html;
+
+    } catch (err) {
+        console.error('Error loading results:', err);
+        contentEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 text-center text-red-500 border border-red-200/50 bg-red-50/50 rounded-3xl p-6">
+                <svg class="w-10 h-10 text-red-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="font-bold mb-1">Failed to load results</span>
+                <span class="text-xs opacity-80">${err.message}</span>
+            </div>
+        `;
+    }
+}
+
+function renderTurnoutCards(container, turnout, election) {
+    if (!container) return;
+
+    const data = turnout && turnout.length > 0 ? turnout[0] : null;
+    const totalVotes = election.status === 'open' ? null : (data ? data.votes_cast : 0);
+    
+    container.innerHTML = data ? `
+        <div class="bg-white border border-slate-100 rounded-2xl p-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Total Members</span>
+            <span class="text-xl font-black text-slate-900">${data.total_members}</span>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Eligible Voters</span>
+            <span class="text-xl font-black text-slate-900">${data.approved_voters}</span>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Votes Cast</span>
+            <span class="text-xl font-black text-slate-900">${data.votes_cast}</span>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Turnout</span>
+            <span class="text-xl font-black text-slate-900">${data.turnout_percentage}%</span>
+        </div>
+    ` : `
+        <div class="col-span-4 text-center py-4 text-slate-400 text-sm font-semibold">Turnout data not available</div>
+    `;
+}
+
+window.showPublishModal = (electionId, action) => {
+    const modal = document.getElementById('publish-modal');
+    const confirmBtn = document.getElementById('publish-modal-confirm');
+    const titleEl = document.getElementById('publish-modal-title');
+    const textEl = document.getElementById('publish-modal-text');
+    const iconContainer = document.getElementById('publish-modal-icon');
+
+    confirmBtn.setAttribute('data-action', action);
+    confirmBtn.setAttribute('data-eid', electionId);
+
+    if (action === 'publish') {
+        titleEl.textContent = 'Publish Election Results?';
+        textEl.textContent = 'Members will be able to see the full election tallies. This action can be reversed.';
+        iconContainer.innerHTML = `<svg class="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        iconContainer.className = 'w-14 h-14 mx-auto rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center';
+        confirmBtn.className = 'flex-1 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold py-3 rounded-full transition active:scale-95 text-sm';
+        confirmBtn.textContent = 'Yes, Publish';
+    } else {
+        titleEl.textContent = 'Unpublish Election Results?';
+        textEl.textContent = 'Members will no longer see the results. This action can be reversed.';
+        iconContainer.innerHTML = `<svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+        iconContainer.className = 'w-14 h-14 mx-auto rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center';
+        confirmBtn.className = 'flex-1 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold py-3 rounded-full transition active:scale-95 text-sm';
+        confirmBtn.textContent = 'Yes, Unpublish';
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
 };
