@@ -80,32 +80,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     const phone = data.user.user_metadata?.phone || null;
                     const email = data.user.email || '';
 
-                    await supabase
+                    const { error: insertError } = await supabase
                         .from('profiles')
                         .insert([{
                             id: data.user.id,
                             full_name: fullName,
                             email: email,
                             phone: phone,
-                        }])
-                        .then(() => {
-                            // Re-fetch after successful insert
-                            return supabase
-                                .from('profiles')
-                                .select('role')
-                                .eq('id', data.user.id)
-                                .single();
-                        })
-                        .then(({ data: newProfile }) => {
-                            profile = newProfile;
-                        })
-                        .catch(err => {
-                            console.error('Profile creation fallback failed:', err.message);
-                        });
+                        }]);
+
+                    if (!insertError) {
+                        // Re-fetch after successful insert
+                        const { data: newProfile } = await supabase
+                            .from('profiles')
+                            .select('role')
+                            .eq('id', data.user.id)
+                            .single();
+                        profile = newProfile;
+                    } else {
+                        console.error('Profile creation fallback failed:', insertError.message);
+                    }
                 }
 
-                // Redirect — allow access regardless of profile status
-                const dashboard = profile?.role === 'admin'
+                // If we still don't have a profile, show error instead of redirecting into a loop
+                if (!profile) {
+                    showAlert('error', 'Could not load your profile. Please try registering again or contact support.');
+                    btn.disabled = false;
+                    btn.textContent = 'Sign in';
+                    return;
+                }
+
+                // Redirect based on role
+                const dashboard = profile.role === 'admin'
                     ? '/pages/admin/dashboard.html'
                     : '/pages/member/dashboard.html';
                 window.location.href = dashboard;
@@ -177,9 +183,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
-                    showAlert('success', 'Registration successful! Redirecting to your dashboard...');
+                    showAlert('success', 'Registration successful! Please sign in to continue.');
                     setTimeout(() => {
-                        window.location.href = '/pages/member/dashboard.html';
+                        window.location.href = '/pages/login.html';
                     }, 1500);
 
                 } else if (data.user && !data.session) {

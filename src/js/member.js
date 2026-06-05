@@ -29,8 +29,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (profileError || !profile) {
             console.error('Profile load error:', profileError);
-            window.location.href = '/pages/login.html';
-            return;
+            // Try a one-time profile creation from auth user metadata as fallback
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
+                const { error: insertError } = await supabase
+                    .from('profiles')
+                    .insert([{
+                        id: user.id,
+                        full_name: fullName,
+                        email: user.email || '',
+                        phone: user.user_metadata?.phone || null,
+                    }]);
+
+                if (!insertError) {
+                    // Retry fetch
+                    const { data: retryProfile } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', user.id)
+                        .single();
+                    if (retryProfile) {
+                        profile = retryProfile;
+                    } else {
+                        window.location.href = '/pages/login.html';
+                        return;
+                    }
+                } else {
+                    window.location.href = '/pages/login.html';
+                    return;
+                }
+            } else {
+                window.location.href = '/pages/login.html';
+                return;
+            }
         }
         currentProfile = profile;
         if (profile.role === 'admin') {
