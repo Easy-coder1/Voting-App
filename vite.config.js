@@ -15,6 +15,7 @@ export default defineConfig({
         login: resolve(__dirname, 'pages/login.html'),
         register: resolve(__dirname, 'pages/register.html'),
         memberDashboard: resolve(__dirname, 'pages/member/dashboard.html'),
+        voting: resolve(__dirname, 'pages/member/voting.html'),
         adminDashboard: resolve(__dirname, 'pages/admin/dashboard.html'),
       }
     }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Church E-Voting System</title>
+    <title>Admin Dashboard - NUTFS E-Voting System</title>
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden relative">
     <!-- Desktop Sidebar -->
@@ -73,7 +73,7 @@
         </header>
 
         <!-- Content Area -->
-        <div class="p-6 max-w-7xl w-full mx-auto space-y-8 pb-32 md:pb-8">
+        <div class="py-10 px-6 sm:px-8 max-w-7xl w-full mx-auto space-y-8 pb-32 md:pb-8">
             <!-- Analytics Tab -->
             <div id="tab-analytics" class="tab-content space-y-8">
                 <!-- Stat Cards -->
@@ -148,35 +148,23 @@
                     <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                         <h3 class="text-lg font-bold text-slate-900 tracking-tight">Member Management</h3>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse min-w-[700px]">
-                            <thead>
-                                <tr class="bg-slate-50/80 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                                    <th class="px-6 py-4">Name</th>
-                                    <th class="px-6 py-4">Email</th>
-                                    <th class="px-6 py-4">Account Status</th>
-                                    <th class="px-6 py-4">Voting Rights</th>
-                                    <th class="px-6 py-4">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="members-table-body" class="text-sm text-slate-700 divide-y divide-slate-100 font-semibold">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                    <div id="members-list" class="divide-y divide-slate-100">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
 
             <!-- Elections Tab -->
-            <div id="tab-elections" class="tab-content hidden space-y-8 animate-fade-in">
-                <div class="bg-white rounded-3xl shadow-premium p-6 sm:p-8 border border-slate-100">
+            <div id="tab-elections" class="tab-content hidden grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
+                <!-- Create Election Form (Left 1 col) -->
+                <div class="lg:col-span-1 bg-white rounded-3xl shadow-premium p-6 sm:p-8 border border-slate-100 h-fit">
                     <h3 class="text-xl font-bold text-slate-900 mb-6 tracking-tight">Create Election</h3>
-                    <form id="create-election-form" class="space-y-5 max-w-xl">
+                    <form id="create-election-form" class="space-y-5">
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Title</label>
                             <input type="text" id="el-title" required class="premium-input bg-slate-50" placeholder="e.g. 2026 Deacon Election">
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div class="space-y-5">
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Start Date</label>
                                 <input type="datetime-local" id="el-start" required class="premium-input bg-slate-50">
@@ -186,11 +174,12 @@
                                 <input type="datetime-local" id="el-end" required class="premium-input bg-slate-50">
                             </div>
                         </div>
-                        <button type="submit" class="bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 text-white px-6 py-4 rounded-full font-bold hover:shadow-premium transition-all duration-300 active:scale-95">Create Election</button>
+                        <button type="submit" class="w-full bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 text-white px-6 py-4 rounded-full font-bold hover:shadow-premium transition-all duration-300 active:scale-95">Create Election</button>
                     </form>
                 </div>
 
-                <div class="bg-white rounded-3xl shadow-premium border border-slate-100 overflow-hidden">
+                <!-- Manage Elections (Right 2 cols) -->
+                <div class="lg:col-span-2 bg-white rounded-3xl shadow-premium border border-slate-100 overflow-hidden h-fit">
                     <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
                         <h3 class="text-lg font-bold text-slate-900 tracking-tight">Manage Elections</h3>
                     </div>
@@ -203,10 +192,11 @@
             </div>
 
             <!-- Candidates Tab -->
-            <div id="tab-candidates" class="tab-content hidden space-y-8 animate-fade-in">
-                <div class="bg-white rounded-3xl shadow-premium p-6 sm:p-8 border border-slate-100">
+            <div id="tab-candidates" class="tab-content hidden grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
+                <!-- Add Candidate Form (Left 1 col) -->
+                <div class="lg:col-span-1 bg-white rounded-3xl shadow-premium p-6 sm:p-8 border border-slate-100 h-fit">
                     <h3 class="text-xl font-bold text-slate-900 mb-6 tracking-tight">Add Candidate</h3>
-                    <form id="add-candidate-form" class="space-y-5 max-w-xl">
+                    <form id="add-candidate-form" class="space-y-5">
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Full Name</label>
                             <input type="text" id="can-name" required class="premium-input bg-slate-50" placeholder="e.g. John Doe">
@@ -239,11 +229,12 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" class="bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 text-white px-6 py-4 rounded-full font-bold hover:shadow-premium transition-all duration-300 active:scale-95">Add Candidate</button>
+                        <button type="submit" class="w-full bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 text-white px-6 py-4 rounded-full font-bold hover:shadow-premium transition-all duration-300 active:scale-95">Add Candidate</button>
                     </form>
                 </div>
 
-                <div class="bg-white rounded-3xl shadow-premium border border-slate-100 overflow-hidden">
+                <!-- Manage Candidates (Right 2 cols) -->
+                <div class="lg:col-span-2 bg-white rounded-3xl shadow-premium border border-slate-100 overflow-hidden h-fit">
                     <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
                         <h3 class="text-lg font-bold text-slate-900 tracking-tight">Manage Candidates</h3>
                     </div>

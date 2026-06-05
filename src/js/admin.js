@@ -201,58 +201,90 @@ function renderChart(approved, others) {
 // Member Management
 async function loadMembers() {
     const { data: members, error } = await supabase.from('profiles').select('*').eq('role', 'member').order('created_at', { ascending: false });
-    const tbody = document.getElementById('members-table-body');
-    tbody.innerHTML = '';
+    const list = document.getElementById('members-list');
+    list.innerHTML = '';
     
-    if(error || !members) return;
+    if (error) {
+        alert('Error fetching members: ' + error.message);
+        return;
+    }
+    if (!members) return;
 
     members.forEach(m => {
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50/50 transition duration-150';
+        const div = document.createElement('div');
+        div.className = 'flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition duration-150 gap-4 bg-white';
         
+        const initials = m.full_name.split(' ').map(n => n[0]).join('').substring(0, 2);
         const statusColors = {
             'pending': 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
             'approved': 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
             'rejected': 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100',
-            'suspended': 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+            'suspended': 'bg-slate-100 text-slate-650 border-slate-200 hover:bg-slate-200'
         };
 
-        tr.innerHTML = `
-            <td class="px-6 py-4.5 whitespace-nowrap text-slate-800 font-bold">${m.full_name}</td>
-            <td class="px-6 py-4.5 whitespace-nowrap text-slate-500">${m.email}</td>
-            <td class="px-6 py-4.5 whitespace-nowrap">
-                <select onchange="window.updateMemberStatus('${m.id}', this.value)" class="text-xs rounded-full border px-3.5 py-1.5 font-bold cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-church-500 shadow-sm outline-none ${statusColors[m.account_status] || ''}">
-                    <option value="pending" ${m.account_status === 'pending' ? 'selected' : ''}>Pending</option>
-                    <option value="approved" ${m.account_status === 'approved' ? 'selected' : ''}>Approved</option>
-                    <option value="rejected" ${m.account_status === 'rejected' ? 'selected' : ''}>Rejected</option>
-                    <option value="suspended" ${m.account_status === 'suspended' ? 'selected' : ''}>Suspended</option>
-                </select>
-            </td>
-            <td class="px-6 py-4.5 whitespace-nowrap">
-                <button onclick="window.toggleVotingRights('${m.id}', ${!m.voting_rights})" 
-                    class="text-xs px-3.5 py-1.5 rounded-full font-bold shadow-sm transition active:scale-95 cursor-pointer border ${m.voting_rights ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' : 'bg-red-50 text-red-650 border-red-200 hover:bg-red-100'}">
-                    ${m.voting_rights ? 'ENABLED ✓' : 'DISABLED'}
-                </button>
-            </td>
-            <td class="px-6 py-4.5 whitespace-nowrap text-sm text-slate-300 font-bold">...</td>
+        div.innerHTML = `
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-church-600 to-indigo-500 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm">${initials}</div>
+                <div>
+                    <h4 class="font-extrabold text-slate-900 leading-tight">${m.full_name}</h4>
+                    <p class="text-xs text-slate-400 font-semibold mt-0.5">${m.email}</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-4 w-full sm:w-auto">
+                <div class="flex flex-col space-y-1 w-full sm:w-auto min-w-[120px]">
+                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Account Status</span>
+                    <select onchange="window.updateMemberStatus('${m.id}', this.value)" class="text-xs rounded-full border px-3 py-1.5 font-bold cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-church-500 shadow-sm outline-none ${statusColors[m.account_status] || ''}">
+                        <option value="pending" ${m.account_status === 'pending' ? 'selected' : ''}>Pending</option>
+                        <option value="approved" ${m.account_status === 'approved' ? 'selected' : ''}>Approved</option>
+                        <option value="rejected" ${m.account_status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                        <option value="suspended" ${m.account_status === 'suspended' ? 'selected' : ''}>Suspended</option>
+                    </select>
+                </div>
+                <div class="flex flex-col space-y-1 w-full sm:w-auto">
+                    <span class="text-[10px] text-slate-450 font-bold uppercase tracking-wider">Voting Rights</span>
+                    <button onclick="window.toggleVotingRights('${m.id}', ${!m.voting_rights})" 
+                        class="text-xs px-3.5 py-1.5 rounded-full font-bold shadow-sm transition active:scale-95 cursor-pointer border ${m.voting_rights ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' : 'bg-red-50 text-red-650 border-red-200 hover:bg-red-100'}">
+                        ${m.voting_rights ? 'ENABLED ✓' : 'DISABLED'}
+                    </button>
+                </div>
+            </div>
         `;
-        tbody.appendChild(tr);
+        list.appendChild(div);
     });
 }
 
 window.updateMemberStatus = async (id, status) => {
-    await supabase.from('profiles').update({ account_status: status }).eq('id', id);
-    if (status === 'approved') {
-        await supabase.from('profiles').update({ voting_rights: true }).eq('id', id);
-    } else {
-        await supabase.from('profiles').update({ voting_rights: false }).eq('id', id);
+    try {
+        let updateData = { account_status: status };
+        if (status === 'approved') {
+            updateData.voting_rights = true;
+        } else {
+            updateData.voting_rights = false;
+        }
+
+        const { error } = await supabase.from('profiles').update(updateData).eq('id', id);
+        if (error) {
+            alert('Error updating status: ' + error.message);
+        } else {
+            loadMembers();
+            loadAnalytics();
+        }
+    } catch (err) {
+        alert('Exception updating status: ' + err.message);
     }
-    loadMembers();
 };
 
 window.toggleVotingRights = async (id, right) => {
-    await supabase.from('profiles').update({ voting_rights: right }).eq('id', id);
-    loadMembers();
+    try {
+        const { error } = await supabase.from('profiles').update({ voting_rights: right }).eq('id', id);
+        if (error) {
+            alert('Error updating voting rights: ' + error.message);
+        } else {
+            loadMembers();
+        }
+    } catch (err) {
+        alert('Exception updating voting rights: ' + err.message);
+    }
 };
 
 // Election Management
@@ -432,13 +464,30 @@ async function loadElections() {
 }
 
 window.updateElectionStatus = async (id, status) => {
-    await supabase.from('elections').update({ status }).eq('id', id);
-    loadElections();
+    try {
+        const { error } = await supabase.from('elections').update({ status }).eq('id', id);
+        if (error) {
+            alert('Error updating election status: ' + error.message);
+        } else {
+            loadElections();
+            loadAnalytics();
+        }
+    } catch (err) {
+        alert('Exception updating election status: ' + err.message);
+    }
 };
 
 window.toggleResults = async (id, pub) => {
-    await supabase.from('elections').update({ results_published: pub }).eq('id', id);
-    loadElections();
+    try {
+        const { error } = await supabase.from('elections').update({ results_published: pub }).eq('id', id);
+        if (error) {
+            alert('Error toggling results: ' + error.message);
+        } else {
+            loadElections();
+        }
+    } catch (err) {
+        alert('Exception toggling results: ' + err.message);
+    }
 };
 
 // Candidate Management
