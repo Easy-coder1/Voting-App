@@ -10,6 +10,47 @@ let countdownInterval = null;
 
 let pendingVote = null;
 
+async function ensureProfile(user) {
+    const { data: profile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    if (fetchError) {
+        console.error('Profile fetch error:', fetchError);
+    }
+
+    if (profile) return profile;
+
+    // No profile found — create one from user metadata
+    console.log('No profile found for user, creating one...');
+    const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
+    const phone = user.user_metadata?.phone || null;
+
+    const { error: insertError } = await supabase
+        .from('profiles')
+        .insert([{
+            id: user.id,
+            full_name: fullName,
+            email: user.email || '',
+            phone: phone,
+        }]);
+
+    if (insertError) {
+        console.error('Profile insert error:', insertError.message);
+        return null;
+    }
+
+    const { data: newProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    return newProfile || null;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // 1. Auth Check
@@ -20,51 +61,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         currentUser = session.user;
 
-        // 2. Load Profile
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
+        // 2. Load or create Profile
+        const profile = await ensureProfile(currentUser);
 
-        if (profileError || !profile) {
-            console.error('Profile load error:', profileError);
-            // Try a one-time profile creation from auth user metadata as fallback
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
-                const { error: insertError } = await supabase
-                    .from('profiles')
-                    .insert([{
-                        id: user.id,
-                        full_name: fullName,
-                        email: user.email || '',
-                        phone: user.user_metadata?.phone || null,
-                    }]);
-
-                if (!insertError) {
-                    // Retry fetch
-                    const { data: retryProfile } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', user.id)
-                        .single();
-                    if (retryProfile) {
-                        profile = retryProfile;
-                    } else {
-                        window.location.href = '/pages/login.html';
-                        return;
-                    }
-                } else {
-                    window.location.href = '/pages/login.html';
-                    return;
-                }
-            } else {
-                window.location.href = '/pages/login.html';
-                return;
-            }
+        if (!profile) {
+            console.error('Could not load or create profile');
+            window.location.href = '/pages/login.html';
+            return;
         }
         currentProfile = profile;
+
         if (profile.role === 'admin') {
             window.location.href = '/pages/admin/dashboard.html';
             return;
@@ -300,15 +306,6 @@ async function renderResults() {
     const content = document.getElementById('panel-content');
     content.innerHTML = '<div class="text-center text-gray-500 py-10">Loading results...</div>';
 
-    // Fetch all votes for this election indirectly (votes are tied to positions/candidates)
-    // Actually we need aggregate. RLS might block normal users from reading all votes, 
-    // Wait, the prompt says RLS: members can only read their own votes.
-    // If members cannot read all votes, how do they see results?
-    // We need an Edge Function or a database VIEW with security definer, or RPC.
-    // Let's create an RPC function to get vote counts!
-    // Since I haven't created it yet, I will simulate it or fetch it using an RPC call.
-    
-    // For now, I will use an RPC call: get_election_results
     const { data: results, error } = await supabase.rpc('get_election_results', { election_id: activeElection.id });
     
     if (error) {

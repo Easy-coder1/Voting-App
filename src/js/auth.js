@@ -23,6 +23,49 @@ export function showAlert(type, message) {
     msgEl.textContent = message;
 }
 
+async function ensureProfile(user) {
+    // Try to fetch the existing profile
+    const { data: profile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    if (fetchError) {
+        console.error('Profile fetch error:', fetchError);
+    }
+
+    if (profile) return profile;
+
+    // No profile found — create one from user metadata
+    console.log('No profile found for user, creating one...');
+    const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
+    const phone = user.user_metadata?.phone || null;
+
+    const { error: insertError } = await supabase
+        .from('profiles')
+        .insert([{
+            id: user.id,
+            full_name: fullName,
+            email: user.email || '',
+            phone: phone,
+        }]);
+
+    if (insertError) {
+        console.error('Profile insert error:', insertError.message);
+        return null;
+    }
+
+    // Fetch the newly created profile
+    const { data: newProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    return newProfile || null;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
@@ -64,46 +107,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Login succeeded — try to fetch/ensure profile, but don't block access
                 btn.textContent = 'Loading profile...';
 
-                // Fetch profile
-                let { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', data.user.id)
-                    .single();
+                // Ensure profile exists
+                const profile = await ensureProfile(data.user);
 
-                // If profile doesn't exist, try creating it from user metadata
-                if (profileError || !profile) {
-                    const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Member';
-                    const phone = data.user.user_metadata?.phone || null;
-                    const email = data.user.email || '';
-
-                    const { error: insertError } = await supabase
-                        .from('profiles')
-                        .insert([{
-                            id: data.user.id,
-                            full_name: fullName,
-                            email: email,
-                            phone: phone,
-                        }]);
-
-                    if (!insertError) {
-                        // Re-fetch after successful insert
-                        const { data: newProfile } = await supabase
-                            .from('profiles')
-                            .select('role')
-                            .eq('id', data.user.id)
-                            .single();
-                        profile = newProfile;
-                    } else {
-                        console.error('Profile creation fallback failed:', insertError.message);
-                    }
-                }
-
-                // If we still don't have a profile, show error instead of redirecting into a loop
                 if (!profile) {
+                    console.error('Could not load or create profile for user:', data.user.id);
                     showAlert('error', 'Could not load your profile. Please try registering again or contact support.');
                     btn.disabled = false;
                     btn.textContent = 'Sign in';
@@ -117,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = dashboard;
 
             } catch (err) {
+                console.error('Login error:', err);
                 showAlert('error', 'Unexpected error: ' + err.message);
                 btn.disabled = false;
                 btn.textContent = 'Sign in';
@@ -159,42 +170,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.session) {
                     // Email confirmation is OFF — user is logged in immediately
 
-                    // Fallback: manually create profile if the DB trigger didn't fire
-                    const { error: profileCheckError, data: existingProfile } = await supabase
-                        .from('profiles')
-                        .select('id')
-                        .eq('id', data.user.id)
-                        .single();
-
-                    if (profileCheckError || !existingProfile) {
-                        // Trigger didn't run — insert the profile manually
-                        const { error: insertError } = await supabase
-                            .from('profiles')
-                            .insert([{
-                                id: data.user.id,
-                                full_name: name || 'Member',
-                                email: email,
-                                phone: phone || null,
-                            }]);
-
-                        if (insertError) {
-                            console.error('Profile creation fallback failed:', insertError.message);
-                            // Still proceed — user is authenticated, profile may appear via trigger shortly
-                        }
-                    }
+                    // Ensure profile gets created
+                    await ensureProfile(data.user);
 
                     showAlert('success', 'Registration successful! Please sign in to continue.');
+                    // Sign out so they can log in fresh
+                    await supabase.auth.signOut();
                     setTimeout(() => {
                         window.location.href = '/pages/login.html';
                     }, 1500);
 
                 } else if (data.user && !data.session) {
-                    // Email confirmation is ON — user must verify their email before they can log in
+                    // Email confirmation is ON
                     showAlert('success',
                         'Registration submitted! Please check your email inbox (and spam folder) ' +
                         'for a confirmation link. You can log in after confirming your email address.');
                     btn.textContent = 'Check your email';
-                    // Do not redirect — let the user read the message
                 } else {
                     showAlert('warning', 'Registration may have succeeded. Please try logging in.');
                     setTimeout(() => {
@@ -203,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
             } catch (err) {
+                console.error('Registration error:', err);
                 showAlert('error', 'Unexpected error: ' + err.message);
                 btn.disabled = false;
                 btn.textContent = 'Complete Registration';
