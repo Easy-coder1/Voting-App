@@ -64,72 +64,51 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Login succeeded — fetch profile to determine which dashboard to go to
+                // Login succeeded — try to fetch/ensure profile, but don't block access
                 btn.textContent = 'Loading profile...';
-                const { data: profile, error: profileError } = await supabase
+
+                // Fetch profile
+                let { data: profile, error: profileError } = await supabase
                     .from('profiles')
                     .select('role')
                     .eq('id', data.user.id)
                     .single();
 
+                // If profile doesn't exist, try creating it from user metadata
                 if (profileError || !profile) {
-                    // Profile row may still be creating via DB trigger — wait 1.5s and retry
-                    await new Promise(r => setTimeout(r, 1500));
-                    const { data: retryProfile, error: retryError } = await supabase
+                    const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Member';
+                    const phone = data.user.user_metadata?.phone || null;
+                    const email = data.user.email || '';
+
+                    await supabase
                         .from('profiles')
-                        .select('role')
-                        .eq('id', data.user.id)
-                        .single();
-
-                    if (retryError || !retryProfile) {
-                        // Trigger didn't fire — attempt to create profile manually
-                        const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Member';
-                        const phone = data.user.user_metadata?.phone || null;
-                        const email = data.user.email || '';
-
-                        const { error: insertError } = await supabase
-                            .from('profiles')
-                            .insert([{
-                                id: data.user.id,
-                                full_name: fullName,
-                                email: email,
-                                phone: phone,
-                            }]);
-
-                        if (insertError) {
-                            console.error('Login profile creation fallback failed:', insertError.message);
-                            showAlert('error',
-                                'Login succeeded but your account profile could not be found. ' +
-                                'This usually means the database trigger did not run. ' +
-                                'Please contact the administrator.');
-                            await supabase.auth.signOut();
-                            btn.disabled = false;
-                            btn.textContent = 'Sign in';
-                            return;
-                        }
-
-                        // Profile created successfully — fetch it to determine role
-                        const { data: newProfile } = await supabase
-                            .from('profiles')
-                            .select('role')
-                            .eq('id', data.user.id)
-                            .single();
-
-                        window.location.href = newProfile?.role === 'admin'
-                            ? '/pages/admin/dashboard.html'
-                            : '/pages/member/dashboard.html';
-                        return;
-                    }
-
-                    window.location.href = retryProfile.role === 'admin'
-                        ? '/pages/admin/dashboard.html'
-                        : '/pages/member/dashboard.html';
-                    return;
+                        .insert([{
+                            id: data.user.id,
+                            full_name: fullName,
+                            email: email,
+                            phone: phone,
+                        }])
+                        .then(() => {
+                            // Re-fetch after successful insert
+                            return supabase
+                                .from('profiles')
+                                .select('role')
+                                .eq('id', data.user.id)
+                                .single();
+                        })
+                        .then(({ data: newProfile }) => {
+                            profile = newProfile;
+                        })
+                        .catch(err => {
+                            console.error('Profile creation fallback failed:', err.message);
+                        });
                 }
 
-                window.location.href = profile.role === 'admin'
+                // Redirect — allow access regardless of profile status
+                const dashboard = profile?.role === 'admin'
                     ? '/pages/admin/dashboard.html'
                     : '/pages/member/dashboard.html';
+                window.location.href = dashboard;
 
             } catch (err) {
                 showAlert('error', 'Unexpected error: ' + err.message);
