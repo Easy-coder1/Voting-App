@@ -592,10 +592,20 @@ async function loadCandidates() {
 }
 
 window.deleteCandidate = async (id) => {
-    if(confirm('Delete candidate?')) {
-        await supabase.from('candidates').delete().eq('id', id);
-        loadCandidates();
+    if(!confirm('Delete candidate?')) return;
+    
+    const { error } = await supabase.from('candidates').delete().eq('id', id);
+    
+    if (error) {
+        if (error.code === '23503') {
+            alert('Cannot delete this candidate because votes have already been cast for them. To delete this candidate, you must first remove all associated votes.');
+        } else {
+            alert('Error deleting candidate: ' + error.message);
+        }
+        console.error('Delete candidate error:', error);
     }
+    
+    loadCandidates();
 };
 
 // ======================================================================
