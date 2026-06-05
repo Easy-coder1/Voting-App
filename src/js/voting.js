@@ -89,7 +89,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const votesToInsert = pendingSubmission.map(v => ({
                     voter_id: currentUser.id,
                     candidate_id: v.candidateId,
-                    position_id: v.positionId
+                    position_id: v.positionId,
+                    election_id: activeElection.id
                 }));
 
                 const { error } = await supabase.from('votes').insert(votesToInsert);
@@ -168,10 +169,12 @@ async function loadBoothData() {
 }
 
 async function loadUserVotes() {
+    if (!activeElection) return;
     const { data } = await supabase
         .from('votes')
         .select('position_id, candidate_id')
-        .eq('voter_id', currentUser.id);
+        .eq('voter_id', currentUser.id)
+        .eq('election_id', activeElection.id);
     // For progress tracking, map position_ids
     userVotes = (data || []).map(v => v.position_id);
     // Also seed selections from already-submitted votes (so locked view shows correct picks)
