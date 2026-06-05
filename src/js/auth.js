@@ -82,13 +82,42 @@ document.addEventListener('DOMContentLoaded', () => {
                         .single();
 
                     if (retryError || !retryProfile) {
-                        showAlert('error',
-                            'Login succeeded but your account profile could not be found. ' +
-                            'This usually means the database trigger did not run. ' +
-                            'Please contact the administrator.');
-                        await supabase.auth.signOut();
-                        btn.disabled = false;
-                        btn.textContent = 'Sign in';
+                        // Trigger didn't fire — attempt to create profile manually
+                        const fullName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Member';
+                        const phone = data.user.user_metadata?.phone || null;
+                        const email = data.user.email || '';
+
+                        const { error: insertError } = await supabase
+                            .from('profiles')
+                            .insert([{
+                                id: data.user.id,
+                                full_name: fullName,
+                                email: email,
+                                phone: phone,
+                            }]);
+
+                        if (insertError) {
+                            console.error('Login profile creation fallback failed:', insertError.message);
+                            showAlert('error',
+                                'Login succeeded but your account profile could not be found. ' +
+                                'This usually means the database trigger did not run. ' +
+                                'Please contact the administrator.');
+                            await supabase.auth.signOut();
+                            btn.disabled = false;
+                            btn.textContent = 'Sign in';
+                            return;
+                        }
+
+                        // Profile created successfully — fetch it to determine role
+                        const { data: newProfile } = await supabase
+                            .from('profiles')
+                            .select('role')
+                            .eq('id', data.user.id)
+                            .single();
+
+                        window.location.href = newProfile?.role === 'admin'
+                            ? '/pages/admin/dashboard.html'
+                            : '/pages/member/dashboard.html';
                         return;
                     }
 
