@@ -1,6 +1,6 @@
-# Church E-Voting Web Application
+# NUTFS E-Voting Web Application
 
-A modern, secure, and mobile-first web application designed to conduct church elections digitally. Built with **Vanilla JavaScript**, **Tailwind CSS**, and powered by a robust **Supabase** backend. 
+A modern, secure, and mobile-first web application designed to conduct digital elections for NUTFS. Built with **Vanilla JavaScript**, **Tailwind CSS**, and powered by a robust **Supabase** backend. 
 
 The application features a premium, Mobbin-level UI/UX design with glassmorphism, native-feeling bottom sheet modals, and silky smooth micro-animations.
 
@@ -13,6 +13,7 @@ The application features a premium, Mobbin-level UI/UX design with glassmorphism
 * **Mobile-First Design:** Features a mobile bottom navigation bar, native-feeling bottom sheet modals, and extremely tap-friendly UI elements.
 * **Secure Voting System:** Built with Supabase Row Level Security (RLS) ensuring that users can only vote once, cannot tamper with other users' votes, and have their voting rights securely verified.
 * **Realtime Updates:** The admin dashboard analytics update in real-time as users register or cast their votes.
+* **Admin Results Panel:** A dedicated "Results" tab in the admin dashboard lets you view live vote tallies during an open election, see final results after closing, and publish/unpublish results to members with a confirmation dialog. Historical results for any past election are also accessible.
 
 ---
 
@@ -45,6 +46,7 @@ npm install
 3. Execute the SQL queries found in the `supabase/migrations/` folder in this exact order:
    - Run `00_init.sql` (Creates tables, triggers, and RLS policies)
    - Run `01_results_rpc.sql` (Creates the RPC function to fetch election results securely)
+   - Run `02_admin_results_view.sql` (Creates admin-only RPC functions for election summaries and turnout analytics)
 
 ### 4. Environment Variables
 Rename the `.env.example` file to `.env` and fill in your Supabase project credentials:
