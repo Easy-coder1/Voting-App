@@ -46,24 +46,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupPublishModal();
 
         // Subscribe to realtime updates for live analytics
-        insforge.channel('public:profiles')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, payload => {
-                loadAnalytics();
-                if(!document.getElementById('tab-members').classList.contains('hidden')){
-                    loadMembers();
-                }
-            })
-            .subscribe();
+        try {
+            await insforge.realtime.connect();
 
-        insforge.channel('public:votes')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'votes' }, payload => {
-                loadAnalytics();
-                // If results tab is open and we're viewing an open election, refresh live
-                if (!document.getElementById('tab-results').classList.contains('hidden') && selectedResultsElection && selectedResultsElection.status === 'open') {
-                    renderResults(selectedResultsElection);
+            await insforge.realtime.subscribe('public:profiles');
+            await insforge.realtime.subscribe('public:votes');
+
+            insforge.realtime.on('postgres_changes', (msg) => {
+                const ch = msg?.channel ?? '';
+                if (ch.includes('profiles')) {
+                    loadAnalytics();
+                    if (!document.getElementById('tab-members').classList.contains('hidden')) {
+                        loadMembers();
+                    }
+                } else if (ch.includes('votes')) {
+                    loadAnalytics();
+                    // If results tab is open and we're viewing an open election, refresh live
+                    if (!document.getElementById('tab-results').classList.contains('hidden') && selectedResultsElection && selectedResultsElection.status === 'open') {
+                        renderResults(selectedResultsElection);
+                    }
                 }
-            })
-            .subscribe();
+            });
+        } catch (realtimeErr) {
+            console.warn('Realtime subscription failed (non-critical):', realtimeErr);
+        }
     } catch (err) {
         console.error('Admin dashboard init error:', err);
         const main = document.querySelector('main') || document.body;
