@@ -1,4 +1,4 @@
-import { insforge } from './insforge.js';
+import { insforge, clearLocalSession } from './insforge.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
             await insforge.auth.signOut();
+            clearLocalSession();
             window.location.href = '/';
         });
 
