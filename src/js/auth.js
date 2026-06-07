@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { insforge } from './insforge.js';
 
 export function showAlert(type, message) {
     const container = document.getElementById('alert-container');
@@ -32,7 +32,7 @@ export function showAlert(type, message) {
 
 async function ensureProfile(user) {
     // Try to fetch the existing profile
-    const { data: profile, error: fetchError } = await supabase
+    const { data: profile, error: fetchError } = await insforge.database
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -46,10 +46,10 @@ async function ensureProfile(user) {
 
     // No profile found — create one from user metadata
     console.log('No profile found for user, creating one...');
-    const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
+    const fullName = user.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
     const phone = user.user_metadata?.phone || null;
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await insforge.database
         .from('profiles')
         .insert([{
             id: user.id,
@@ -64,7 +64,7 @@ async function ensureProfile(user) {
     }
 
     // Fetch the newly created profile
-    const { data: newProfile } = await supabase
+    const { data: newProfile } = await insforge.database
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = document.getElementById('password').value;
 
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                const { data, error } = await insforge.auth.signInWithPassword({ email, password });
 
                 if (error) {
                     let msg = error.message;
@@ -166,15 +166,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = `${firstName} ${lastName}`.trim();
 
             try {
-                const { data, error } = await supabase.auth.signUp({
+                const { data, error } = await insforge.auth.signUp({
                     email,
                     password,
-                    options: {
-                        data: {
-                            full_name: name,
-                            phone: null,
-                        }
-                    }
+                    name: name,
                 });
 
                 if (error) {
@@ -192,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     showAlert('success', 'Registration successful! Please sign in to continue.');
                     // Sign out so they can log in fresh
-                    await supabase.auth.signOut();
+                    await insforge.auth.signOut();
                     setTimeout(() => {
                         window.location.href = '/pages/login.html';
                     }, 1500);
@@ -201,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Email confirmation is ON
                     showAlert('success',
                         'Registration submitted! Please check your email inbox (and spam folder) ' +
-                        'for a confirmation link. You will be redirected to the login page shortly.');
+                        'for a confirmation link.');
                     btn.textContent = 'Check your email';
                     setTimeout(() => {
                         window.location.href = '/pages/login.html';

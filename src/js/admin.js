@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { insforge } from './insforge.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -8,15 +8,15 @@ let selectedResultsElection = null;
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // 1. Auth Check
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !session) {
+        const { data: currentUserData, error: sessionError } = await insforge.auth.getCurrentUser();
+        if (sessionError || !currentUserData) {
             window.location.href = '/pages/login.html';
             return;
         }
-        currentUser = session.user;
+        currentUser = currentUserData;
 
         // 2. Load Profile and verify Admin
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await insforge.database
             .from('profiles')
             .select('*')
             .eq('id', currentUser.id)
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (avatarEl) avatarEl.textContent = initials;
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            await supabase.auth.signOut();
+            await insforge.auth.signOut();
             window.location.href = '/';
         });
 
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupPublishModal();
 
         // Subscribe to realtime updates for live analytics
-        supabase.channel('public:profiles')
+        insforge.channel('public:profiles')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, payload => {
                 loadAnalytics();
                 if(!document.getElementById('tab-members').classList.contains('hidden')){
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             })
             .subscribe();
 
-        supabase.channel('public:votes')
+        insforge.channel('public:votes')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'votes' }, payload => {
                 loadAnalytics();
                 // If results tab is open and we're viewing an open election, refresh live
@@ -133,10 +133,10 @@ function setupTabs() {
 // ----------------------
 async function loadAnalytics() {
     const [ {count: totalMembers}, {count: pending}, {count: approved}, {count: totalVotes} ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').eq('role', 'member'),
-        supabase.from('votes').select('*', { count: 'exact', head: true })
+        insforge.database.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
+        insforge.database.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
+        insforge.database.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').eq('role', 'member'),
+        insforge.database.from('votes').select('*', { count: 'exact', head: true })
     ]);
 
     document.getElementById('stat-total-members').textContent = totalMembers || 0;
@@ -147,7 +147,7 @@ async function loadAnalytics() {
     renderChart(approved || 0, totalMembers ? totalMembers - approved : 0);
     
     // Check active election
-    const { data: elections } = await supabase.from('elections').select('*').eq('status', 'open').limit(1);
+    const { data: elections } = await insforge.database.from('elections').select('*').eq('status', 'open').limit(1);
     const statusContainer = document.getElementById('live-election-status');
     if (statusContainer) {
         if(elections && elections.length > 0) {
@@ -223,7 +223,7 @@ function renderChart(approved, others) {
 // MEMBER MANAGEMENT
 // ----------------------
 async function loadMembers() {
-    const { data: members, error } = await supabase.from('profiles').select('*').eq('role', 'member').order('created_at', { ascending: false });
+    const { data: members, error } = await insforge.database.from('profiles').select('*').eq('role', 'member').order('created_at', { ascending: false });
     const list = document.getElementById('members-list');
     list.innerHTML = '';
     
@@ -285,7 +285,7 @@ window.updateMemberStatus = async (id, status) => {
             updateData.voting_rights = false;
         }
 
-        const { error } = await supabase.from('profiles').update(updateData).eq('id', id);
+        const { error } = await insforge.database.from('profiles').update(updateData).eq('id', id);
         if (error) {
             alert('Error updating status: ' + error.message);
         } else {
@@ -299,7 +299,7 @@ window.updateMemberStatus = async (id, status) => {
 
 window.toggleVotingRights = async (id, right) => {
     try {
-        const { error } = await supabase.from('profiles').update({ voting_rights: right }).eq('id', id);
+        const { error } = await insforge.database.from('profiles').update({ voting_rights: right }).eq('id', id);
         if (error) {
             alert('Error updating voting rights: ' + error.message);
         } else {
@@ -322,7 +322,7 @@ function setupForms() {
         const start = document.getElementById('el-start').value;
         const end = document.getElementById('el-end').value;
 
-        await supabase.from('elections').insert([{ title, start_date: start, end_date: end, status: 'upcoming' }]);
+        await insforge.database.from('elections').insert([{ title, start_date: start, end_date: end, status: 'upcoming' }]);
         e.target.reset();
         loadElections();
     });
@@ -333,7 +333,7 @@ function setupForms() {
         const pos = document.getElementById('can-position').value;
         const photo = document.getElementById('can-photo').value;
 
-        await supabase.from('candidates').insert([{ full_name: name, position_id: pos, photo_url: photo }]);
+        await insforge.database.from('candidates').insert([{ full_name: name, position_id: pos, photo_url: photo }]);
         e.target.reset();
         resetImageUpload();
         loadCandidates();
@@ -444,7 +444,7 @@ function handleSelectedFile(file) {
 }
 
 async function loadElections() {
-    const { data: elections } = await supabase.from('elections').select('*').order('created_at', { ascending: false });
+    const { data: elections } = await insforge.database.from('elections').select('*').order('created_at', { ascending: false });
     const list = document.getElementById('elections-list');
     list.innerHTML = '';
 
@@ -492,7 +492,7 @@ async function loadElections() {
 
 window.updateElectionStatus = async (id, status) => {
     try {
-        const { error } = await supabase.from('elections').update({ status }).eq('id', id);
+        const { error } = await insforge.database.from('elections').update({ status }).eq('id', id);
         if (error) {
             alert('Error updating election status: ' + error.message);
         } else {
@@ -506,7 +506,7 @@ window.updateElectionStatus = async (id, status) => {
 
 window.toggleResults = async (id, pub) => {
     try {
-        const { error } = await supabase.from('elections').update({ results_published: pub }).eq('id', id);
+        const { error } = await insforge.database.from('elections').update({ results_published: pub }).eq('id', id);
         if (error) {
             alert('Error toggling results: ' + error.message);
         } else {
@@ -551,7 +551,7 @@ window.switchToResultsTab = (electionId) => {
 // CANDIDATE MANAGEMENT
 // ----------------------
 async function loadPositions() {
-    const { data: pos } = await supabase.from('positions').select('*');
+    const { data: pos } = await insforge.database.from('positions').select('*');
     const select = document.getElementById('can-position');
     select.innerHTML = '<option value="">Select a position...</option>';
     if (!pos) return;
@@ -561,7 +561,7 @@ async function loadPositions() {
 }
 
 async function loadCandidates() {
-    const { data: candidates } = await supabase.from('candidates').select('*, positions(position_name)');
+    const { data: candidates } = await insforge.database.from('candidates').select('*, positions(position_name)');
     const list = document.getElementById('candidates-list');
     list.innerHTML = '';
     
@@ -594,7 +594,7 @@ async function loadCandidates() {
 window.deleteCandidate = async (id) => {
     if(!confirm('Delete candidate?')) return;
     
-    const { error } = await supabase.from('candidates').delete().eq('id', id);
+    const { error } = await insforge.database.from('candidates').delete().eq('id', id);
     
     if (error) {
         if (error.code === '23503') {
@@ -633,7 +633,7 @@ function setupResultsTab() {
             }
             
             // Fetch election and render
-            const { data: elections } = await supabase.from('elections').select('*').eq('id', electionId);
+            const { data: elections } = await insforge.database.from('elections').select('*').eq('id', electionId);
             if (elections && elections.length > 0) {
                 selectedResultsElection = elections[0];
                 renderResults(selectedResultsElection);
@@ -673,7 +673,7 @@ function setupPublishModal() {
             updateData.results_published = false;
         }
 
-        const { error } = await supabase.from('elections').update(updateData).eq('id', electionId);
+        const { error } = await insforge.database.from('elections').update(updateData).eq('id', electionId);
         if (error) {
             alert('Error updating results visibility: ' + error.message);
         }
@@ -682,7 +682,7 @@ function setupPublishModal() {
         modal.classList.remove('flex');
 
         // Refresh the results view
-        const { data: elections } = await supabase.from('elections').select('*').eq('id', electionId);
+        const { data: elections } = await insforge.database.from('elections').select('*').eq('id', electionId);
         if (elections && elections.length > 0) {
             selectedResultsElection = elections[0];
             renderResults(selectedResultsElection);
@@ -692,7 +692,7 @@ function setupPublishModal() {
 
 async function loadResultsTab(preSelectedId = null) {
     // Fetch all elections for the selector
-    const { data: elections } = await supabase.from('elections').select('*').order('created_at', { ascending: false });
+    const { data: elections } = await insforge.database.from('elections').select('*').order('created_at', { ascending: false });
     const selector = document.getElementById('results-election-select');
     if (!selector) return;
 
@@ -714,7 +714,7 @@ async function loadResultsTab(preSelectedId = null) {
     if (selectId) {
         selector.value = selectId;
         // Trigger change
-        const { data: elData } = await supabase.from('elections').select('*').eq('id', selectId);
+        const { data: elData } = await insforge.database.from('elections').select('*').eq('id', selectId);
         if (elData && elData.length > 0) {
             selectedResultsElection = elData[0];
             renderResults(selectedResultsElection);
@@ -771,14 +771,14 @@ async function renderResults(election) {
 
     try {
         // Fetch summary results
-        const { data: results, error } = await supabase.rpc('get_admin_election_summary', { election_id: election.id });
+        const { data: results, error } = await insforge.database.rpc('get_admin_election_summary', { election_id: election.id });
 
         if (error) {
             throw error;
         }
 
         // Fetch turnout data
-        const { data: turnout } = await supabase.rpc('get_election_turnout', { election_id: election.id });
+        const { data: turnout } = await insforge.database.rpc('get_election_turnout', { election_id: election.id });
 
         // Render turnout cards
         renderTurnoutCards(turnoutEl, turnout, election);
