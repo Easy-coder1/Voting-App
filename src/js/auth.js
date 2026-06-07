@@ -350,12 +350,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Redirect based on role — use replace() on mobile to avoid the browser
-                // holding the login page in the back-stack and re-running scripts.
+                // Redirect based on role
                 const dashboard = profile.role === 'admin'
                     ? '/pages/admin/dashboard.html'
                     : '/pages/member/dashboard.html';
-                window.location.replace(dashboard);
+                window.location.href = dashboard;
 
             } catch (err) {
                 console.error('Login error:', err);
