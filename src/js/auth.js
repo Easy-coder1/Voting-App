@@ -1,4 +1,4 @@
-import { insforge } from './insforge.js';
+import { insforge, isMisconfigured } from './insforge.js';
 
 export function showAlert(type, message) {
     const container = document.getElementById('alert-container');
@@ -77,6 +77,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
 
+    // ── CONFIG CHECK ────────────────────────────────────────────────────────
+    // If environment variables are missing, disable all auth forms and show a
+    // prominent banner so the user knows exactly what is wrong instead of
+    // hitting a vague "Unexpected error" on submit.
+    if (isMisconfigured) {
+        const container = document.getElementById('alert-container');
+        const msgEl = document.getElementById('alert-message');
+        const iconContainer = document.getElementById('alert-icon-container');
+
+        // Re-use the existing alert UI if present
+        if (container && msgEl && iconContainer) {
+            container.classList.remove('hidden');
+            container.classList.add('bg-red-950/40', 'border-red-500/20', 'text-red-300');
+            iconContainer.innerHTML = '<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
+            msgEl.textContent = 'App is not configured: InsForge environment variables are missing. Contact the administrator.';
+        }
+
+        // Disable whichever form is present
+        const btn = document.getElementById('submit-btn');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Configuration Error';
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
     // ── LOGIN ──────────────────────────────────────────────────────────────
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
@@ -92,22 +118,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { data, error } = await insforge.auth.signInWithPassword({ email, password });
 
                 if (error) {
-                    let msg = error.message;
+                    const msg = (error.message || '').toLowerCase();
+                    const code = (error.error || '').toLowerCase();
+
                     if (
-                        msg.toLowerCase().includes('email not confirmed') ||
-                        msg.toLowerCase().includes('email_not_confirmed')
+                        msg.includes('email not confirmed') ||
+                        msg.includes('email_not_confirmed') ||
+                        code === 'email_not_confirmed' ||
+                        code === 'email_not_verified'
                     ) {
                         showAlert('warning',
                             'Your email address has not been confirmed yet. ' +
-                            'Please check your inbox (and spam folder) for a confirmation link from Supabase, ' +
+                            'Please check your inbox (and spam folder) for a confirmation link from InsForge, ' +
                             'then try logging in again.');
                     } else if (
-                        msg.toLowerCase().includes('invalid login credentials') ||
-                        msg.toLowerCase().includes('invalid_credentials')
+                        msg.includes('invalid login credentials') ||
+                        msg.includes('invalid_credentials') ||
+                        msg.includes('invalid email or password') ||
+                        msg.includes('wrong password') ||
+                        code === 'invalid_credentials' ||
+                        code === 'invalid_email_or_password'
                     ) {
                         showAlert('error', 'Incorrect email or password. Please try again.');
+                    } else if (
+                        msg.includes('network') ||
+                        msg.includes('failed to fetch') ||
+                        msg.includes('econnrefused') ||
+                        msg.includes('econnreset')
+                    ) {
+                        showAlert('error', 'Could not reach the authentication server. Please check your internet connection or contact support.');
                     } else {
-                        showAlert('error', msg);
+                        showAlert('error', error.message);
                     }
                     btn.disabled = false;
                     btn.textContent = 'Sign in';
