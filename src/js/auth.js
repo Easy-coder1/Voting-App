@@ -1,4 +1,4 @@
-import { insforge, isMisconfigured } from './insforge.js';
+import { insforge, isMisconfigured, saveLocalSession } from './insforge.js';
 
 // ── PASSWORD TOGGLE ──────────────────────────────────────────────────────
 function initPasswordToggles() {
@@ -323,24 +323,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // Persist the full session (access token + refresh token + user) so it
+                // survives page navigation even when mobile Tracking Prevention blocks
+                // the cross-origin refresh-token cookie set by InsForge.
+                if (data?.accessToken && data?.user) {
+                    saveLocalSession(data.accessToken, data.refreshToken ?? null, data.user);
+                }
+
                 setLoading(btn, true, 'Loading profile...');
 
-                // Wait for the session to be fully persisted (fixes mobile race condition
-                // where window.location.href fires before localStorage is written by the SDK).
-                // Mobile devices can take longer to flush localStorage, so we wait up to ~5s.
-                let sessionUser = data.user;
-                for (let i = 0; i < 25; i++) {
-                    const { data: cur } = await insforge.auth.getCurrentUser();
-                    if (cur?.user) { sessionUser = cur.user; break; }
-                    await new Promise(r => setTimeout(r, 200));
-                }
+                // signInWithPassword already saved the session to tokenManager internally,
+                // so data.user is reliable — no polling loop needed.
+                const sessionUser = data.user;
                 if (!sessionUser) {
                     showAlert('error', 'Signed in, but the session could not be established. Please try again.');
                     setLoading(btn, false, 'Sign in');
                     return;
                 }
 
-                // Ensure profile exists
+                // Ensure profile exists in the InsForge database
                 const profile = await ensureProfile(sessionUser);
 
                 if (!profile) {
