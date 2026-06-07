@@ -5,8 +5,10 @@ import { insforge } from './js/insforge.js'
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: currentUserData } = await insforge.auth.getCurrentUser()
     
-    // Check if we are on the landing page and have a session
-    if (currentUserData?.user && window.location.pathname === '/') {
+    // Pre-auth pages: if a user is already signed in and visits the landing,
+    // login, or register page, redirect them straight to their dashboard.
+    const preAuthPages = ['/', '/pages/login.html', '/pages/register.html']
+    if (currentUserData?.user && preAuthPages.includes(window.location.pathname)) {
         const user = currentUserData.user
         // Fetch role from profile using maybeSingle (doesn't throw on no rows)
         const { data: profile } = await insforge.database
@@ -20,6 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (profile?.role === 'member') {
             window.location.href = '/pages/member/dashboard.html'
         }
-        // If no profile yet, stay on landing page — user can click Login
+        // If no profile yet, stay on current page — user can Login/Register
     }
 })
