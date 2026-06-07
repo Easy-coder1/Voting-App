@@ -47,11 +47,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // 1. Auth Check
         const { data: currentUserData, error: sessionError } = await insforge.auth.getCurrentUser();
-        if (sessionError || !currentUserData) {
+        if (sessionError || !currentUserData?.user) {
             window.location.href = '/pages/login.html';
             return;
         }
-        currentUser = currentUserData;
+        currentUser = currentUserData.user;
 
         // 2. Profile Check
         const profile = await ensureProfile(currentUser);
