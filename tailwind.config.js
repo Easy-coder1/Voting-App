@@ -29,7 +29,12 @@ export default {
           500: '#f59e0b', // Accent amber-500
           600: '#d97706',
           700: '#b45309',
-        }
+        },
+        surface: {
+          DEFAULT: '#ffffff',
+          2: '#f8fafc',
+          3: '#f1f5f9',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
@@ -42,10 +47,13 @@ export default {
         'premium-lg': '0 24px 60px -15px rgba(79, 70, 229, 0.12)',
         'glass': '0 8px 32px 0 rgba(79, 70, 229, 0.08)',
         'glass-dark': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+        'glow': '0 0 24px rgba(99,102,241,0.18)',
+        'card-hover': '0 4px 20px rgba(0,0,0,0.06)',
       },
       borderRadius: {
         '4xl': '2rem',
         '5xl': '2.5rem',
+        '6xl': '3rem',
       }
     },
   },
