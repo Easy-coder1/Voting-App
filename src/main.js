@@ -3,15 +3,16 @@ import { insforge } from './js/insforge.js'
 
 // Simple auth state listener to redirect appropriately
 document.addEventListener('DOMContentLoaded', async () => {
-    const { data: currentUser } = await insforge.auth.getCurrentUser()
+    const { data: currentUserData } = await insforge.auth.getCurrentUser()
     
     // Check if we are on the landing page and have a session
-    if (currentUser && window.location.pathname === '/') {
+    if (currentUserData?.user && window.location.pathname === '/') {
+        const user = currentUserData.user
         // Fetch role from profile using maybeSingle (doesn't throw on no rows)
         const { data: profile } = await insforge.database
             .from('profiles')
             .select('role')
-            .eq('id', currentUser.id)
+            .eq('id', user.id)
             .maybeSingle()
             
         if (profile?.role === 'admin') {
