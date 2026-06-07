@@ -326,12 +326,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 setLoading(btn, true, 'Loading profile...');
 
                 // Wait for the session to be fully persisted (fixes mobile race condition
-                // where window.location.href fires before localStorage is written by the SDK)
+                // where window.location.href fires before localStorage is written by the SDK).
+                // Mobile devices can take longer to flush localStorage, so we wait up to ~5s.
                 let sessionUser = data.user;
-                for (let i = 0; i < 10; i++) {
+                for (let i = 0; i < 25; i++) {
                     const { data: cur } = await insforge.auth.getCurrentUser();
                     if (cur?.user) { sessionUser = cur.user; break; }
-                    await new Promise(r => setTimeout(r, 100));
+                    await new Promise(r => setTimeout(r, 200));
                 }
                 if (!sessionUser) {
                     showAlert('error', 'Signed in, but the session could not be established. Please try again.');
@@ -349,11 +350,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Redirect based on role
+                // Redirect based on role — use replace() on mobile to avoid the browser
+                // holding the login page in the back-stack and re-running scripts.
                 const dashboard = profile.role === 'admin'
                     ? '/pages/admin/dashboard.html'
                     : '/pages/member/dashboard.html';
-                window.location.href = dashboard;
+                window.location.replace(dashboard);
 
             } catch (err) {
                 console.error('Login error:', err);
