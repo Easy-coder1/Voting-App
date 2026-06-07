@@ -157,11 +157,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 btn.textContent = 'Loading profile...';
 
+                // Wait for the session to be fully persisted (fixes mobile race condition
+                // where window.location.href fires before localStorage is written by the SDK)
+                let sessionUser = data.user;
+                for (let i = 0; i < 10; i++) {
+                    const { data: cur } = await insforge.auth.getCurrentUser();
+                    if (cur?.user) { sessionUser = cur.user; break; }
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                if (!sessionUser) {
+                    showAlert('error', 'Signed in, but the session could not be established. Please try again.');
+                    btn.disabled = false;
+                    btn.textContent = 'Sign in';
+                    return;
+                }
+
                 // Ensure profile exists
-                const profile = await ensureProfile(data.user);
+                const profile = await ensureProfile(sessionUser);
 
                 if (!profile) {
-                    console.error('Could not load or create profile for user:', data.user.id);
+                    console.error('Could not load or create profile for user:', sessionUser.id);
                     showAlert('error', 'Could not load your profile. Please try registering again or contact support.');
                     btn.disabled = false;
                     btn.textContent = 'Sign in';
