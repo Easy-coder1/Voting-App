@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Email confirmation is ON
                     showAlert('success',
                         'Registration submitted! Please check your email inbox (and spam folder) ' +
-                        'for a confirmation link. You will be redirected to the login page shortly.');
+                        'for a confirmation link.');
                     btn.textContent = 'Check your email';
                     setTimeout(() => {
                         window.location.href = '/pages/login.html';
