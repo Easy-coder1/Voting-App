@@ -3,86 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Login - NUTFS E-Voting System</title>
+    <title>Login — NUTFS E‑Voting</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
-<body class="bg-cosmic-dark flex items-center justify-center min-h-[100dvh] min-h-screen py-8 sm:py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-    <!-- Ambient Background Glows -->
-    <div class="glow-aura w-[250px] sm:w-[350px] h-[250px] sm:h-[350px] bg-indigo-500/10 top-[-50px] right-[-50px] animate-glow-pulse"></div>
-    <div class="glow-aura w-[200px] sm:w-[300px] h-[200px] sm:h-[300px] bg-violet-600/10 bottom-[-50px] left-[-50px] animate-glow-pulse" style="animation-delay: -3s;"></div>
+<body class="bg-slate-50 flex flex-col min-h-screen relative overflow-x-hidden">
 
-    <div class="max-w-md w-full space-y-6 sm:space-y-8 glass-panel-dark p-6 sm:p-10 rounded-4xl sm:rounded-5xl animate-fade-in relative z-10 pb-safe">
-        <div class="text-center sm:text-left">
-            <div class="flex items-center justify-between mb-6">
-                <a href="/" class="inline-flex items-center text-sm font-bold text-slate-400 hover:text-white transition duration-300">
-                    <svg class="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+    <!-- Ambient Backdrop Glows -->
+    <div class="glow-aura w-[350px] h-[350px] bg-church-200/40 top-[-100px] right-[-80px] animate-glow-pulse"></div>
+    <div class="glow-aura w-[280px] h-[280px] bg-violet-200/30 bottom-[0px] left-[-80px] animate-glow-pulse" style="animation-delay:-3s;"></div>
+
+    <div class="flex flex-1 relative z-10">
+
+        <!-- Left: Brand panel (desktop only) -->
+        <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-church-600 via-church-700 to-violet-800 items-center justify-center p-12 relative overflow-hidden">
+            <!-- Decorative orbs -->
+            <div class="absolute w-[400px] h-[400px] rounded-full bg-white/5 top-[-80px] left-[-80px]"></div>
+            <div class="absolute w-[300px] h-[300px] rounded-full bg-white/5 bottom-[-60px] right-[-60px]"></div>
+
+            <div class="relative z-10 max-w-md text-center text-white">
+                <img src="/images/NUTFS.png" alt="NUTFS Logo" class="h-20 w-auto mx-auto mb-8 rounded-2xl bg-white/10 p-3 backdrop-blur-sm">
+                <h1 class="font-heading text-3xl font-black leading-tight mb-4">
+                    Welcome Back to<br>NUTFS E‑Voting
+                </h1>
+                <p class="text-church-200 text-base leading-relaxed mb-8">
+                    Sign in to cast your ballot, view election results, and participate in your organization's democratic process.
+                </p>
+                <div class="flex items-center justify-center gap-6 text-sm text-church-200/80">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        Secure
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        Fast
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        Private
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Login form -->
+        <div class="flex-1 flex items-center justify-center px-4 sm:px-8 py-10 sm:py-16">
+            <div class="w-full max-w-md animate-fade-in">
+
+                <!-- Mobile logo -->
+                <div class="flex justify-center mb-6 lg:hidden">
+                    <a href="/" class="flex items-center gap-2">
+                        <img src="/images/NUTFS.png" alt="NUTFS Logo" class="h-12 w-auto rounded-xl shadow-sm bg-white p-1 border border-slate-200/50">
+                    </a>
+                </div>
+
+                <!-- Back link -->
+                <a href="/" class="inline-flex items-center text-sm font-semibold text-slate-400 hover:text-slate-700 transition-colors mb-6">
+                    <svg class="mr-1.5 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                     Back to Home
                 </a>
-            </div>
-            <!-- Logo -->
-            <div class="flex justify-center sm:justify-start mb-4">
-                <img src="/images/NUTFS.png" alt="NUTFS Logo" class="h-14 w-auto sm:h-16 rounded-2xl shadow-premium bg-black/20 p-2">
-            </div>
-            <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                Welcome Back
-            </h2>
-            <p class="mt-2 text-sm text-slate-400">
-                Or
-                <a href="/pages/register.html" class="font-bold text-church-400 hover:text-church-300 transition duration-300">
-                    create a new account
-                </a>
-            </p>
-        </div>
-        
-        <!-- Alerts dynamically styled in JS -->
-        <div id="alert-container" class="hidden rounded-2xl p-4 mb-4 border transition-all duration-300 text-sm font-semibold">
-            <div class="flex items-center space-x-2.5">
-                <div class="flex-shrink-0" id="alert-icon-container">
-                    <!-- Dynamic Alert Icon -->
-                </div>
-                <div class="flex-1">
-                    <p id="alert-message" class="leading-snug"></p>
-                </div>
-            </div>
-        </div>
 
-        <form id="login-form" class="mt-8 space-y-6">
-            <div class="space-y-4">
-                <!-- Email Field -->
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206"></path></svg>
-                    </div>
-                    <label for="email-address" class="sr-only">Email address</label>
-                    <input id="email-address" name="email" type="email" autocomplete="email" required class="premium-input-dark pl-12" placeholder="Email address">
+                <div>
+                    <h2 class="font-heading text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Welcome Back</h2>
+                    <p class="mt-2 text-sm text-slate-500">
+                        Don't have an account?
+                        <a href="/pages/register.html" class="font-bold text-church-600 hover:text-church-500 transition-colors">Create one</a>
+                    </p>
                 </div>
-                
-                <!-- Password Field -->
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+
+                <!-- Alerts -->
+                <div id="alert-container" class="hidden rounded-2xl p-4 mt-6 border transition-all duration-300 text-sm font-semibold">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="flex-shrink-0" id="alert-icon-container"></div>
+                        <div class="flex-1"><p id="alert-message" class="leading-snug"></p></div>
                     </div>
-                    <label for="password" class="sr-only">Password</label>
-                    <input id="password" name="password" type="password" autocomplete="current-password" required class="premium-input-dark pl-12 pr-12" placeholder="Password">
-                    <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-300 transition-colors duration-200" aria-label="Show password" tabindex="-1">
-                        <!-- Eye (shown) -->
-                        <svg id="toggle-password-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </div>
+
+                <form id="login-form" class="mt-8 space-y-5">
+                    <div class="relative m-field" id="field-email">
+                        <input id="email-address" name="email" type="email" autocomplete="email" required placeholder=" " class="peer">
+                        <label for="email-address" class="peer-focus:text-church-600 peer-focus:font-semibold peer-not-placeholder-shown:text-church-600 peer-not-placeholder-shown:font-semibold">Email address</label>
+                    </div>
+
+                    <div>
+                        <div class="relative m-field" id="field-password">
+                            <input id="password" name="password" type="password" autocomplete="current-password" required placeholder=" " class="peer pr-12">
+                            <label for="password" class="peer-focus:text-church-600 peer-focus:font-semibold peer-not-placeholder-shown:text-church-600 peer-not-placeholder-shown:font-semibold">Password</label>
+                            <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors" aria-label="Show password" tabindex="-1">
+                                <svg id="toggle-password-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex justify-end mt-1.5">
+                            <a href="#" class="text-xs font-semibold text-slate-400 hover:text-church-600 transition-colors">Forgot password?</a>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="w-full flex justify-center items-center py-4 px-6 rounded-full text-base font-bold text-white bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 shadow-premium hover:shadow-premium-lg transition-all duration-300 active:scale-95 mt-2">
+                        <span id="submit-btn-text">Sign In</span>
+                        <svg id="submit-btn-spinner" class="hidden w-5 h-5 ml-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                         </svg>
                     </button>
-                </div>
+                </form>
             </div>
-
-            <div>
-                <button type="submit" id="submit-btn" class="w-full flex justify-center py-4 px-6 rounded-full text-base font-bold text-white bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 shadow-premium hover:shadow-premium-lg transition-all duration-300 active:scale-95">
-                    <span id="submit-btn-text">Sign in</span>
-                    <svg id="submit-btn-spinner" class="hidden w-5 h-5 ml-2 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 
     <script type="module" src="/src/js/auth.js"></script>
