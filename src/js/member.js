@@ -8,6 +8,32 @@ let candidates = [];
 let userVotes = [];
 let countdownInterval = null;
 
+// ── TOAST SYSTEM (WIMP: Notification) ────────────────────────────────
+function showToast(type, message) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `app-toast app-toast-${type}`;
+    toast.innerHTML = `
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            ${type === 'success'
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+            }
+        </svg>
+        <span>${message}</span>
+    `;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-8px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
 async function ensureProfile(user) {
     const { data: profile, error: fetchError } = await insforge.database
         .from('profiles')
@@ -21,8 +47,6 @@ async function ensureProfile(user) {
 
     if (profile) return profile;
 
-    // No profile found — create one from user metadata
-    console.log('No profile found for user, creating one...');
     const fullName = user.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
     const phone = user.user_metadata?.phone || null;
 
@@ -96,7 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Dashboard init error:', err);
         const panel = document.getElementById('panel-content');
         if (panel) {
-            panel.innerHTML = `<div style="text-align:center;padding:40px 16px;color:#b91c1c;font-weight:600;font-size:14px">Failed to load dashboard: ${err.message}.<br>Please try refreshing or <a style="color:#6366f1;text-decoration:underline" href="/pages/login.html">log in again</a>.</div>`;
+            panel.innerHTML = `<div class="app-empty"><div class="app-empty-icon" style="background:var(--red-dim);border-color:rgba(244,63,94,0.15)"><svg width="24" height="24" fill="none" stroke="var(--red)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><span class="app-empty-title" style="color:var(--red)">Failed to load dashboard</span><span class="app-empty-sub">${err.message}. Please try refreshing or <a style="color:#6366f1;text-decoration:underline" href="/pages/login.html">log in again</a>.</span></div>`;
         }
     }
 });
@@ -156,27 +180,27 @@ async function loadUserVotes() {
 
 function updateStatusBanner() {
     const banner = document.getElementById('status-banner');
+    if (!banner) return;
     if (currentProfile.account_status !== 'approved' || !currentProfile.voting_rights) {
-        banner.className = 'alert-banner error visible';
+        banner.className = 'app-alert app-alert-error visible';
         banner.innerHTML = `
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             <span>Your account is not currently approved for voting. Please contact the Election Committee.</span>
         `;
     } else {
-        banner.className = 'alert-banner';
+        banner.className = 'app-alert';
         banner.innerHTML = '';
     }
 }
 
 function renderStats() {
-    // Find the stat row container — it's injected dynamically before the sidebar cards
     let statRow = document.getElementById('stat-row');
     if (!statRow) {
-        const sidebar = document.querySelector('.sidebar');
+        const sidebar = document.querySelector('.app-sidebar');
         if (sidebar) {
             statRow = document.createElement('div');
             statRow.id = 'stat-row';
-            statRow.className = 'stat-row';
+            statRow.className = 'app-stat-row';
             sidebar.insertBefore(statRow, sidebar.firstChild);
         }
     }
@@ -188,44 +212,42 @@ function renderStats() {
     const isRestricted = currentProfile.account_status !== 'approved' || !currentProfile.voting_rights;
 
     const statusColor = isOpen ? 'var(--green-dim)' : 'var(--surface-3)';
-    const statusIconColor = isOpen ? 'var(--green)' : 'var(--text-3)';
     const statusBg = isOpen ? 'var(--green)' : 'var(--text-3)';
 
     const countColor = isRestricted ? 'var(--red)' : (castVotes >= totalPos && totalPos > 0) ? 'var(--green)' : 'var(--brand)';
 
     statRow.innerHTML = `
-        <div class="stat-card">
-            <div class="stat-icon" style="background:${statusColor}"><div style="width:10px;height:10px;border-radius:50%;background:${statusBg}"></div></div>
-            <div class="stat-label">Status</div>
-            <div class="stat-value">${isOpen ? 'Open' : activeElection ? 'Closed' : '—'}</div>
-            <div class="stat-sub">${activeElection ? activeElection.title : 'No election'}</div>
+        <div class="app-stat-card">
+            <div class="app-stat-icon" style="background:${statusColor}"><div style="width:10px;height:10px;border-radius:50%;background:${statusBg}"></div></div>
+            <div class="app-stat-label">Status</div>
+            <div class="app-stat-value">${isOpen ? 'Open' : activeElection ? 'Closed' : '—'}</div>
+            <div class="app-stat-sub">${activeElection ? activeElection.title : 'No election'}</div>
         </div>
-        <div class="stat-card" id="stat-countdown-card">
-            <div class="stat-icon" style="background:var(--brand-dim)"><svg width="16" height="16" fill="none" stroke="var(--brand)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-            <div class="stat-label">Time Left</div>
-            <div class="stat-value" id="stat-countdown">—</div>
-            <div class="stat-sub" id="stat-countdown-sub">${isOpen ? 'until election closes' : 'Election ended'}</div>
+        <div class="app-stat-card" id="stat-countdown-card">
+            <div class="app-stat-icon" style="background:var(--brand-dim)"><svg width="16" height="16" fill="none" stroke="var(--brand)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div class="app-stat-label">Time Left</div>
+            <div class="app-stat-value" id="stat-countdown">—</div>
+            <div class="app-stat-sub" id="stat-countdown-sub">${isOpen ? 'until election closes' : 'Election ended'}</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background:var(--gold-dim)"><svg width="16" height="16" fill="none" stroke="var(--gold)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-            <div class="stat-label">Progress</div>
-            <div class="stat-value" style="color:${countColor}">${castVotes} / ${totalPos}</div>
-            <div class="stat-sub">${totalPos === 0 ? 'No positions yet' : isRestricted ? 'Restricted' : (castVotes >= totalPos ? 'All done!' : 'positions voted')}</div>
+        <div class="app-stat-card">
+            <div class="app-stat-icon" style="background:var(--gold-dim)"><svg width="16" height="16" fill="none" stroke="var(--gold)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div class="app-stat-label">Progress</div>
+            <div class="app-stat-value" style="color:${countColor}">${castVotes} / ${totalPos}</div>
+            <div class="app-stat-sub">${totalPos === 0 ? 'No positions yet' : isRestricted ? 'Restricted' : (castVotes >= totalPos ? 'All done!' : 'positions voted')}</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background:${isRestricted ? 'var(--red-dim)' : 'var(--green-dim)'}">
+        <div class="app-stat-card">
+            <div class="app-stat-icon" style="background:${isRestricted ? 'var(--red-dim)' : 'var(--green-dim)'}">
                 ${isRestricted
-                    ? '<svg width="16" height="16" fill="none" stroke="var(--red)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>'
-                    : '<svg width="16" height="16" fill="none" stroke="var(--green)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>'
+                    ? '<svg width="16" height="16" fill="none" stroke="var(--red)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>'
+                    : '<svg width="16" height="16" fill="none" stroke="var(--green)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>'
                 }
             </div>
-            <div class="stat-label">Account</div>
-            <div class="stat-value">${isRestricted ? 'Restricted' : 'Approved'}</div>
-            <div class="stat-sub">${isRestricted ? 'Contact committee' : 'Ready to vote'}</div>
+            <div class="app-stat-label">Account</div>
+            <div class="app-stat-value">${isRestricted ? 'Restricted' : 'Approved'}</div>
+            <div class="app-stat-sub">${isRestricted ? 'Contact committee' : 'Ready to vote'}</div>
         </div>
     `;
 
-    // Start countdown in stat card
     if (isOpen) {
         startStatCountdown(new Date(activeElection.end_date).getTime());
     }
@@ -267,29 +289,29 @@ function renderElectionInfo() {
 
     infoContainer.innerHTML = `
         <div>
-            <div class="info-row">
-                <span class="info-label">Title</span>
-                <span class="info-value" style="max-width:160px">${activeElection.title}</span>
+            <div class="app-info-row">
+                <span class="app-info-label">Title</span>
+                <span class="app-info-value" style="max-width:160px">${activeElection.title}</span>
             </div>
-            <div class="info-row">
-                <span class="info-label">Status</span>
-                <span class="badge ${isOpen ? 'open' : 'closed'}">${activeElection.status}</span>
+            <div class="app-info-row">
+                <span class="app-info-label">Status</span>
+                <span class="app-badge ${isOpen ? 'app-badge-open' : 'app-badge-closed'}">${activeElection.status}</span>
             </div>
-            <div class="info-row">
-                <span class="info-label">Closes</span>
-                <span class="info-value">${endDate}</span>
-            </div>
-        </div>
-        <div id="countdown" class="countdown-wrap" style="${isOpen ? '' : 'display:none'}">
-            <div class="countdown-label">Time Remaining</div>
-            <div class="countdown-grid">
-                <div class="countdown-unit"><span class="countdown-num" id="cd-days">—</span><span class="countdown-seg">Days</span></div>
-                <div class="countdown-unit"><span class="countdown-num" id="cd-hours">—</span><span class="countdown-seg">Hours</span></div>
-                <div class="countdown-unit"><span class="countdown-num" id="cd-mins">—</span><span class="countdown-seg">Min</span></div>
-                <div class="countdown-unit"><span class="countdown-num" id="cd-secs">—</span><span class="countdown-seg">Sec</span></div>
+            <div class="app-info-row">
+                <span class="app-info-label">Closes</span>
+                <span class="app-info-value">${endDate}</span>
             </div>
         </div>
-        ${!isOpen ? '<div class="countdown-wrap" style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--text-3)">Election Closed</span></div>' : ''}
+        <div class="app-countdown" id="countdown" style="${isOpen ? '' : 'display:none'}">
+            <div class="app-countdown-label">Time Remaining</div>
+            <div class="app-countdown-grid">
+                <div class="app-countdown-unit"><span class="app-countdown-num" id="cd-days">—</span><span class="app-countdown-seg">Days</span></div>
+                <div class="app-countdown-unit"><span class="app-countdown-num" id="cd-hours">—</span><span class="app-countdown-seg">Hours</span></div>
+                <div class="app-countdown-unit"><span class="app-countdown-num" id="cd-mins">—</span><span class="app-countdown-seg">Min</span></div>
+                <div class="app-countdown-unit"><span class="app-countdown-num" id="cd-secs">—</span><span class="app-countdown-seg">Sec</span></div>
+            </div>
+        </div>
+        ${!isOpen ? '<div class="app-countdown" style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--text-3)">Election Closed</span></div>' : ''}
     `;
 
     if (isOpen) {
@@ -330,9 +352,9 @@ function renderProgress() {
     positions.forEach(pos => {
         const hasVoted = userVotes.includes(pos.id);
         const li = document.createElement('li');
-        li.className = `stepper-item${hasVoted ? ' voted' : ''}`;
+        li.className = `app-stepper-item${hasVoted ? ' voted' : ''}`;
         li.innerHTML = `
-            <span class="stepper-num">${hasVoted ? '✓' : '—'}</span>
+            <span class="app-stepper-num">${hasVoted ? '✓' : '—'}</span>
             <span style="flex:1">${pos.position_name}</span>
         `;
         list.appendChild(li);
@@ -342,11 +364,11 @@ function renderProgress() {
 function renderMessage(msg) {
     document.getElementById('panel-label').textContent = 'Information';
     document.getElementById('panel-content').innerHTML = `
-        <div class="empty-state">
-            <div class="empty-icon" style="background:var(--surface-3);border:1px solid var(--border)">
-                <svg width="24" height="24" fill="none" stroke="var(--text-3)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div class="app-empty">
+            <div class="app-empty-icon" style="background:var(--surface-3);border:1px solid var(--border)">
+                <svg width="24" height="24" fill="none" stroke="var(--text-3)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
-            <span class="empty-sub">${msg}</span>
+            <span class="app-empty-sub">${msg}</span>
         </div>
     `;
 }
@@ -361,12 +383,12 @@ function renderBallot() {
 
     if (!isEligible) {
         content.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon" style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.15)">
-                    <svg width="24" height="24" fill="none" stroke="var(--red)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <div class="app-empty">
+                <div class="app-empty-icon" style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.15)">
+                    <svg width="24" height="24" fill="none" stroke="var(--red)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 </div>
-                <span class="empty-title">Voting Restricted</span>
-                <span class="empty-sub">Your account must be approved with active voting rights to vote.</span>
+                <span class="app-empty-title">Voting Restricted</span>
+                <span class="app-empty-sub">Your account must be approved with active voting rights to vote.</span>
             </div>
         `;
         return;
@@ -374,28 +396,28 @@ function renderBallot() {
 
     if (cast >= total && total > 0) {
         content.innerHTML = `
-            <div class="vote-hero">
-                <div class="check-circle">✓</div>
-                <span class="empty-title">All Votes Submitted!</span>
-                <span class="empty-sub">Thank you for participating. You have voted in all ${total} positions. Results will be published once the election closes.</span>
+            <div class="app-hero">
+                <div class="w-[68px] h-[68px] rounded-full bg-emerald-50 border-2 border-emerald-200/60 flex items-center justify-center text-[26px] animate-pop-in">✓</div>
+                <span class="app-hero-title">All Votes Submitted!</span>
+                <span class="app-hero-sub">Thank you for participating. You have voted in all ${total} positions. Results will be published once the election closes.</span>
             </div>
         `;
     } else {
         const pct = total > 0 ? Math.round((cast / total) * 100) : 0;
         content.innerHTML = `
-            <div class="vote-hero">
-                <div class="vote-hero-icon">
-                    <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <div class="app-hero">
+                <div class="app-hero-icon">
+                    <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 </div>
-                <span class="vote-hero-title">Voting is Live</span>
-                <span class="vote-hero-sub">Cast your secure ballot today. You have completed <strong>${cast} of ${total}</strong> positions.</span>
-                <div class="progress-track">
-                    <div class="progress-fill" style="width:${pct}%"></div>
+                <span class="app-hero-title">Voting is Live</span>
+                <span class="app-hero-sub">Cast your secure ballot today. You have completed <strong>${cast} of ${total}</strong> positions.</span>
+                <div class="app-progress-track">
+                    <div class="app-progress-fill" style="width:${pct}%"></div>
                 </div>
-                <span class="progress-label">${pct}% complete</span>
-                <a href="/pages/member/voting.html" class="cta-btn">
+                <span class="text-xs font-semibold text-slate-400 mt-1">${pct}% complete</span>
+                <a href="/pages/member/voting.html" class="app-btn-primary relative overflow-hidden">
                     Enter Voting Booth
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </a>
             </div>
         `;
@@ -406,8 +428,8 @@ async function renderResults() {
     document.getElementById('panel-label').textContent = 'Election Results';
     const content = document.getElementById('panel-content');
     content.innerHTML = `
-        <div class="skeleton">
-            <div class="spinner"></div>
+        <div class="app-skeleton">
+            <div class="app-spinner"></div>
             <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em">Tallying votes</span>
         </div>
     `;
@@ -416,12 +438,12 @@ async function renderResults() {
 
     if (error) {
         content.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon" style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.15)">
-                    <svg width="24" height="24" fill="none" stroke="var(--red)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="app-empty">
+                <div class="app-empty-icon" style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.15)">
+                    <svg width="24" height="24" fill="none" stroke="var(--red)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
-                <span class="empty-title" style="color:var(--red)">Failed to load results</span>
-                <span class="empty-sub">RPC function 'get_election_results' may not be set up yet. Contact support.</span>
+                <span class="app-empty-title" style="color:var(--red)">Failed to load results</span>
+                <span class="app-empty-sub">RPC function 'get_election_results' may not be set up yet. Contact support.</span>
             </div>
         `;
         return;
@@ -441,11 +463,11 @@ async function renderResults() {
         const totalVotesInPos = cans.reduce((sum, c) => sum + c.vote_count, 0);
 
         const section = document.createElement('div');
-        section.className = 'pos-section';
+        section.className = 'app-pos-section';
 
         let html = `
-            <div class="pos-header">
-                <span class="pos-name">${posName}</span>
+            <div class="app-pos-header">
+                <span class="app-pos-name">${posName}</span>
                 <span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em">${totalVotesInPos} votes cast</span>
             </div>
             <div style="display:flex;flex-direction:column;gap:10px">
@@ -456,7 +478,7 @@ async function renderResults() {
             const pct = totalVotesInPos > 0 ? Math.round((c.vote_count / totalVotesInPos) * 100) : 0;
 
             html += `
-                <div class="result-card${isWinner ? ' winner' : ''}">
+                <div class="app-result-card${isWinner ? ' winner' : ''}">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                         <span style="font-size:14px;font-weight:700;color:var(--text-1);display:flex;align-items:center;gap:6px">
                             ${c.candidate_name}
@@ -464,8 +486,8 @@ async function renderResults() {
                         </span>
                         <span style="font-size:13px;font-weight:700;color:var(--text-2)">${c.vote_count} <span style="font-size:11px;color:var(--text-3)">(${pct}%)</span></span>
                     </div>
-                    <div class="result-bar-track">
-                        <div class="result-bar-fill ${isWinner ? 'gold' : 'brand'}" style="width:${pct}%"></div>
+                    <div class="app-result-bar-track">
+                        <div class="app-result-bar-fill ${isWinner ? 'gold' : 'brand'}" style="width:${pct}%"></div>
                     </div>
                 </div>
             `;

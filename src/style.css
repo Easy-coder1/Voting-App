@@ -1,117 +1,594 @@
+/* ════════════════════════════════════════════════════════════════════════
+   NUTFS E‑Voting — Unified Design System
+   ────────────────────────────────────────────────────────────────────────
+   Single source of truth for ALL pages (public + member + admin)
+   ════════════════════════════════════════════════════════════════════════ */
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
-@import './css/member.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ════════════════════════════════════════════════════════════════════════
+   BASE LAYER
+   ════════════════════════════════════════════════════════════════════════ */
+
 @layer base {
-  body {
-    @apply bg-slate-50 text-slate-900 antialiased font-sans selection:bg-church-200 selection:text-church-900;
+  :root {
+    /* CSS custom properties for dynamic JS use */
+    --brand:       #6366f1;
+    --brand-2:     #818cf8;
+    --brand-dim:   rgba(99,102,241,0.10);
+    --brand-glow:  rgba(99,102,241,0.18);
+    --gold:        #f59e0b;
+    --gold-dim:    rgba(245,158,11,0.10);
+    --green:       #10b981;
+    --green-dim:   rgba(16,185,129,0.10);
+    --red:         #f43f5e;
+    --red-dim:     rgba(244,63,94,0.08);
+    --surface:     #ffffff;
+    --surface-2:   #f8fafc;
+    --surface-3:   #f1f5f9;
+    --border:      rgba(0,0,0,0.06);
+    --border-2:    rgba(0,0,0,0.10);
+    --text-1:      #0f172a;
+    --text-2:      #475569;
+    --text-3:      #94a3b8;
+    --radius:      16px;
+    --radius-lg:   24px;
+    --radius-xl:   32px;
   }
-  
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased font-sans min-h-dvh flex flex-col overflow-x-hidden selection:bg-church-200 selection:text-church-900;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading tracking-tight;
   }
-  
-  /* Remove the native tap highlight flash on mobile devices */
+
   * {
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+  }
+
+  /* Safe area support */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+  .pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Focus visible – keyboard-only focus indicators */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-church-500 ring-offset-2 ring-offset-slate-50 rounded-lg;
+  }
 }
 
-/* Custom premium scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+/* ════════════════════════════════════════════════════════════════════════
+   COMPONENT LAYER — Shared Design System Components
+   ════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* ───── GLOW AURAS ───── */
+  .glow-aura {
+    @apply absolute rounded-full pointer-events-none z-0;
+    filter: blur(100px);
+  }
+
+  /* ───── GLASS PANELS ───── */
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-premium;
+  }
+  .glass-panel-dark {
+    @apply bg-slate-900/65 backdrop-blur-xl border border-slate-800/80 shadow-glass-dark;
+  }
+
+  /* ───── TOPBAR / NAVBAR ───── */
+  .app-topbar {
+    @apply sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8;
+  }
+  .app-topbar-brand {
+    @apply flex items-center gap-2.5;
+  }
+  .app-topbar-brand img {
+    @apply h-8 w-auto rounded-lg shadow-sm bg-white p-0.5;
+  }
+  .app-topbar-brand-text {
+    @apply text-lg font-black tracking-tight font-heading bg-gradient-to-r from-church-700 to-church-500 bg-clip-text text-transparent hidden sm:inline;
+  }
+  .app-topbar-right {
+    @apply flex items-center gap-3;
+  }
+
+  /* ───── USER PILL ───── */
+  .app-user-pill {
+    @apply flex items-center gap-2 bg-slate-100/60 border border-slate-200/50 rounded-full py-1.5 pl-2 pr-4;
+  }
+  .app-user-avatar {
+    @apply w-7 h-7 rounded-full bg-gradient-to-br from-church-500 to-violet-400 flex items-center justify-center text-[11px] font-bold text-white uppercase flex-shrink-0;
+  }
+  .app-user-name {
+    @apply text-sm font-semibold text-slate-900 hidden sm:block;
+  }
+
+  /* ───── BUTTONS ───── */
+  .app-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-white bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 shadow-premium hover:shadow-premium-lg transition-all duration-300 active:scale-95 min-h-touch;
+  }
+  .app-btn-primary::after {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.10), transparent);
+  }
+  .app-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all duration-300 active:scale-95 min-h-touch;
+  }
+  .app-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-slate-600 hover:text-church-600 hover:bg-church-50 transition-all duration-200 min-h-touch;
+  }
+  .app-btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-red-600 bg-red-50 border border-red-200/60 hover:bg-red-100 hover:border-red-300 transition-all duration-300 active:scale-95 min-h-touch;
+  }
+
+  /* ───── SKELETON LOADER ───── */
+  .app-skeleton {
+    @apply flex flex-col items-center justify-center gap-4 py-16;
+  }
+  .app-spinner {
+    @apply w-8 h-8 border-2 border-slate-200 border-t-church-500 rounded-full animate-spin;
+  }
+
+  /* ───── CARD ───── */
+  .app-card {
+    @apply bg-white border border-slate-200/60 rounded-2xl shadow-soft transition-all duration-300;
+  }
+  .app-card:hover {
+    @apply border-slate-300/60;
+  }
+  .app-card-header {
+    @apply flex items-center justify-between px-6 pt-5 pb-0 mb-3;
+  }
+  .app-card-title {
+    @apply flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest;
+  }
+  .app-card-dot {
+    @apply w-1.5 h-1.5 rounded-full flex-shrink-0;
+  }
+  .app-card-body {
+    @apply px-6 pb-6;
+  }
+  .app-card-strip {
+    @apply h-0.5 bg-gradient-to-r from-church-500 via-violet-400 to-church-400;
+  }
+
+  /* ───── STAT CARD ───── */
+  .app-stat-row {
+    @apply grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5;
+  }
+  .app-stat-card {
+    @apply bg-white border border-slate-200/60 rounded-xl p-4 transition-all duration-200 hover:border-slate-300/60 hover:shadow-elevated;
+  }
+  .app-stat-icon {
+    @apply w-9 h-9 rounded-xl flex items-center justify-center mb-2.5;
+  }
+  .app-stat-label {
+    @apply text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5;
+  }
+  .app-stat-value {
+    @apply font-heading text-xl font-extrabold text-slate-900 leading-tight;
+  }
+  .app-stat-sub {
+    @apply text-[11px] font-medium text-slate-400 mt-0.5;
+  }
+
+  /* ───── FORM INPUTS ───── */
+  .app-input-wrap {
+    @apply relative;
+  }
+  .app-input {
+    @apply block w-full px-5 py-4 bg-slate-100/60 border border-slate-200/50 rounded-2xl placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-church-500 focus:border-transparent focus:bg-white transition-all duration-300 text-base;
+  }
+  .app-input-floating {
+    @apply block w-full pt-5 pb-2 px-4 bg-slate-100/60 border border-slate-200/50 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-church-500 focus:border-transparent focus:bg-white transition-all duration-300 text-base min-h-[52px];
+  }
+  .app-label-floating {
+    @apply absolute left-4 top-3.5 text-sm text-slate-400 font-medium pointer-events-none transition-all duration-200;
+  }
+  .app-input-floating:focus ~ .app-label-floating,
+  .app-input-floating:not(:placeholder-shown) ~ .app-label-floating {
+    @apply text-xs text-church-600 font-semibold -translate-y-3;
+  }
+  .app-input-error {
+    @apply ring-2 ring-red-500/70 border-red-500/60 !important;
+  }
+  .app-input-error-text {
+    @apply text-xs font-semibold text-red-500 mt-1.5 ml-1 leading-tight;
+  }
+
+  /* ───── PASSWORD STRENGTH ───── */
+  .app-strength-bar {
+    @apply h-1 rounded-full bg-slate-200 overflow-hidden mt-2;
+  }
+  .app-strength-fill {
+    @apply h-full rounded-full transition-all duration-300;
+  }
+  .app-strength-fill.weak   { @apply w-1/4 bg-red-500; }
+  .app-strength-fill.fair   { @apply w-1/2 bg-amber-500; }
+  .app-strength-fill.good   { @apply w-3/4 bg-green-500; }
+  .app-strength-fill.strong { @apply w-full bg-emerald-500; }
+  .app-strength-label {
+    @apply text-xs font-semibold mt-1;
+  }
+
+  /* ───── BADGE ───── */
+  .app-badge {
+    @apply inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full;
+  }
+  .app-badge-open {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200/60;
+  }
+  .app-badge-open::before {
+    content: '';
+    @apply w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-dot;
+  }
+  .app-badge-closed {
+    @apply bg-slate-100 text-slate-400 border border-slate-200;
+  }
+  .app-badge-restricted {
+    @apply bg-red-50 text-red-600 border border-red-200/60;
+  }
+
+  /* ───── ALERT BANNER ───── */
+  .app-alert {
+    @apply hidden items-start gap-3 rounded-2xl p-4 text-sm font-semibold border;
+  }
+  .app-alert.visible { @apply flex; }
+  .app-alert-error  { @apply bg-red-50 text-red-700 border-red-200/60; }
+  .app-alert-warning { @apply bg-amber-50 text-amber-700 border-amber-200/60; }
+  .app-alert-success { @apply bg-emerald-50 text-emerald-700 border-emerald-200/60; }
+
+  /* ───── TOAST NOTIFICATION ───── */
+  .app-toast-container {
+    @apply fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-[200] flex flex-col gap-3 pointer-events-none;
+  }
+  .app-toast {
+    @apply flex items-start gap-3 px-5 py-4 rounded-2xl shadow-soft-lg border text-sm font-semibold pointer-events-auto max-w-sm animate-fade-in-up;
+  }
+  .app-toast-success { @apply bg-emerald-50 text-emerald-700 border-emerald-200/60; }
+  .app-toast-error   { @apply bg-red-50 text-red-700 border-red-200/60; }
+  .app-toast-info    { @apply bg-church-50 text-church-700 border-church-200/60; }
+
+  /* ───── INFO ROW ───── */
+  .app-info-row {
+    @apply flex items-center justify-between py-2.5 border-b border-slate-100;
+  }
+  .app-info-row:last-child { @apply border-b-0; }
+  .app-info-label {
+    @apply text-xs font-medium text-slate-400;
+  }
+  .app-info-value {
+    @apply text-sm font-semibold text-slate-600 text-right;
+  }
+
+  /* ───── COUNTDOWN ───── */
+  .app-countdown {
+    @apply bg-church-50/60 border border-church-200/60 rounded-xl p-4;
+  }
+  .app-countdown-label {
+    @apply text-[10px] font-bold text-church-600 uppercase tracking-widest text-center mb-2;
+  }
+  .app-countdown-grid {
+    @apply grid grid-cols-4 gap-2;
+  }
+  .app-countdown-unit {
+    @apply flex flex-col items-center gap-0.5;
+  }
+  .app-countdown-num {
+    @apply font-heading text-2xl font-black text-slate-900 leading-none;
+  }
+  .app-countdown-seg {
+    @apply text-[9px] font-semibold text-slate-400 uppercase tracking-wider;
+  }
+
+  /* ───── STEPPER / PROGRESS LIST ───── */
+  .app-stepper {
+    @apply flex flex-col gap-1.5;
+  }
+  .app-stepper-item {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200/60 text-sm font-medium text-slate-600 transition-all duration-200;
+  }
+  .app-stepper-item.voted {
+    @apply bg-emerald-50 border-emerald-200/60 text-emerald-600;
+  }
+  .app-stepper-item.active {
+    @apply bg-church-50 border-church-200/60 text-church-600 font-semibold;
+  }
+  .app-stepper-num {
+    @apply w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold bg-slate-200 text-slate-400 flex-shrink-0 transition-all duration-200;
+  }
+  .app-stepper-item.voted .app-stepper-num {
+    @apply bg-emerald-500 text-white;
+  }
+  .app-stepper-item.active .app-stepper-num {
+    @apply bg-church-500 text-white;
+  }
+
+  /* ───── PROGRESS BAR ───── */
+  .app-progress-track {
+    @apply w-full h-2 bg-slate-100 rounded-full overflow-hidden;
+  }
+  .app-progress-fill {
+    @apply h-full rounded-full bg-gradient-to-r from-church-500 to-violet-400;
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* ───── VOTE HERO / EMPTY STATE ───── */
+  .app-hero {
+    @apply flex flex-col items-center text-center gap-5 py-4;
+  }
+  .app-hero-icon {
+    @apply w-16 h-16 rounded-[22px] flex items-center justify-center bg-church-50/60 border border-church-200/60 text-church-400 shadow-glow;
+  }
+  .app-hero-title {
+    @apply font-heading text-2xl sm:text-3xl font-black text-slate-900;
+  }
+  .app-hero-sub {
+    @apply text-sm text-slate-500 max-w-sm leading-relaxed;
+  }
+
+  /* ───── EMPTY STATE ───── */
+  .app-empty {
+    @apply flex flex-col items-center text-center gap-4 py-12 px-4;
+  }
+  .app-empty-icon {
+    @apply w-14 h-14 rounded-xl flex items-center justify-center bg-slate-100 border border-slate-200;
+  }
+  .app-empty-title {
+    @apply font-heading text-xl font-extrabold text-slate-900;
+  }
+  .app-empty-sub {
+    @apply text-sm text-slate-500 max-w-xs leading-relaxed;
+  }
+
+  /* ───── RESULT CARDS ───── */
+  .app-result-card {
+    @apply bg-white border border-slate-200/60 rounded-xl p-4 transition-all duration-200;
+  }
+  .app-result-card.winner {
+    @apply bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200/60;
+  }
+  .app-result-bar-track {
+    @apply h-1 bg-slate-100 rounded-full overflow-hidden;
+  }
+  .app-result-bar-fill {
+    @apply h-full rounded-full;
+    transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .app-result-bar-fill.gold  { @apply bg-gradient-to-r from-amber-400 to-yellow-300; }
+  .app-result-bar-fill.brand { @apply bg-gradient-to-r from-church-500 to-church-400; }
+
+  /* ───── POSITION SECTION ───── */
+  .app-pos-section {
+    @apply mb-8 pb-6 border-b border-slate-200/60;
+  }
+  .app-pos-section:last-child { @apply mb-0 border-b-0 pb-0; }
+  .app-pos-header {
+    @apply flex items-center justify-between mb-4;
+  }
+  .app-pos-name {
+    @apply font-heading text-lg font-extrabold text-slate-900;
+  }
+  .app-pos-status {
+    @apply inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full;
+  }
+  .app-pos-pending { @apply bg-church-50 text-church-600 border border-church-200/60; }
+  .app-pos-done     { @apply bg-emerald-50 text-emerald-600 border border-emerald-200/60; }
+  .app-pos-locked   { @apply bg-slate-100 text-slate-400 border border-slate-200; }
+
+  /* ───── CANDIDATE GRID ───── */
+  .app-cand-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3;
+  }
+
+  /* ───── CANDIDATE CARD ───── */
+  .app-cand-card {
+    @apply bg-white border-2 border-slate-200/60 rounded-2xl p-6 flex flex-col items-center text-center cursor-pointer relative;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .app-cand-card:hover:not(.locked):not(.voted) {
+    @apply border-church-400 shadow-glow -translate-y-0.5;
+  }
+  .app-cand-card.selected {
+    @apply border-church-500 shadow-[0_0_0_3px_rgba(99,102,241,0.18),0_8px_28px_rgba(99,102,241,0.18)];
+  }
+  .app-cand-card.locked {
+    @apply cursor-default opacity-55;
+  }
+  .app-cand-card.voted {
+    @apply cursor-default;
+  }
+  .app-cand-avatar {
+    @apply w-20 h-20 rounded-full flex items-center justify-center font-heading text-xl font-extrabold text-white mb-3 flex-shrink-0 bg-gradient-to-br from-church-500 to-violet-400;
+  }
+  .app-cand-photo {
+    @apply w-20 h-20 rounded-full object-cover border-[3px] border-slate-100 mb-3;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .app-cand-card.selected .app-cand-photo {
+    @apply border-church-500;
+  }
+  .app-cand-name {
+    @apply text-sm font-bold text-slate-900 mb-3 leading-tight;
+  }
+  .app-cand-radio {
+    @apply w-7 h-7 rounded-full border-2 border-slate-300 flex items-center justify-center mt-auto;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .app-cand-card.selected .app-cand-radio {
+    @apply border-church-500 bg-church-500;
+  }
+  .app-cand-card.selected .app-cand-radio::after {
+    content: '';
+    @apply w-2.5 h-2.5 rounded-full bg-white;
+  }
+  .app-cand-card.voted .app-cand-radio {
+    @apply border-emerald-500 bg-emerald-500;
+  }
+  .app-cand-card.voted .app-cand-radio::after {
+    content: '✓';
+    @apply text-white text-xs font-extrabold;
+  }
+
+  /* ───── LOCK BANNER ───── */
+  .app-lock-banner {
+    @apply flex items-center justify-center gap-2 bg-slate-50 border border-slate-200/60 rounded-xl p-4 mb-6 text-sm font-bold text-slate-400;
+  }
+
+  /* ───── SUBMIT AREA ───── */
+  .app-submit-area {
+    @apply flex flex-col items-center pt-6 border-t border-slate-200/60 mt-6;
+  }
+  .app-submit-count {
+    @apply text-sm font-semibold text-slate-400 mb-3;
+  }
+  .app-submit-note {
+    @apply text-xs font-medium text-slate-400 mt-2;
+  }
+
+  /* ───── BOTTOM ACTION BAR (mobile) ───── */
+  .app-action-bar {
+    @apply hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-200/60 px-4 pb-safe pt-3 items-center justify-between gap-3;
+  }
+  @media (max-width: 767px) {
+    .app-action-bar.is-active { @apply flex; }
+  }
+
+  /* ───── MODAL / BOTTOM SHEET ───── */
+  .app-overlay {
+    @apply fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none;
+    transition: opacity 0.25s ease;
+  }
+  .app-overlay.open {
+    @apply opacity-100 pointer-events-auto;
+  }
+  .app-modal {
+    @apply bg-white rounded-3xl shadow-modal w-full max-w-md max-h-[85vh] overflow-y-auto transition-transform duration-300;
+    transform: translateY(12px) scale(0.97);
+  }
+  .app-overlay.open .app-modal {
+    transform: translateY(0) scale(1);
+  }
+  .app-modal-handle {
+    @apply w-9 h-1 rounded-full bg-slate-200 mx-auto mt-3 sm:hidden;
+  }
+  .app-modal-header {
+    @apply px-6 pt-6 pb-0;
+  }
+  .app-modal-title {
+    @apply font-heading text-xl font-extrabold text-slate-900;
+  }
+  .app-modal-body {
+    @apply px-6 pt-4 pb-0;
+  }
+  .app-modal-footer {
+    @apply px-6 pt-5 pb-6 flex flex-col sm:flex-row-reverse gap-3;
+  }
+  .app-modal-row {
+    @apply flex justify-between items-center bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-3 mb-2;
+  }
+  .app-modal-row-name {
+    @apply text-sm font-semibold text-slate-500;
+  }
+  .app-modal-row-cand {
+    @apply text-sm font-bold text-slate-900;
+  }
+  .app-modal-warning {
+    @apply bg-amber-50 border border-amber-200/60 rounded-xl p-4 text-center mt-3;
+  }
+  .app-modal-warning p {
+    @apply text-sm font-bold text-amber-700;
+  }
+
+  /* ───── MOBILE BOTTOM NAV ───── */
+  .app-bottom-nav {
+    @apply flex fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-200/60 px-3 pb-safe pt-1.5 justify-around items-center sm:hidden;
+  }
+  .app-bottom-nav-item {
+    @apply flex flex-col items-center gap-1 flex-1 py-2 px-1 bg-none border-none cursor-pointer text-slate-400 text-[10px] font-semibold tracking-wider no-underline transition-colors duration-200 rounded-xl;
+  }
+  .app-bottom-nav-item:hover,
+  .app-bottom-nav-item.active {
+    @apply text-church-500;
+  }
+
+  /* ───── TOOLTIP ───── */
+  .app-tooltip {
+    @apply relative inline-flex;
+  }
+  .app-tooltip-content {
+    @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg whitespace-nowrap opacity-0 pointer-events-none transition-all duration-200 translate-y-1;
+  }
+  .app-tooltip:hover .app-tooltip-content {
+    @apply opacity-100 translate-y-0;
+  }
+
+  /* ───── DROPDOWN ───── */
+  .app-dropdown {
+    @apply absolute top-full right-0 mt-2 bg-white border border-slate-200/60 rounded-2xl shadow-soft-lg py-2 min-w-[200px] opacity-0 pointer-events-none transition-all duration-200 translate-y-1 z-50;
+  }
+  .app-dropdown.open {
+    @apply opacity-100 pointer-events-auto translate-y-0;
+  }
+  .app-dropdown-item {
+    @apply flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors duration-150 cursor-pointer;
+  }
+  .app-dropdown-divider {
+    @apply h-px bg-slate-100 my-1.5;
+  }
 }
 
-/* Custom animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-in {
-  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* ───── RESPONSIVE SIDEBAR REORDER ───── */
+@media (max-width: 1023px) {
+  .app-sidebar { order: 2; }
+  .app-main-panel { order: 1; }
+  .app-alert-banner-wrap { order: 0; }
 }
 
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+/* ───── OVERRIDE FOR MAIN WRAP GRID ───── */
+.app-layout-grid {
+  @apply relative z-10 flex-1 max-w-5xl mx-auto w-full;
 }
-.animate-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+@media (min-width: 1024px) {
+  .app-layout-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
 }
-
-@keyframes glowPulse {
-  0%, 100% { opacity: 0.35; transform: scale(1); }
-  50% { opacity: 0.55; transform: scale(1.05); }
-}
-.animate-glow-pulse {
-  animation: glowPulse 8s ease-in-out infinite;
-}
-
-/* Glow Auror */
-.glow-aura {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Glassmorphism utilities */
-.glass-panel {
-  @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-premium;
-}
-.glass-panel-dark {
-  @apply bg-slate-900/65 backdrop-blur-xl border border-slate-800/80 shadow-glass-dark;
-}
-
-/* Custom bottom sheet drawer classes for mobile modal */
-.mobile-bottom-sheet {
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Styled focus rings for inputs */
-.premium-input {
-  @apply block w-full px-5 py-4 bg-slate-100/60 border border-slate-200/50 rounded-2xl placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-church-500 focus:border-transparent focus:bg-white transition-all duration-300 text-base sm:text-base;
-}
-.premium-input-dark {
-  @apply block w-full px-5 py-4 bg-slate-900/40 border border-slate-800/60 rounded-2xl placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-church-500 focus:border-transparent focus:bg-slate-950/80 transition-all duration-300 text-base sm:text-base;
-}
-
-/* Dark mode custom background aura values */
-.bg-cosmic-dark {
-  background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
-}
-
-/* Safe area padding for mobile devices with notches / home indicator */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-.pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-.pl-safe {
-  padding-left: env(safe-area-inset-left, 0px);
-}
-.pr-safe {
-  padding-right: env(safe-area-inset-right, 0px);
-}
-
-/* Inline field error styling (applied by JS via .field-error class) */
-.field-error {
-  @apply ring-2 ring-red-500/70 border-red-500/60 !important;
-}
-
-.field-error-text {
-  @apply text-xs font-semibold text-red-300 mt-1.5 ml-1 leading-tight;
-}
-

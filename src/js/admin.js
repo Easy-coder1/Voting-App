@@ -1,5 +1,31 @@
 import { insforge, clearLocalSession } from './insforge.js';
 
+// ── TOAST SYSTEM (WIMP: Notification) ────────────────────────────────
+function showToast(type, message) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `app-toast app-toast-${type}`;
+    toast.innerHTML = `
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            ${type === 'success'
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+            }
+        </svg>
+        <span>${message}</span>
+    `;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-8px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
 let currentUser = null;
 let currentProfile = null;
 let turnoutChartInstance = null;
@@ -235,7 +261,7 @@ async function loadMembers() {
     list.innerHTML = '';
     
     if (error) {
-        alert('Error fetching members: ' + error.message);
+        showToast('error', 'Error fetching members: ' + error.message);
         return;
     }
     if (!members) return;
@@ -294,13 +320,13 @@ window.updateMemberStatus = async (id, status) => {
 
         const { error } = await insforge.database.from('profiles').update(updateData).eq('id', id);
         if (error) {
-            alert('Error updating status: ' + error.message);
+            showToast('error', 'Error updating status: ' + error.message);
         } else {
             loadMembers();
             loadAnalytics();
         }
     } catch (err) {
-        alert('Exception updating status: ' + err.message);
+        showToast('error', 'Exception updating status: ' + err.message);
     }
 };
 
@@ -308,12 +334,12 @@ window.toggleVotingRights = async (id, right) => {
     try {
         const { error } = await insforge.database.from('profiles').update({ voting_rights: right }).eq('id', id);
         if (error) {
-            alert('Error updating voting rights: ' + error.message);
+            showToast('error', 'Error updating voting rights: ' + error.message);
         } else {
             loadMembers();
         }
     } catch (err) {
-        alert('Exception updating voting rights: ' + err.message);
+        showToast('error', 'Exception updating voting rights: ' + err.message);
     }
 };
 
@@ -406,7 +432,7 @@ function setupImageUpload() {
 
 function handleSelectedFile(file) {
     if (!file || !file.type.startsWith('image/')) {
-        alert('Please select a valid image file.');
+        showToast('error', 'Please select a valid image file.');
         return;
     }
 
@@ -501,13 +527,13 @@ window.updateElectionStatus = async (id, status) => {
     try {
         const { error } = await insforge.database.from('elections').update({ status }).eq('id', id);
         if (error) {
-            alert('Error updating election status: ' + error.message);
+            showToast('error', 'Error updating election status: ' + error.message);
         } else {
             loadElections();
             loadAnalytics();
         }
     } catch (err) {
-        alert('Exception updating election status: ' + err.message);
+        showToast('error', 'Exception updating election status: ' + err.message);
     }
 };
 
@@ -515,12 +541,12 @@ window.toggleResults = async (id, pub) => {
     try {
         const { error } = await insforge.database.from('elections').update({ results_published: pub }).eq('id', id);
         if (error) {
-            alert('Error toggling results: ' + error.message);
+            showToast('error', 'Error toggling results: ' + error.message);
         } else {
             loadElections();
         }
     } catch (err) {
-        alert('Exception toggling results: ' + err.message);
+        showToast('error', 'Exception toggling results: ' + err.message);
     }
 };
 
@@ -599,15 +625,15 @@ async function loadCandidates() {
 }
 
 window.deleteCandidate = async (id) => {
-    if(!confirm('Delete candidate?')) return;
+    if(!confirm('Delete candidate? Are you sure?')) return;
     
     const { error } = await insforge.database.from('candidates').delete().eq('id', id);
     
     if (error) {
         if (error.code === '23503') {
-            alert('Cannot delete this candidate because votes have already been cast for them. To delete this candidate, you must first remove all associated votes.');
+            showToast('error', 'Cannot delete this candidate because votes have already been cast for them. To delete this candidate, you must first remove all associated votes.');
         } else {
-            alert('Error deleting candidate: ' + error.message);
+            showToast('error', 'Error deleting candidate: ' + error.message);
         }
         console.error('Delete candidate error:', error);
     }
@@ -682,7 +708,7 @@ function setupPublishModal() {
 
         const { error } = await insforge.database.from('elections').update(updateData).eq('id', electionId);
         if (error) {
-            alert('Error updating results visibility: ' + error.message);
+            showToast('error', 'Error updating results visibility: ' + error.message);
         }
 
         modal.classList.add('hidden');

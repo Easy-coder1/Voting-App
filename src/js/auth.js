@@ -4,8 +4,7 @@ import { insforge, isMisconfigured, saveLocalSession } from './insforge.js';
 function initPasswordToggles() {
     document.querySelectorAll('[id^="toggle-password"]').forEach(btn => {
         btn.addEventListener('click', () => {
-            // Determine the target input: the sibling input[type=password] or input[type=text] in the same .relative container
-            const container = btn.closest('.relative');
+            const container = btn.closest('.app-input-wrap');
             const input = container?.querySelector('input[type="password"], input[type="text"]');
             if (!input) return;
 
@@ -13,16 +12,13 @@ function initPasswordToggles() {
             input.type = isPassword ? 'text' : 'password';
             btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
 
-            // Toggle icon: swap eye for eye-off
             const icon = btn.querySelector('svg');
             if (icon) {
                 if (isPassword) {
-                    // Eye-off icon
                     icon.innerHTML = `
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
                     `;
                 } else {
-                    // Eye icon
                     icon.innerHTML = `
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -36,17 +32,16 @@ function initPasswordToggles() {
 // ── INLINE FIELD ERRORS ────────────────────────────────────────────────
 function showFieldError(inputEl, message) {
     clearFieldError(inputEl);
-    inputEl.classList.add('field-error');
+    inputEl.classList.add('app-input-error');
 
     const errorEl = document.createElement('p');
-    errorEl.className = 'field-error-text';
+    errorEl.className = 'app-input-error-text';
     errorEl.textContent = message;
     errorEl.id = `error-${inputEl.id || Math.random().toString(36).slice(2, 9)}`;
     inputEl.setAttribute('aria-invalid', 'true');
     inputEl.setAttribute('aria-describedby', errorEl.id);
 
-    // Insert after the parent .relative container, or after input itself
-    const container = inputEl.closest('.relative') || inputEl.parentElement;
+    const container = inputEl.closest('.app-input-wrap') || inputEl.parentElement;
     if (container) {
         container.after(errorEl);
     } else {
@@ -55,22 +50,21 @@ function showFieldError(inputEl, message) {
 }
 
 function clearFieldError(inputEl) {
-    inputEl.classList.remove('field-error');
+    inputEl.classList.remove('app-input-error');
     inputEl.removeAttribute('aria-invalid');
     inputEl.removeAttribute('aria-describedby');
 
-    // Remove sibling error text
-    const container = inputEl.closest('.relative') || inputEl.parentElement;
+    const container = inputEl.closest('.app-input-wrap') || inputEl.parentElement;
     if (container) {
         const next = container.nextElementSibling;
-        if (next && next.classList.contains('field-error-text')) {
+        if (next && next.classList.contains('app-input-error-text')) {
             next.remove();
         }
     }
 }
 
 function clearAllFieldErrors(form) {
-    form.querySelectorAll('.field-error').forEach(el => clearFieldError(el));
+    form.querySelectorAll('.app-input-error').forEach(el => clearFieldError(el));
 }
 
 // ── TOP ALERT ──────────────────────────────────────────────────────────
@@ -82,26 +76,25 @@ export function showAlert(type, message) {
     if (!container || !msgEl) return;
 
     // Reset classes
-    container.classList.remove('hidden', 'bg-red-950/40', 'border-red-500/20', 'text-red-300', 'bg-emerald-950/40', 'border-emerald-500/20', 'text-emerald-300', 'bg-amber-950/40', 'border-amber-500/20', 'text-amber-300');
-    
+    container.className = 'app-alert mt-6';
+
     let iconHtml = '';
-    
+
     if (type === 'error') {
-        container.classList.add('bg-red-950/40', 'border-red-500/20', 'text-red-300');
-        iconHtml = `<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        container.classList.add('app-alert-error', 'visible');
+        iconHtml = `<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
     } else if (type === 'warning') {
-        container.classList.add('bg-amber-950/40', 'border-amber-500/20', 'text-amber-300');
-        iconHtml = `<svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+        container.classList.add('app-alert-warning', 'visible');
+        iconHtml = `<svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
     } else {
-        container.classList.add('bg-emerald-950/40', 'border-emerald-500/20', 'text-emerald-300');
-        iconHtml = `<svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        container.classList.add('app-alert-success', 'visible');
+        iconHtml = `<svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
     }
 
     if (iconContainer) {
         iconContainer.innerHTML = iconHtml;
     }
     msgEl.textContent = message;
-    container.classList.remove('hidden');
 }
 
 // ── SUBMIT BUTTON LOADING STATE ────────────────────────────────────────
@@ -196,7 +189,6 @@ function validateRegisterForm(firstName, lastName, email, password, verifyPasswo
 
 // ── PROFILE ────────────────────────────────────────────────────────────
 async function ensureProfile(user) {
-    // Try to fetch the existing profile
     const { data: profile, error: fetchError } = await insforge.database
         .from('profiles')
         .select('*')
@@ -209,8 +201,6 @@ async function ensureProfile(user) {
 
     if (profile) return profile;
 
-    // No profile found — create one from user metadata
-    console.log('No profile found for user, creating one...');
     const fullName = user.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
     const phone = user.user_metadata?.phone || null;
 
@@ -228,7 +218,6 @@ async function ensureProfile(user) {
         return null;
     }
 
-    // Fetch the newly created profile
     const { data: newProfile } = await insforge.database
         .from('profiles')
         .select('*')
@@ -239,7 +228,6 @@ async function ensureProfile(user) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Init password toggles
     initPasswordToggles();
 
     const loginForm = document.getElementById('login-form');
@@ -252,9 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const iconContainer = document.getElementById('alert-icon-container');
 
         if (container && msgEl && iconContainer) {
-            container.classList.remove('hidden');
-            container.classList.add('bg-red-950/40', 'border-red-500/20', 'text-red-300');
-            iconContainer.innerHTML = '<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
+            container.className = 'app-alert app-alert-error visible mt-6';
+            iconContainer.innerHTML = '<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
             msgEl.textContent = 'App is not configured: InsForge environment variables are missing. Contact the administrator.';
         }
 
@@ -276,7 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = document.getElementById('email-address').value.trim();
             const password = document.getElementById('password').value;
 
-            // Client-side validation
             if (!validateLoginForm(email, password)) {
                 return;
             }
@@ -323,17 +309,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Persist the full session (access token + refresh token + user) so it
-                // survives page navigation even when mobile Tracking Prevention blocks
-                // the cross-origin refresh-token cookie set by InsForge.
                 if (data?.accessToken && data?.user) {
                     saveLocalSession(data.accessToken, data.refreshToken ?? null, data.user);
                 }
 
                 setLoading(btn, true, 'Loading profile...');
 
-                // signInWithPassword already saved the session to tokenManager internally,
-                // so data.user is reliable — no polling loop needed.
                 const sessionUser = data.user;
                 if (!sessionUser) {
                     showAlert('error', 'Signed in, but the session could not be established. Please try again.');
@@ -341,7 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Ensure profile exists in the InsForge database
                 const profile = await ensureProfile(sessionUser);
 
                 if (!profile) {
@@ -351,7 +331,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Redirect based on role
                 const dashboard = profile.role === 'admin'
                     ? '/pages/admin/dashboard.html'
                     : '/pages/member/dashboard.html';
@@ -377,7 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = document.getElementById('password').value;
             const verifyPassword = document.getElementById('verify-password').value;
 
-            // Client-side validation
             if (!validateRegisterForm(firstName, lastName, email, password, verifyPassword)) {
                 return;
             }
@@ -400,7 +378,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (data.session) {
-                    // Email confirmation is OFF — user is logged in immediately
                     await ensureProfile(data.user);
 
                     showAlert('success', 'Registration successful! Please sign in to continue.');
@@ -411,7 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, 1500);
 
                 } else if (data.user && !data.session) {
-                    // Email confirmation is ON
                     showAlert('success',
                         'Registration submitted! Please check your email inbox (and spam folder) ' +
                         'for a confirmation link.');

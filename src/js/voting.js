@@ -7,12 +7,34 @@ let positions = [];
 let candidates = [];
 let userVotes = [];
 let pendingSubmission = null;
-
-// Tracks user's free selections per position { [positionId]: candidateId }
 let ballotSelections = {};
-
-// Once submitted, this flag locks the booth permanently for the session
 let hasSubmitted = false;
+
+// ── TOAST SYSTEM (WIMP: Notification) ────────────────────────────────
+function showToast(type, message) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `app-toast app-toast-${type}`;
+    toast.innerHTML = `
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            ${type === 'success'
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+            }
+        </svg>
+        <span>${message}</span>
+    `;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-8px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
 
 async function ensureProfile(user) {
     const { data: profile, error: fetchError } = await insforge.database
@@ -99,9 +121,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 renderBallot();
                 updateBoothProgress();
                 updateActionBar();
+                showToast('success', 'Your votes have been submitted successfully. No more changes can be made.');
                 showSuccessBanner('Your votes have been submitted. No more changes can be made.');
             } catch (err) {
-                alert('Failed to submit votes: ' + err.message);
+                showToast('error', 'Failed to submit votes: ' + err.message);
             } finally {
                 hideModal();
                 btn.disabled = false;
@@ -115,11 +138,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             showConfirmModal();
         });
 
+        // Keyboard shortcut: Escape closes modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') hideModal();
+        });
+
     } catch (err) {
         console.error('Booth loading error:', err);
         const panel = document.getElementById('panel-content');
         if (panel) {
-            panel.innerHTML = `<div style="text-align:center;padding:40px 16px;color:#b91c1c;font-weight:600;font-size:14px">Failed to load voting booth: ${err.message}</div>`;
+            panel.innerHTML = `<div class="app-empty"><div class="app-empty-icon" style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.15)"><svg width="24" height="24" fill="none" stroke="var(--red)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><span class="app-empty-title" style="color:var(--red)">Failed to load voting booth</span><span class="app-empty-sub">${err.message}</span></div>`;
         }
     }
 });
@@ -181,14 +209,15 @@ async function loadUserVotes() {
 
 function updateStatusBanner() {
     const banner = document.getElementById('status-banner');
+    if (!banner) return;
     if (currentProfile.account_status !== 'approved' || !currentProfile.voting_rights) {
-        banner.className = 'alert-banner error visible';
+        banner.className = 'app-alert app-alert-error visible';
         banner.innerHTML = `
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             <span>Your account is not approved to vote. Exit this booth and contact support.</span>
         `;
     } else {
-        banner.className = 'alert-banner';
+        banner.className = 'app-alert';
         banner.innerHTML = '';
     }
 }
@@ -205,37 +234,38 @@ function updateActionBar() {
 
     const isLocked = hasSubmitted || (positions.length > 0 && userVotes.length >= positions.length);
     if (isLocked) {
-        bar.style.display = 'none';
+        bar.className = 'app-action-bar';
         return;
     }
 
     const selectionCount = Object.keys(ballotSelections).length;
     if (selectionCount > 0) {
-        bar.style.display = 'flex';
+        bar.className = 'app-action-bar is-active';
         document.getElementById('action-bar-text').textContent = `${selectionCount} of ${positions.length} selected`;
         const submitBtn = document.getElementById('action-bar-submit');
         submitBtn.disabled = selectionCount === 0;
     } else {
-        bar.style.display = 'none';
+        bar.className = 'app-action-bar';
     }
 }
 
 function showSuccessBanner(message) {
     const banner = document.getElementById('status-banner');
-    banner.className = 'alert-banner success visible';
+    if (!banner) return;
+    banner.className = 'app-alert app-alert-success visible';
     banner.innerHTML = `
-        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span>${message}</span>
     `;
 }
 
 function renderMessage(msg) {
     document.getElementById('panel-content').innerHTML = `
-        <div class="empty-state">
-            <div class="empty-icon" style="background:var(--surface-3);border:1px solid var(--border)">
-                <svg width="24" height="24" fill="none" stroke="var(--text-3)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <div class="app-empty">
+            <div class="app-empty-icon" style="background:var(--surface-3);border:1px solid var(--border)">
+                <svg width="24" height="24" fill="none" stroke="var(--text-3)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             </div>
-            <span class="empty-sub">${msg}</span>
+            <span class="app-empty-sub">${msg}</span>
         </div>
     `;
 }
@@ -247,12 +277,12 @@ function renderBallot() {
     const isEligible = currentProfile.account_status === 'approved' && currentProfile.voting_rights;
     const isLocked = hasSubmitted || (positions.length > 0 && userVotes.length >= positions.length);
 
-    // Locked banner
+    // Locked banner (WIMP: Lock indicator)
     if (isLocked) {
         const lockBanner = document.createElement('div');
-        lockBanner.className = 'lock-banner';
+        lockBanner.className = 'app-lock-banner';
         lockBanner.innerHTML = `
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             🔒 Ballot Locked — No further changes allowed
         `;
         content.appendChild(lockBanner);
@@ -264,22 +294,22 @@ function renderBallot() {
         const selectedId = ballotSelections[pos.id] || null;
 
         const section = document.createElement('div');
-        section.className = 'pos-section';
+        section.className = 'app-pos-section';
 
         // Position status
-        let statusClass = 'pending';
+        let statusClass = 'app-pos-pending';
         let statusText = 'Pending Vote';
-        if (hasVoted) { statusClass = 'done'; statusText = '✓ Completed'; }
-        else if (isLocked) { statusClass = 'locked'; statusText = 'Locked'; }
+        if (hasVoted) { statusClass = 'app-pos-done'; statusText = '✓ Completed'; }
+        else if (isLocked) { statusClass = 'app-pos-locked'; statusText = 'Locked'; }
 
         let headerHtml = `
-            <div class="pos-header">
-                <span class="pos-name">${pos.position_name}</span>
-                <span class="pos-status ${statusClass}">${statusText}</span>
+            <div class="app-pos-header">
+                <span class="app-pos-name">${pos.position_name}</span>
+                <span class="app-pos-status ${statusClass}">${statusText}</span>
             </div>
         `;
 
-        let candidatesHtml = '<div class="cand-grid">';
+        let candidatesHtml = '<div class="app-cand-grid">';
 
         posCandidates.forEach(c => {
             const hasPhoto = c.photo_url && c.photo_url.trim() !== '' && !c.photo_url.includes('placeholder');
@@ -288,23 +318,23 @@ function renderBallot() {
 
             let photoHtml = '';
             if (hasPhoto) {
-                photoHtml = `<img src="${c.photo_url}" alt="${c.full_name}" class="cand-photo">`;
+                photoHtml = `<img src="${c.photo_url}" alt="${c.full_name}" class="app-cand-photo">`;
             } else {
-                photoHtml = `<div class="cand-avatar" style="background:linear-gradient(135deg,var(--brand),#a78bfa)">${initials}</div>`;
+                photoHtml = `<div class="app-cand-avatar" style="background:linear-gradient(135deg,var(--brand),#a78bfa)">${initials}</div>`;
             }
 
             // Card classes
-            let cardClass = 'cand-card';
+            let cardClass = 'app-cand-card';
             if (isSelected && !isLocked) cardClass += ' selected';
             else if (isSelected && isLocked) cardClass += ' selected';
             else if (isLocked || hasVoted) cardClass += ' locked';
             else if (hasVoted) cardClass += ' voted';
 
             candidatesHtml += `
-                <div class="${cardClass}" onclick="window.toggleSelection('${c.id}', '${pos.id}')" role="radio" aria-checked="${isSelected}" tabindex="0">
+                <div class="${cardClass}" onclick="window.toggleSelection('${c.id}', '${pos.id}')" role="radio" aria-checked="${isSelected}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')window.toggleSelection('${c.id}','${pos.id}')">
                     ${photoHtml}
-                    <span class="cand-name">${c.full_name}</span>
-                    <div class="cand-radio"></div>
+                    <span class="app-cand-name">${c.full_name}</span>
+                    <div class="app-cand-radio"></div>
                 </div>
             `;
         });
@@ -320,13 +350,13 @@ function renderBallot() {
         const isComplete = selectionCount >= positions.length;
 
         const submitContainer = document.createElement('div');
-        submitContainer.className = 'submit-area';
+        submitContainer.className = 'app-submit-area';
         submitContainer.innerHTML = `
-            <span class="submit-count">${isComplete ? 'You have selected candidates for all positions.' : `Selected ${selectionCount} of ${positions.length} positions.`}</span>
-            <button id="submit-all-btn" ${selectionCount === 0 ? 'disabled' : ''} class="submit-btn">
+            <span class="app-submit-count">${isComplete ? 'You have selected candidates for all positions.' : `Selected ${selectionCount} of ${positions.length} positions.`}</span>
+            <button id="submit-all-btn" ${selectionCount === 0 ? 'disabled' : ''} class="app-btn-primary relative overflow-hidden">
                 Submit All Votes
             </button>
-            <span class="submit-note">Review your selections carefully. This action is final.</span>
+            <span class="app-submit-note">Review your selections carefully. This action is final.</span>
         `;
         content.appendChild(submitContainer);
 
@@ -368,15 +398,15 @@ function showConfirmModal() {
     let summaryHtml = '';
     pendingSubmission.forEach(v => {
         summaryHtml += `
-            <div class="modal-row">
-                <span class="modal-row-name">${v.positionName}</span>
-                <span class="modal-row-cand">${v.candidateName}</span>
+            <div class="app-modal-row">
+                <span class="app-modal-row-name">${v.positionName}</span>
+                <span class="app-modal-row-cand">${v.candidateName}</span>
             </div>
         `;
     });
 
     summaryHtml += `
-        <div class="modal-warning">
+        <div class="app-modal-warning">
             <p>⚠️ This action is final. No changes will be allowed after submission.</p>
         </div>
     `;

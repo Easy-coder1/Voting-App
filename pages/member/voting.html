@@ -7,75 +7,82 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./voting.css">
+    <!-- Removed standalone voting.css — using unified design system from style.css -->
 </head>
 <body>
 
-    <!-- TOPBAR -->
-    <nav class="topbar">
-        <div class="topbar-left">
-            <a href="/pages/member/dashboard.html" class="topbar-back">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+    <!-- ═══ TOPBAR ═══ -->
+    <nav class="app-topbar" role="navigation" aria-label="Voting booth navigation">
+        <div class="flex items-center gap-2">
+            <a href="/pages/member/dashboard.html" class="app-btn-ghost inline-flex" aria-label="Back to dashboard">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 Dashboard
             </a>
         </div>
-        <div class="topbar-right">
-            <div class="user-pill">
-                <div id="user-avatar-badge" class="user-avatar">U</div>
-                <span id="user-name" class="user-name">Loading…</span>
+        <div class="app-topbar-right">
+            <div class="app-user-pill">
+                <div id="user-avatar-badge" class="app-user-avatar">U</div>
+                <span id="user-name" class="app-user-name">Loading…</span>
             </div>
         </div>
     </nav>
 
-    <!-- MAIN -->
-    <main class="main-wrap">
+    <!-- ═══ MAIN ═══ -->
+    <main class="flex-1 relative z-10">
+        <div class="max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8 lg:py-10 pb-safe" style="padding-bottom:calc(80px + env(safe-area-inset-bottom, 0px))">
+            <div class="flex flex-col gap-4">
 
-        <!-- Alert Banner -->
-        <div id="status-banner" class="alert-banner" role="alert"></div>
+                <!-- Alert Banner (WIMP: Notification bar) -->
+                <div id="status-banner" class="app-alert app-alert-error" role="alert"></div>
 
-        <!-- Voting Panel -->
-        <div class="card" style="min-height:450px">
-            <div class="booth-header">
-                <div>
-                    <h2 class="booth-title" id="panel-title">Voting Booth</h2>
-                    <p class="booth-sub" id="election-title-sub">Loading active election…</p>
-                </div>
-                <div class="booth-progress-pill">
-                    <span>Progress</span>
-                    <span id="booth-progress-text">— / —</span>
-                </div>
-            </div>
-            <div class="booth-body" id="panel-content">
-                <div class="skeleton">
-                    <div class="spinner"></div>
-                    <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em">Loading ballot</span>
+                <!-- Voting Panel (WIMP: Window-like card) -->
+                <div class="app-card" style="min-height:450px">
+                    <div class="flex items-center justify-between flex-wrap gap-3 px-6 sm:px-7 py-5 border-b border-slate-200/60">
+                        <div>
+                            <h2 class="font-heading text-xl sm:text-2xl font-black text-slate-900" id="panel-title">Voting Booth</h2>
+                            <p class="text-sm text-slate-400 mt-0.5" id="election-title-sub">Loading active election…</p>
+                        </div>
+                        <div class="flex items-center gap-2 bg-slate-50 border border-slate-200/60 rounded-full px-3.5 py-1.5">
+                            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Progress</span>
+                            <span class="text-sm font-bold text-slate-700" id="booth-progress-text">— / —</span>
+                        </div>
+                    </div>
+                    <div class="p-6 sm:p-7" id="panel-content">
+                        <div class="app-skeleton">
+                            <div class="app-spinner"></div>
+                            <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em">Loading ballot</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- MOBILE BOTTOM ACTION BAR -->
-    <div class="action-bar" id="mobile-action-bar" style="display:none">
-        <span class="action-bar-text" id="action-bar-text">0 selected</span>
-        <button class="action-bar-btn" id="action-bar-submit" disabled>Submit</button>
+    <!-- ═══ MOBILE BOTTOM ACTION BAR (WIMP: Fixed toolbar) ═══ -->
+    <div class="app-action-bar" id="mobile-action-bar">
+        <span class="text-sm font-semibold text-slate-600" id="action-bar-text">0 selected</span>
+        <button class="app-btn-primary text-sm px-5 py-2.5" id="action-bar-submit" disabled>Submit</button>
     </div>
 
-    <!-- CONFIRMATION MODAL -->
-    <div class="overlay" id="vote-modal">
-        <div class="modal">
-            <div class="modal-handle"></div>
-            <div class="modal-header">
-                <h3 class="modal-title">Confirm All Votes</h3>
+    <!-- ═══ CONFIRMATION MODAL (WIMP: Dialog window) ═══ -->
+    <div class="app-overlay" id="vote-modal" role="dialog" aria-modal="true" aria-label="Confirm your votes">
+        <div class="app-modal">
+            <div class="app-modal-handle" aria-hidden="true"></div>
+            <div class="app-modal-header">
+                <h3 class="app-modal-title">Confirm All Votes</h3>
             </div>
-            <div class="modal-body">
+            <div class="app-modal-body">
                 <div id="modal-text"></div>
             </div>
-            <div class="modal-footer">
-                <button id="modal-confirm" class="btn-primary">Confirm & Submit</button>
-                <button id="modal-cancel" class="btn-secondary">Review Again</button>
+            <div class="app-modal-footer">
+                <button id="modal-confirm" class="app-btn-primary flex-1 relative overflow-hidden">Confirm & Submit</button>
+                <button id="modal-cancel" class="app-btn-secondary flex-1">Review Again</button>
             </div>
         </div>
     </div>
+
+    <!-- ═══ TOAST CONTAINER (WIMP: Notification center) ═══ -->
+    <div id="toast-container" class="app-toast-container" aria-live="polite" aria-atomic="true"></div>
 
     <script type="module" src="/src/js/voting.js"></script>
     <script type="module" src="/src/main.js"></script>
