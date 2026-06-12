@@ -638,7 +638,7 @@
   }
 
   .app-sidebar-nav-item {
-    @apply w-full flex items-center space-x-3 px-4 py-3 rounded-2xl font-semibold transition-all duration-300 relative overflow-hidden group;
+    @apply w-full flex items-center space-x-3 px-4 py-3 rounded-2xl font-semibold transition-all duration-300 relative overflow-hidden;
   }
   .app-sidebar-nav-item.active {
     @apply bg-church-600/10 text-white;
