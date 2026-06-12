@@ -1,5 +1,20 @@
 import './style.css'
 import { insforge } from './js/insforge.js'
+import { createIcons, icons } from 'lucide'
+
+// Initialize Lucide icons on DOMContentLoaded and observe for dynamic updates
+document.addEventListener('DOMContentLoaded', () => {
+    createIcons({ icons })
+    // Simple mutation observer to re-run createIcons when new elements are added
+    const observer = new MutationObserver((mutations) => {
+        let shouldUpdate = false
+        mutations.forEach(mutation => {
+            if (mutation.addedNodes.length) shouldUpdate = true
+        })
+        if (shouldUpdate) createIcons({ icons })
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+})
 
 // Simple auth state listener to redirect appropriately
 document.addEventListener('DOMContentLoaded', async () => {

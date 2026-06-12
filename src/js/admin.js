@@ -8,12 +8,10 @@ function showToast(type, message) {
     const toast = document.createElement('div');
     toast.className = `app-toast app-toast-${type}`;
     toast.innerHTML = `
-        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            ${type === 'success'
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>'
-                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'
-            }
-        </svg>
+        ${type === 'success'
+            ? '<i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>'
+            : '<i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>'
+        }
         <span>${message}</span>
     `;
     container.appendChild(toast);
@@ -497,7 +495,7 @@ async function loadElections() {
             <div class="space-y-2">
                 <h4 class="font-extrabold text-lg text-slate-800 tracking-tight leading-tight">${el.title}</h4>
                 <p class="text-sm text-slate-400 font-semibold flex items-center space-x-1.5">
-                    <svg class="w-4 h-4 text-slate-350" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <i data-lucide="calendar" class="w-4 h-4 text-slate-350"></i>
                     <span>${new Date(el.start_date).toLocaleDateString()} - ${new Date(el.end_date).toLocaleDateString()}</span>
                 </p>
                 <div class="mt-3 text-xs font-bold flex items-center space-x-2 flex-wrap gap-2">
@@ -655,7 +653,7 @@ function setupResultsTab() {
                 selectedResultsElection = null;
                 document.getElementById('results-content').innerHTML = `
                     <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-3">
-                        <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <i data-lucide="box-select" class="w-12 h-12 text-slate-300"></i>
                         <span class="text-sm font-semibold">Select an election to view results</span>
                     </div>
                 `;
@@ -819,7 +817,7 @@ async function renderResults(election) {
         if (!results || results.length === 0) {
             contentEl.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-3">
-                    <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    <i data-lucide="box-select" class="w-12 h-12 text-slate-300"></i>
                     <span class="text-sm font-semibold">No candidates or votes found for this election yet.</span>
                 </div>
             `;
@@ -882,14 +880,14 @@ async function renderResults(election) {
         } else if (election.status === 'closed' && !election.results_published) {
             html = `
                 <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-6 flex items-center space-x-3">
-                    <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 flex-shrink-0"></i>
                     <span class="text-sm font-bold text-amber-800">Results are not yet published. Members cannot see them.</span>
                 </div>
             ` + html;
         } else if (election.status === 'closed' && election.results_published) {
             html = `
                 <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-6 flex items-center space-x-3">
-                    <svg class="w-5 h-5 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <i data-lucide="check-circle" class="w-5 h-5 text-indigo-600 flex-shrink-0"></i>
                     <span class="text-sm font-bold text-indigo-800">Results are published. Members can view them.</span>
                 </div>
             ` + html;
@@ -901,7 +899,7 @@ async function renderResults(election) {
         console.error('Error loading results:', err);
         contentEl.innerHTML = `
             <div class="flex flex-col items-center justify-center py-12 text-center text-red-500 border border-red-200/50 bg-red-50/50 rounded-3xl p-6">
-                <svg class="w-10 h-10 text-red-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <i data-lucide="alert-circle" class="w-10 h-10 text-red-500 mb-2"></i>
                 <span class="font-bold mb-1">Failed to load results</span>
                 <span class="text-xs opacity-80">${err.message}</span>
             </div>
@@ -950,14 +948,14 @@ window.showPublishModal = (electionId, action) => {
     if (action === 'publish') {
         titleEl.textContent = 'Publish Election Results?';
         textEl.textContent = 'Members will be able to see the full election tallies. This action can be reversed.';
-        iconContainer.innerHTML = `<svg class="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        iconContainer.innerHTML = `<i data-lucide="check-circle" class="w-7 h-7 text-emerald-600"></i>`;
         iconContainer.className = 'w-14 h-14 mx-auto rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center';
         confirmBtn.className = 'flex-1 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold py-3 rounded-full transition active:scale-95 text-sm';
         confirmBtn.textContent = 'Yes, Publish';
     } else {
         titleEl.textContent = 'Unpublish Election Results?';
         textEl.textContent = 'Members will no longer see the results. This action can be reversed.';
-        iconContainer.innerHTML = `<svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+        iconContainer.innerHTML = `<i data-lucide="alert-triangle" class="w-7 h-7 text-amber-600"></i>`;
         iconContainer.className = 'w-14 h-14 mx-auto rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center';
         confirmBtn.className = 'flex-1 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold py-3 rounded-full transition active:scale-95 text-sm';
         confirmBtn.textContent = 'Yes, Unpublish';

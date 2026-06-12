@@ -16,12 +16,10 @@ function showToast(type, message) {
     const toast = document.createElement('div');
     toast.className = `app-toast app-toast-${type}`;
     toast.innerHTML = `
-        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            ${type === 'success'
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>'
-                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'
-            }
-        </svg>
+        ${type === 'success'
+            ? '<i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>'
+            : '<i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>'
+        }
         <span>${message}</span>
     `;
     container.appendChild(toast);
@@ -120,7 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Dashboard init error:', err);
         const panel = document.getElementById('panel-content');
         if (panel) {
-            panel.innerHTML = `<div class="app-empty"><div class="app-empty-icon" style="background:var(--red-dim);border-color:rgba(244,63,94,0.15)"><svg width="24" height="24" fill="none" stroke="var(--red)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><span class="app-empty-title" style="color:var(--red)">Failed to load dashboard</span><span class="app-empty-sub">${err.message}. Please try refreshing or <a style="color:#6366f1;text-decoration:underline" href="/pages/login.html">log in again</a>.</span></div>`;
+            panel.innerHTML = `<div class="app-empty"><div class="app-empty-icon" style="background:var(--red-dim);border-color:rgba(244,63,94,0.15)"><i data-lucide="alert-circle" class="w-6 h-6 text-red-500"></i></div><span class="app-empty-title" style="color:var(--red)">Failed to load dashboard</span><span class="app-empty-sub">${err.message}. Please try refreshing or <a style="color:#6366f1;text-decoration:underline" href="/pages/login.html">log in again</a>.</span></div>`;
         }
     }
 });
@@ -184,7 +182,7 @@ function updateStatusBanner() {
     if (currentProfile.account_status !== 'approved' || !currentProfile.voting_rights) {
         banner.className = 'app-alert app-alert-error visible';
         banner.innerHTML = `
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <i data-lucide="alert-triangle" class="w-[18px] h-[18px]"></i>
             <span>Your account is not currently approved for voting. Please contact the Election Committee.</span>
         `;
     } else {
@@ -224,13 +222,13 @@ function renderStats() {
             <div class="app-stat-sub">${activeElection ? activeElection.title : 'No election'}</div>
         </div>
         <div class="app-stat-card" id="stat-countdown-card">
-            <div class="app-stat-icon" style="background:var(--brand-dim)"><svg width="16" height="16" fill="none" stroke="var(--brand)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div class="app-stat-icon" style="background:var(--brand-dim)"><i data-lucide="calendar" class="w-4 h-4" style="color:var(--brand)"></i></div>
             <div class="app-stat-label">Time Left</div>
             <div class="app-stat-value" id="stat-countdown">—</div>
             <div class="app-stat-sub" id="stat-countdown-sub">${isOpen ? 'until election closes' : 'Election ended'}</div>
         </div>
         <div class="app-stat-card">
-            <div class="app-stat-icon" style="background:var(--gold-dim)"><svg width="16" height="16" fill="none" stroke="var(--gold)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div class="app-stat-icon" style="background:var(--gold-dim)"><i data-lucide="bar-chart-2" class="w-4 h-4" style="color:var(--gold)"></i></div>
             <div class="app-stat-label">Progress</div>
             <div class="app-stat-value" style="color:${countColor}">${castVotes} / ${totalPos}</div>
             <div class="app-stat-sub">${totalPos === 0 ? 'No positions yet' : isRestricted ? 'Restricted' : (castVotes >= totalPos ? 'All done!' : 'positions voted')}</div>
@@ -238,8 +236,8 @@ function renderStats() {
         <div class="app-stat-card">
             <div class="app-stat-icon" style="background:${isRestricted ? 'var(--red-dim)' : 'var(--green-dim)'}">
                 ${isRestricted
-                    ? '<svg width="16" height="16" fill="none" stroke="var(--red)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>'
-                    : '<svg width="16" height="16" fill="none" stroke="var(--green)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>'
+                    ? '<i data-lucide="x-circle" class="w-4 h-4" style="color:var(--red)"></i>'
+                    : '<i data-lucide="check-circle" class="w-4 h-4" style="color:var(--green)"></i>'
                 }
             </div>
             <div class="app-stat-label">Account</div>
@@ -366,7 +364,7 @@ function renderMessage(msg) {
     document.getElementById('panel-content').innerHTML = `
         <div class="app-empty">
             <div class="app-empty-icon" style="background:var(--surface-3);border:1px solid var(--border)">
-                <svg width="24" height="24" fill="none" stroke="var(--text-3)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <i data-lucide="info" class="w-6 h-6" style="color:var(--text-3)"></i>
             </div>
             <span class="app-empty-sub">${msg}</span>
         </div>
@@ -385,7 +383,7 @@ function renderBallot() {
         content.innerHTML = `
             <div class="app-empty">
                 <div class="app-empty-icon" style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.15)">
-                    <svg width="24" height="24" fill="none" stroke="var(--red)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <i data-lucide="alert-triangle" class="w-6 h-6" style="color:var(--red)"></i>
                 </div>
                 <span class="app-empty-title">Voting Restricted</span>
                 <span class="app-empty-sub">Your account must be approved with active voting rights to vote.</span>
@@ -407,7 +405,7 @@ function renderBallot() {
         content.innerHTML = `
             <div class="app-hero">
                 <div class="app-hero-icon">
-                    <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <i data-lucide="file-text" class="w-7 h-7"></i>
                 </div>
                 <span class="app-hero-title">Voting is Live</span>
                 <span class="app-hero-sub">Cast your secure ballot today. You have completed <strong>${cast} of ${total}</strong> positions.</span>
@@ -417,7 +415,7 @@ function renderBallot() {
                 <span class="text-xs font-semibold text-slate-400 mt-1">${pct}% complete</span>
                 <a href="/pages/member/voting.html" class="app-btn-primary relative overflow-hidden">
                     Enter Voting Booth
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    <i data-lucide="arrow-right" class="w-[18px] h-[18px] ml-2"></i>
                 </a>
             </div>
         `;
@@ -440,7 +438,7 @@ async function renderResults() {
         content.innerHTML = `
             <div class="app-empty">
                 <div class="app-empty-icon" style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.15)">
-                    <svg width="24" height="24" fill="none" stroke="var(--red)" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <i data-lucide="alert-circle" class="w-6 h-6 text-red-500"></i>
                 </div>
                 <span class="app-empty-title" style="color:var(--red)">Failed to load results</span>
                 <span class="app-empty-sub">RPC function 'get_election_results' may not be set up yet. Contact support.</span>

@@ -12,17 +12,14 @@ function initPasswordToggles() {
             input.type = isPassword ? 'text' : 'password';
             btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
 
-            const icon = btn.querySelector('svg');
+            const icon = btn.querySelector('svg, i');
             if (icon) {
+                const iconId = icon.id || '';
+                const iconClass = typeof icon.className === 'string' ? icon.className : icon.className.baseVal || '';
                 if (isPassword) {
-                    icon.innerHTML = `
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-                    `;
+                    icon.outerHTML = `<i data-lucide="eye" id="${iconId}" class="${iconClass.replace('lucide lucide-eye-off', '').replace('lucide lucide-eye', '')}"></i>`;
                 } else {
-                    icon.innerHTML = `
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    `;
+                    icon.outerHTML = `<i data-lucide="eye-off" id="${iconId}" class="${iconClass.replace('lucide lucide-eye-off', '').replace('lucide lucide-eye', '')}"></i>`;
                 }
             }
         });
@@ -82,13 +79,13 @@ export function showAlert(type, message) {
 
     if (type === 'error') {
         container.classList.add('app-alert-error', 'visible');
-        iconHtml = `<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        iconHtml = `<i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i>`;
     } else if (type === 'warning') {
         container.classList.add('app-alert-warning', 'visible');
-        iconHtml = `<svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+        iconHtml = `<i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400"></i>`;
     } else {
         container.classList.add('app-alert-success', 'visible');
-        iconHtml = `<svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        iconHtml = `<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>`;
     }
 
     if (iconContainer) {
@@ -241,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (container && msgEl && iconContainer) {
             container.className = 'app-alert app-alert-error visible mt-6';
-            iconContainer.innerHTML = '<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
+            iconContainer.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5 text-red-400"></i>';
             msgEl.textContent = 'App is not configured: InsForge environment variables are missing. Contact the administrator.';
         }
 

@@ -32,11 +32,11 @@
                 <!-- Floating Trust Badges (WIMP: visual proof) -->
                 <div class="relative w-full h-32 mt-8 hidden sm:block">
                     <div class="absolute top-0 left-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 flex items-center gap-3 animate-fade-in-up" style="animation-delay: 0.2s">
-                        <div class="w-8 h-8 rounded-full bg-emerald-400/20 text-emerald-400 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                        <div class="w-8 h-8 rounded-full bg-emerald-400/20 text-emerald-400 flex items-center justify-center"><i data-lucide="check-circle" class="w-4 h-4"></i></div>
                         <div class="text-left"><p class="text-xs font-bold text-white">E2E Encrypted</p><p class="text-[10px] text-church-200">Military-grade security</p></div>
                     </div>
                     <div class="absolute bottom-0 right-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 flex items-center gap-3 animate-fade-in-up" style="animation-delay: 0.4s">
-                        <div class="w-8 h-8 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                        <div class="w-8 h-8 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center"><i data-lucide="clock" class="w-4 h-4"></i></div>
                         <div class="text-left"><p class="text-xs font-bold text-white">Real-time Tally</p><p class="text-[10px] text-church-200">Instant results</p></div>
                     </div>
                 </div>
@@ -56,7 +56,7 @@
 
                 <!-- Back link -->
                 <a href="/" class="app-btn-ghost mb-6 inline-flex" aria-label="Back to home page">
-                    <svg class="mr-1.5 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    <i data-lucide="arrow-left" class="mr-1.5 w-4 h-4"></i>
                     Back to Home
                 </a>
 
@@ -78,21 +78,18 @@
                     <div class="app-card-strip absolute top-0 left-0 right-0"></div>
                     <form id="login-form" class="space-y-5 relative z-10">
                         <div class="app-input-wrap">
-                            <svg class="app-input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            <i data-lucide="mail" class="app-input-icon"></i>
                             <input id="email-address" name="email" type="email" autocomplete="email" required placeholder=" " class="app-input-floating with-icon peer">
                             <label for="email-address" class="app-label-floating with-icon">Email address</label>
                         </div>
 
                         <div>
                             <div class="app-input-wrap">
-                                <svg class="app-input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                <i data-lucide="lock" class="app-input-icon"></i>
                                 <input id="password" name="password" type="password" autocomplete="current-password" required placeholder=" " class="app-input-floating with-icon peer pr-12">
                                 <label for="password" class="app-label-floating with-icon">Password</label>
                                 <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors min-h-touch min-w-touch" aria-label="Show password" tabindex="-1">
-                                    <svg id="toggle-password-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                    </svg>
+                                    <i data-lucide="eye-off" id="toggle-password-icon" class="w-5 h-5"></i>
                                 </button>
                             </div>
                             <div class="flex justify-end mt-1.5">
@@ -102,10 +99,7 @@
 
                         <button type="submit" id="submit-btn" class="app-btn-primary w-full mt-2 relative overflow-hidden h-[52px]">
                             <span id="submit-btn-text">Sign In</span>
-                            <svg id="submit-btn-spinner" class="hidden w-5 h-5 ml-2 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                            </svg>
+                            <i data-lucide="loader-2" id="submit-btn-spinner" class="hidden w-5 h-5 ml-2 animate-spin"></i>
                         </button>
                     </form>
                     <!-- Form spinner overlay -->
