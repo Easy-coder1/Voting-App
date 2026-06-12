@@ -29,18 +29,15 @@
                 <p class="text-church-200 text-base leading-relaxed mb-8">
                     Create your account to participate in secure, transparent elections. It takes less than a minute to get started.
                 </p>
-                <div class="flex items-center justify-center gap-6 text-sm text-church-200/80">
-                    <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                        Secure
+                <!-- Floating Trust Badges (WIMP: visual proof) -->
+                <div class="relative w-full h-32 mt-8 hidden sm:block">
+                    <div class="absolute top-0 left-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 flex items-center gap-3 animate-fade-in-up" style="animation-delay: 0.2s">
+                        <div class="w-8 h-8 rounded-full bg-emerald-400/20 text-emerald-400 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                        <div class="text-left"><p class="text-xs font-bold text-white">E2E Encrypted</p><p class="text-[10px] text-church-200">Military-grade security</p></div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        Fast
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                        Private
+                    <div class="absolute bottom-0 right-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 flex items-center gap-3 animate-fade-in-up" style="animation-delay: 0.4s">
+                        <div class="w-8 h-8 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                        <div class="text-left"><p class="text-xs font-bold text-white">Real-time Tally</p><p class="text-[10px] text-church-200">Instant results</p></div>
                     </div>
                 </div>
             </div>
@@ -64,10 +61,16 @@
                 </a>
 
                 <!-- Step Indicator (WIMP: Progress indicator) -->
-                <div class="flex items-center gap-2 mb-6" id="step-indicator" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="3" aria-label="Registration progress">
-                    <div class="flex-1 h-1 rounded-full bg-church-500 transition-all duration-500 step-bar" data-step="1"></div>
-                    <div class="flex-1 h-1 rounded-full bg-slate-200 transition-all duration-500 step-bar" data-step="2"></div>
-                    <div class="flex-1 h-1 rounded-full bg-slate-200 transition-all duration-500 step-bar" data-step="3"></div>
+                <div class="mb-6 flex flex-col gap-2" id="step-indicator" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="3" aria-label="Registration progress">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="step-label">Step 1: Identity</span>
+                        <span class="text-[10px] font-bold text-church-600 bg-church-50 px-2.5 py-1 rounded-md border border-church-100" id="step-count">1 of 3</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 h-1.5 rounded-full bg-church-500 transition-all duration-500 step-bar" data-step="1"></div>
+                        <div class="flex-1 h-1.5 rounded-full bg-slate-200 transition-all duration-500 step-bar" data-step="2"></div>
+                        <div class="flex-1 h-1.5 rounded-full bg-slate-200 transition-all duration-500 step-bar" data-step="3"></div>
+                    </div>
                 </div>
 
                 <div>
@@ -79,71 +82,92 @@
                 </div>
 
                 <!-- Alerts -->
-                <div id="alert-container" class="app-alert app-alert-error mt-6 hidden">
+                <div id="alert-container" class="app-alert app-alert-error mt-6 hidden" role="alert" aria-live="assertive">
                     <div class="flex-shrink-0" id="alert-icon-container"></div>
                     <div class="flex-1"><p id="alert-message" class="leading-snug"></p></div>
                 </div>
 
-                <form id="register-form" class="mt-8 space-y-5">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="app-input-wrap">
-                            <input id="first-name" name="first_name" type="text" required placeholder=" " class="app-input-floating peer">
-                            <label for="first-name" class="app-label-floating">First Name</label>
-                        </div>
-                        <div class="app-input-wrap">
-                            <input id="last-name" name="last_name" type="text" required placeholder=" " class="app-input-floating peer">
-                            <label for="last-name" class="app-label-floating">Last Name</label>
-                        </div>
-                    </div>
-
-                    <div class="app-input-wrap">
-                        <input id="email-address" name="email" type="email" autocomplete="email" required placeholder=" " class="app-input-floating peer">
-                        <label for="email-address" class="app-label-floating">Email Address</label>
-                    </div>
-
-                    <div>
-                        <div class="app-input-wrap">
-                            <input id="password" name="password" type="password" autocomplete="new-password" required placeholder=" " minlength="6" class="app-input-floating peer pr-12">
-                            <label for="password" class="app-label-floating">Create Password</label>
-                            <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors min-h-touch min-w-touch" aria-label="Show password" tabindex="-1">
-                                <svg id="toggle-password-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <!-- Password Strength (WIMP: Visual feedback) -->
-                        <div id="password-strength" class="hidden mt-2">
-                            <div class="app-strength-bar">
-                                <div id="strength-fill" class="app-strength-fill"></div>
+                <div class="app-card p-6 sm:p-8 mt-8 relative overflow-hidden">
+                    <div class="app-card-strip absolute top-0 left-0 right-0"></div>
+                    <form id="register-form" class="space-y-5 relative z-10">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="app-input-wrap">
+                                <svg class="app-input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                <input id="first-name" name="first_name" type="text" required placeholder=" " class="app-input-floating with-icon peer">
+                                <label for="first-name" class="app-label-floating with-icon">First Name</label>
                             </div>
-                            <p id="strength-text" class="app-strength-label"></p>
+                            <div class="app-input-wrap">
+                                <svg class="app-input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                <input id="last-name" name="last_name" type="text" required placeholder=" " class="app-input-floating with-icon peer">
+                                <label for="last-name" class="app-label-floating with-icon">Last Name</label>
+                            </div>
                         </div>
-                    </div>
 
-                    <div>
                         <div class="app-input-wrap">
-                            <input id="verify-password" name="verify_password" type="password" autocomplete="new-password" required placeholder=" " minlength="6" class="app-input-floating peer pr-12">
-                            <label for="verify-password" class="app-label-floating">Verify Password</label>
-                            <button type="button" id="toggle-verify-password" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors min-h-touch min-w-touch" aria-label="Show password" tabindex="-1">
-                                <svg id="toggle-verify-password-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                </svg>
-                            </button>
+                            <svg class="app-input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            <input id="email-address" name="email" type="email" autocomplete="email" required placeholder=" " class="app-input-floating with-icon peer">
+                            <label for="email-address" class="app-label-floating with-icon">Email Address</label>
                         </div>
-                        <!-- Password Match Indicator -->
-                        <p id="password-match" class="hidden mt-1.5 text-xs font-semibold"></p>
-                    </div>
 
-                    <button type="submit" id="submit-btn" class="app-btn-primary w-full mt-2 relative overflow-hidden">
-                        <span id="submit-btn-text">Complete Registration</span>
-                        <svg id="submit-btn-spinner" class="hidden w-5 h-5 ml-2 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
-                    </button>
-                </form>
+                        <div>
+                            <div class="app-input-wrap">
+                                <svg class="app-input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                <input id="password" name="password" type="password" autocomplete="new-password" required placeholder=" " minlength="6" class="app-input-floating with-icon peer pr-12">
+                                <label for="password" class="app-label-floating with-icon">Create Password</label>
+                                <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors min-h-touch min-w-touch" aria-label="Show password" tabindex="-1">
+                                    <svg id="toggle-password-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <!-- Password Strength (WIMP: Visual feedback) -->
+                            <div id="password-strength" class="hidden mt-3 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-slate-600">Password Strength</span>
+                                    <span id="strength-text" class="text-[11px] font-black uppercase tracking-wider"></span>
+                                </div>
+                                <div class="app-strength-bar mt-0 mb-3">
+                                    <div id="strength-fill" class="app-strength-fill"></div>
+                                </div>
+                                <ul class="text-[11px] font-semibold text-slate-500 space-y-1.5">
+                                    <li id="req-len" class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-slate-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg> Min 6 characters</li>
+                                    <li id="req-num" class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-slate-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg> Contains number</li>
+                                    <li id="req-up" class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-slate-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg> Contains uppercase</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="app-input-wrap">
+                                <svg class="app-input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                <input id="verify-password" name="verify_password" type="password" autocomplete="new-password" required placeholder=" " minlength="6" class="app-input-floating with-icon peer pr-12">
+                                <label for="verify-password" class="app-label-floating with-icon">Verify Password</label>
+                                <button type="button" id="toggle-verify-password" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors min-h-touch min-w-touch" aria-label="Show password" tabindex="-1">
+                                    <svg id="toggle-verify-password-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <!-- Password Match Indicator -->
+                            <p id="password-match" class="hidden mt-1.5 ml-1 text-xs font-bold"></p>
+                        </div>
+
+                        <button type="submit" id="submit-btn" class="app-btn-primary w-full mt-2 relative overflow-hidden h-[52px]">
+                            <span id="submit-btn-text">Complete Registration</span>
+                            <svg id="submit-btn-spinner" class="hidden w-5 h-5 ml-2 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                        </button>
+                    </form>
+                    <!-- Form spinner overlay -->
+                    <div id="form-loading-overlay" class="absolute inset-0 bg-white/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+                        <div class="app-spinner"></div>
+                        <span class="text-xs font-bold text-church-600 mt-3 uppercase tracking-wider">Creating account...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -176,23 +200,32 @@
                 return;
             }
             strengthWrap.classList.remove('hidden');
+            
+            const hasLen = pw.length >= 6;
+            const hasNum = /[0-9]/.test(pw);
+            const hasUp = /[A-Z]/.test(pw);
+            
+            document.getElementById('req-len').querySelector('svg').style.color = hasLen ? '#10b981' : '#cbd5e1';
+            document.getElementById('req-num').querySelector('svg').style.color = hasNum ? '#10b981' : '#cbd5e1';
+            document.getElementById('req-up').querySelector('svg').style.color = hasUp ? '#10b981' : '#cbd5e1';
+
             const score = getStrength(pw);
             strengthFill.className = 'app-strength-fill';
             if (score <= 1) {
                 strengthFill.classList.add('weak');
-                strengthText.textContent = 'Weak';
+                strengthText.textContent = 'WEAK';
                 strengthText.style.color = '#f43f5e';
             } else if (score === 2) {
                 strengthFill.classList.add('fair');
-                strengthText.textContent = 'Fair';
+                strengthText.textContent = 'FAIR';
                 strengthText.style.color = '#f59e0b';
             } else if (score <= 4) {
                 strengthFill.classList.add('good');
-                strengthText.textContent = 'Good';
+                strengthText.textContent = 'GOOD';
                 strengthText.style.color = '#22c55e';
             } else {
                 strengthFill.classList.add('strong');
-                strengthText.textContent = 'Strong';
+                strengthText.textContent = 'STRONG';
                 strengthText.style.color = '#10b981';
             }
         }
@@ -220,6 +253,10 @@
         // Step indicator animation on focus
         const allInputs = document.querySelectorAll('#register-form input');
         const stepBars = document.querySelectorAll('.step-bar');
+        const stepLabel = document.getElementById('step-label');
+        const stepCount = document.getElementById('step-count');
+        const stepNames = ['Identity', 'Credentials', 'Verification'];
+        
         allInputs.forEach(input => {
             input.addEventListener('focus', () => {
                 const idx = Array.from(allInputs).indexOf(input);
@@ -228,6 +265,8 @@
                     const s = parseInt(bar.dataset.step);
                     bar.style.background = s <= step ? '#6366f1' : '#e2e8f0';
                 });
+                if(stepLabel) stepLabel.textContent = `Step ${step}: ${stepNames[step-1]}`;
+                if(stepCount) stepCount.textContent = `${step} of 3`;
             });
         });
     </script>

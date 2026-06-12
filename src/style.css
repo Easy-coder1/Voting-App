@@ -88,6 +88,14 @@
   *:focus-visible {
     @apply outline-none ring-2 ring-church-500 ring-offset-2 ring-offset-slate-50 rounded-lg;
   }
+
+  @media print {
+    .app-topbar, .app-bottom-nav, .app-sidebar, .app-action-bar, button {
+      display: none !important;
+    }
+    body { background: white !important; }
+    .app-card { border: 1px solid #cbd5e1 !important; box-shadow: none !important; }
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -111,7 +119,11 @@
 
   /* ───── TOPBAR / NAVBAR ───── */
   .app-topbar {
-    @apply sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8;
+    @apply sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 relative;
+  }
+  .app-topbar::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-church-500/20 to-transparent;
   }
   .app-topbar-brand {
     @apply flex items-center gap-2.5;
@@ -155,6 +167,9 @@
   .app-btn-danger {
     @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-red-600 bg-red-50 border border-red-200/60 hover:bg-red-100 hover:border-red-300 transition-all duration-300 active:scale-95 min-h-touch;
   }
+  .app-btn-icon {
+    @apply inline-flex items-center justify-center w-10 h-10 rounded-full text-slate-500 bg-slate-50 border border-slate-200/60 hover:bg-white hover:text-church-600 hover:border-church-200 hover:shadow-soft transition-all duration-200 active:scale-95 flex-shrink-0 relative;
+  }
 
   /* ───── SKELETON LOADER ───── */
   .app-skeleton {
@@ -169,7 +184,7 @@
     @apply bg-white border border-slate-200/60 rounded-2xl shadow-soft transition-all duration-300;
   }
   .app-card:hover {
-    @apply border-slate-300/60;
+    @apply border-slate-300/60 -translate-y-0.5 shadow-elevated;
   }
   .app-card-header {
     @apply flex items-center justify-between px-6 pt-5 pb-0 mb-3;
@@ -211,18 +226,33 @@
   .app-input-wrap {
     @apply relative;
   }
+  .app-input-icon {
+    @apply absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 transition-colors duration-200 pointer-events-none z-10;
+  }
   .app-input {
     @apply block w-full px-5 py-4 bg-slate-100/60 border border-slate-200/50 rounded-2xl placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-church-500 focus:border-transparent focus:bg-white transition-all duration-300 text-base;
+  }
+  .app-input.with-icon {
+    @apply pl-11;
   }
   .app-input-floating {
     @apply block w-full pt-5 pb-2 px-4 bg-slate-100/60 border border-slate-200/50 rounded-2xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-church-500 focus:border-transparent focus:bg-white transition-all duration-300 text-base min-h-[52px];
   }
+  .app-input-floating.with-icon {
+    @apply pl-11;
+  }
   .app-label-floating {
     @apply absolute left-4 top-3.5 text-sm text-slate-400 font-medium pointer-events-none transition-all duration-200;
+  }
+  .app-label-floating.with-icon {
+    @apply left-11;
   }
   .app-input-floating:focus ~ .app-label-floating,
   .app-input-floating:not(:placeholder-shown) ~ .app-label-floating {
     @apply text-xs text-church-600 font-semibold -translate-y-3;
+  }
+  .app-input-wrap:focus-within .app-input-icon {
+    @apply text-church-500;
   }
   .app-input-error {
     @apply ring-2 ring-red-500/70 border-red-500/60 !important;
@@ -262,6 +292,12 @@
   }
   .app-badge-restricted {
     @apply bg-red-50 text-red-600 border border-red-200/60;
+  }
+  .app-chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200/60;
+  }
+  .app-chip svg {
+    @apply w-3.5 h-3.5;
   }
 
   /* ───── ALERT BANNER ───── */
@@ -570,6 +606,49 @@
   }
   .app-dropdown-divider {
     @apply h-px bg-slate-100 my-1.5;
+  }
+
+  /* ───── ERGONOMICS & WIMP UTILITIES ───── */
+  .fade-up {
+    animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .app-sidebar-header {
+    @apply flex items-center px-6 h-20 border-b border-slate-900 bg-gradient-to-r from-slate-950 to-slate-900 relative overflow-hidden;
+  }
+  .app-sidebar-header::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-church-500/50 via-indigo-500/50 to-transparent;
+  }
+
+  .app-kbd {
+    @apply inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 border-b-2 text-[10px] font-bold text-slate-500 min-w-[20px] font-sans shadow-sm;
+  }
+
+  .app-section-title {
+    @apply font-heading text-xl font-black text-slate-900 tracking-tight flex items-center gap-2;
+  }
+
+  .app-divider {
+    @apply w-full h-px bg-slate-200/60 my-6;
+  }
+
+  .app-sidebar-nav-item {
+    @apply w-full flex items-center space-x-3 px-4 py-3 rounded-2xl font-semibold transition-all duration-300 relative overflow-hidden group;
+  }
+  .app-sidebar-nav-item.active {
+    @apply bg-church-600/10 text-white;
+  }
+  .app-sidebar-nav-item.active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-church-500 rounded-r-full;
+  }
+  .app-sidebar-nav-item:not(.active) {
+    @apply text-slate-400 hover:text-white hover:bg-slate-900;
   }
 }
 

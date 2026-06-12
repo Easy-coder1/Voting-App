@@ -29,18 +29,15 @@
                 <p class="text-church-200 text-base leading-relaxed mb-8">
                     Sign in to cast your ballot, view election results, and participate in your organization's democratic process.
                 </p>
-                <div class="flex items-center justify-center gap-6 text-sm text-church-200/80">
-                    <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                        Secure
+                <!-- Floating Trust Badges (WIMP: visual proof) -->
+                <div class="relative w-full h-32 mt-8 hidden sm:block">
+                    <div class="absolute top-0 left-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 flex items-center gap-3 animate-fade-in-up" style="animation-delay: 0.2s">
+                        <div class="w-8 h-8 rounded-full bg-emerald-400/20 text-emerald-400 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                        <div class="text-left"><p class="text-xs font-bold text-white">E2E Encrypted</p><p class="text-[10px] text-church-200">Military-grade security</p></div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        Fast
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                        Private
+                    <div class="absolute bottom-0 right-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 flex items-center gap-3 animate-fade-in-up" style="animation-delay: 0.4s">
+                        <div class="w-8 h-8 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                        <div class="text-left"><p class="text-xs font-bold text-white">Real-time Tally</p><p class="text-[10px] text-church-200">Instant results</p></div>
                     </div>
                 </div>
             </div>
@@ -72,41 +69,51 @@
                 </div>
 
                 <!-- Alerts -->
-                <div id="alert-container" class="app-alert app-alert-error mt-6 hidden">
+                <div id="alert-container" class="app-alert app-alert-error mt-6 hidden" role="alert" aria-live="assertive">
                     <div class="flex-shrink-0" id="alert-icon-container"></div>
                     <div class="flex-1"><p id="alert-message" class="leading-snug"></p></div>
                 </div>
 
-                <form id="login-form" class="mt-8 space-y-5">
-                    <div class="app-input-wrap">
-                        <input id="email-address" name="email" type="email" autocomplete="email" required placeholder=" " class="app-input-floating peer">
-                        <label for="email-address" class="app-label-floating">Email address</label>
-                    </div>
-
-                    <div>
+                <div class="app-card p-6 sm:p-8 mt-8 relative overflow-hidden">
+                    <div class="app-card-strip absolute top-0 left-0 right-0"></div>
+                    <form id="login-form" class="space-y-5 relative z-10">
                         <div class="app-input-wrap">
-                            <input id="password" name="password" type="password" autocomplete="current-password" required placeholder=" " class="app-input-floating peer pr-12">
-                            <label for="password" class="app-label-floating">Password</label>
-                            <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors min-h-touch min-w-touch" aria-label="Show password" tabindex="-1">
-                                <svg id="toggle-password-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                </svg>
-                            </button>
+                            <svg class="app-input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            <input id="email-address" name="email" type="email" autocomplete="email" required placeholder=" " class="app-input-floating with-icon peer">
+                            <label for="email-address" class="app-label-floating with-icon">Email address</label>
                         </div>
-                        <div class="flex justify-end mt-1.5">
-                            <a href="#" class="text-xs font-semibold text-slate-400 hover:text-church-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-church-500 rounded">Forgot password?</a>
-                        </div>
-                    </div>
 
-                    <button type="submit" id="submit-btn" class="app-btn-primary w-full mt-2 relative overflow-hidden">
-                        <span id="submit-btn-text">Sign In</span>
-                        <svg id="submit-btn-spinner" class="hidden w-5 h-5 ml-2 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
-                    </button>
-                </form>
+                        <div>
+                            <div class="app-input-wrap">
+                                <svg class="app-input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                <input id="password" name="password" type="password" autocomplete="current-password" required placeholder=" " class="app-input-floating with-icon peer pr-12">
+                                <label for="password" class="app-label-floating with-icon">Password</label>
+                                <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors min-h-touch min-w-touch" aria-label="Show password" tabindex="-1">
+                                    <svg id="toggle-password-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="flex justify-end mt-1.5">
+                                <a href="#" class="text-xs font-semibold text-slate-400 hover:text-church-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-church-500 rounded">Forgot password?</a>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submit-btn" class="app-btn-primary w-full mt-2 relative overflow-hidden h-[52px]">
+                            <span id="submit-btn-text">Sign In</span>
+                            <svg id="submit-btn-spinner" class="hidden w-5 h-5 ml-2 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                        </button>
+                    </form>
+                    <!-- Form spinner overlay -->
+                    <div id="form-loading-overlay" class="absolute inset-0 bg-white/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+                        <div class="app-spinner"></div>
+                        <span class="text-xs font-bold text-church-600 mt-3 uppercase tracking-wider">Authenticating...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
