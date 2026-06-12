@@ -11,7 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
         mutations.forEach(mutation => {
             if (mutation.addedNodes.length) shouldUpdate = true
         })
-        if (shouldUpdate) createIcons({ icons })
+        if (shouldUpdate) {
+            observer.disconnect()
+            createIcons({ icons })
+            observer.observe(document.body, { childList: true, subtree: true })
+        }
     })
     observer.observe(document.body, { childList: true, subtree: true })
 })
