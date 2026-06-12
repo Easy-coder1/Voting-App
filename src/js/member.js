@@ -1,4 +1,4 @@
-import { insforge, clearLocalSession } from './insforge.js';
+import { insforge, clearLocalSession, waitForUser } from './insforge.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -74,7 +74,7 @@ async function ensureProfile(user) {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // 1. Auth Check
-        const { data: currentUserData, error: sessionError } = await insforge.auth.getCurrentUser();
+        const { data: currentUserData, error: sessionError } = await waitForUser();
         if (sessionError || !currentUserData?.user) {
             window.location.href = '/pages/login.html';
             return;

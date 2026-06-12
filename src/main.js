@@ -17,19 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
 })
 
 // Simple auth state listener to redirect appropriately
+import { waitForUser } from './js/insforge.js'
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Give the SDK a moment to rehydrate the session from localStorage on mobile
     // (localStorage writes can lag behind page navigation on slow devices)
-    let currentUserData = null
-    for (let i = 0; i < 10; i++) {
-        const result = await insforge.auth.getCurrentUser()
-        currentUserData = result.data
-        if (currentUserData?.user) break
-        await new Promise(r => setTimeout(r, 200))
-    }
+    const { data: currentUserData } = await waitForUser()
 
     const preAuthPages = ['/', '/pages/login.html', '/pages/register.html']
-    const authPages = ['/pages/member/dashboard.html', '/pages/admin/dashboard.html']
+    const authPages = ['/pages/member/dashboard.html', '/pages/admin/dashboard.html', '/pages/member/voting.html']
     const isPreAuth = preAuthPages.includes(window.location.pathname)
     const isAuthRequired = authPages.includes(window.location.pathname)
 

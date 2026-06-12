@@ -104,3 +104,12 @@ export function restoreLocalSession() {
 
 // Auto-restore on every page load
 restoreLocalSession();
+
+export async function waitForUser() {
+    for (let i = 0; i < 10; i++) {
+        const result = await insforge.auth.getCurrentUser();
+        if (result.data?.user) return result;
+        await new Promise(r => setTimeout(r, 200));
+    }
+    return await insforge.auth.getCurrentUser();
+}
