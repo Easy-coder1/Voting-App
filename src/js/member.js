@@ -76,6 +76,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Set user name + avatar initials
         document.getElementById('user-name').textContent = profile.full_name;
+        const firstName = (profile.full_name || '').trim().split(' ')[0];
+        const greetingEl = document.getElementById('greeting-name');
+        if (greetingEl && firstName) greetingEl.textContent = firstName;
         const initials = profile.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
         const avatarEl = document.getElementById('user-avatar-badge');
         if (avatarEl) avatarEl.textContent = initials;

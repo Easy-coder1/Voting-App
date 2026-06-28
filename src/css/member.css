@@ -3,31 +3,36 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-  --brand:       #722F37;
-  --brand-hover: #5a2329;
-  --brand-light: #9b3d4d;
-  --brand-dim:   rgba(114, 47, 55, 0.08);
-  --brand-glow:  rgba(114, 47, 55, 0.16);
-  --gold:        #b8943f;
-  --gold-dim:    rgba(184, 148, 63, 0.10);
+  --brand:       #9e1b2e;
+  --brand-hover: #7f1826;
+  --brand-light: #bb2538;
+  --brand-2:     #d24a12;
+  --brand-dim:   rgba(158, 27, 46, 0.08);
+  --brand-glow:  rgba(158, 27, 46, 0.18);
+  --ember:       #e5641c;
+  --ember-dim:   rgba(229, 100, 28, 0.10);
+  --gold:        #c2963a;
+  --gold-dim:    rgba(194, 150, 58, 0.12);
   --green:       #1a7a4a;
   --green-dim:   rgba(26, 122, 74, 0.08);
   --red:         #c53030;
   --red-dim:     rgba(197, 48, 48, 0.08);
   --surface:     #ffffff;
-  --surface-2:   #faf8f6;
-  --surface-3:   #f3eeeb;
-  --border:      rgba(12, 6, 8, 0.07);
-  --border-2:    rgba(12, 6, 8, 0.12);
-  --text-1:      #0c0608;
+  --surface-2:   #fbf8f5;
+  --surface-3:   #f4ece6;
+  --border:      rgba(57, 7, 13, 0.08);
+  --border-2:    rgba(57, 7, 13, 0.14);
+  --text-1:      #180a0c;
   --text-2:      #5c4f52;
-  --text-3:      #9a8d90;
+  --text-3:      #998c8f;
   --radius-sm:   6px;
   --radius:      10px;
   --radius-lg:   14px;
   --radius-xl:   20px;
-  --shadow-sm:   0 1px 2px rgba(12,6,8,0.04), 0 2px 8px rgba(12,6,8,0.04);
-  --shadow-md:   0 4px 16px rgba(12,6,8,0.06), 0 1px 3px rgba(12,6,8,0.04);
+  --shadow-sm:   0 1px 2px rgba(57,7,13,0.04), 0 2px 8px rgba(57,7,13,0.05);
+  --shadow-md:   0 4px 16px rgba(57,7,13,0.07), 0 1px 3px rgba(57,7,13,0.04);
+  --shadow-lg:   0 18px 48px rgba(57,7,13,0.1), 0 4px 12px rgba(57,7,13,0.06);
+  --grad-brand:  linear-gradient(135deg, #9e1b2e 0%, #d24a12 60%, #ee8636 100%);
   --font-sans:   'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display:'Cormorant Garamond', Georgia, serif;
 }
@@ -84,8 +89,10 @@ body { font-family: var(--font-sans); background: var(--surface-2); color: var(-
 @media (min-width: 768px) { .app-body { padding: 32px 32px 48px; } }
 
 .page-header { margin-bottom: 28px; }
-.page-title { font-family: var(--font-display); font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; color: var(--text-1); line-height: 1.15; }
-.page-subtitle { font-size: 14px; color: var(--text-2); margin-top: 6px; }
+.section-eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--brand); margin-bottom: 8px; }
+.page-title { font-family: var(--font-display); font-size: 2.25rem; font-weight: 600; letter-spacing: -0.02em; color: var(--text-1); line-height: 1.12; }
+.page-title span { color: var(--brand); font-style: italic; }
+.page-subtitle { font-size: 14px; color: var(--text-2); margin-top: 8px; max-width: 540px; }
 
 /* ── METRICS GRID ──────────────────────────────────────────────── */
 .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
@@ -123,7 +130,7 @@ body { font-family: var(--font-sans); background: var(--surface-2); color: var(-
 }
 .card-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .card-body { padding: 0 22px 22px; }
-.card-strip { height: 2px; background: linear-gradient(90deg, var(--brand), var(--brand-light)); }
+.card-strip { height: 3px; background: var(--grad-brand); }
 
 .main-panel .card-body { padding: 24px 28px 28px; }
 
@@ -195,10 +202,10 @@ body { font-family: var(--font-sans); background: var(--surface-2); color: var(-
 .cta-btn, .btn-primary {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   background: var(--brand); color: #fff; font-size: 14px; font-weight: 600;
-  padding: 12px 24px; border-radius: var(--radius-sm); border: none; cursor: pointer;
-  text-decoration: none; transition: all 0.15s ease; box-shadow: var(--shadow-sm);
+  padding: 12px 24px; border-radius: var(--radius); border: none; cursor: pointer;
+  text-decoration: none; transition: all 0.18s ease; box-shadow: var(--shadow-sm);
 }
-.cta-btn:hover, .btn-primary:hover { background: var(--brand-hover); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.cta-btn:hover, .btn-primary:hover { background-image: var(--grad-brand); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
 .cta-btn:active, .btn-primary:active { transform: translateY(0); }
 .cta-btn:disabled, .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
@@ -241,6 +248,7 @@ body { font-family: var(--font-sans); background: var(--surface-2); color: var(-
 .topbar-back:hover { background: var(--surface-3); color: var(--text-1); }
 
 .booth-header { padding: 24px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.booth-header-lead { display: flex; align-items: center; gap: 14px; }
 .booth-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
 .booth-sub { font-size: 13px; color: var(--text-3); margin-top: 2px; }
 .booth-progress-pill { display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); font-size: 13px; font-weight: 600; }
@@ -371,6 +379,27 @@ body { font-family: var(--font-sans); background: var(--surface-2); color: var(-
 .m-strength-bar-fill.fair { width: 50%; background: var(--gold); }
 .m-strength-bar-fill.good { width: 75%; background: #3d9a6a; }
 .m-strength-bar-fill.strong { width: 100%; background: var(--green); }
+
+/* ── LOCK BANNER (voting booth, after submission) ──────────────── */
+.lock-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; margin-bottom: 20px;
+  border-radius: var(--radius); font-size: 13px; font-weight: 700;
+  color: var(--brand); background: var(--brand-dim);
+  border: 1px solid rgba(158,27,46,0.16);
+}
+.lock-banner svg { flex-shrink: 0; }
+
+/* ── CONFIRM MODAL ROWS ────────────────────────────────────────── */
+.modal-row-name { font-weight: 600; color: var(--text-2); }
+.modal-row-cand { font-weight: 700; color: var(--brand); }
+
+/* ── FLAME BRAND MOTIF ─────────────────────────────────────────── */
+.flame-chip {
+  width: 36px; height: 36px; border-radius: var(--radius);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--grad-brand); color: #fff; box-shadow: 0 6px 18px -6px rgba(158,27,46,0.5);
+}
 
 /* Legacy class aliases (member pages) */
 .topbar {

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard — NUTFS E‑Voting</title>
+    <title>Dashboard — NUTFS UCC Chapter E‑Voting</title>
+    <link rel="icon" type="image/png" href="/images/NUTFS.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,10 +15,10 @@
     <header class="app-header">
         <div class="app-header-inner">
             <a href="/" class="app-brand">
-                <img src="/images/NUTFS.png" alt="NUTFS">
+                <img src="/images/NUTFS.png" alt="NUTFS UCC Chapter">
                 <div>
-                    <span class="app-brand-name">Member Portal</span>
-                    <span class="app-brand-tag">E‑Voting</span>
+                    <span class="app-brand-name">NUTFS UCC Chapter</span>
+                    <span class="app-brand-tag">NUC · Member Portal</span>
                 </div>
             </a>
             <div class="app-header-actions">
@@ -31,6 +32,12 @@
     </header>
 
     <div class="app-body">
+        <div class="page-header fade-up">
+            <p class="section-eyebrow">Voter dashboard</p>
+            <h1 class="page-title">Your ballot, <span id="greeting-name">at a glance</span></h1>
+            <p class="page-subtitle">Track the active election, your voting progress, and published results.</p>
+        </div>
+
         <div id="status-banner" class="alert-banner" role="alert"></div>
 
         <div id="metrics-row" class="metrics-grid"></div>

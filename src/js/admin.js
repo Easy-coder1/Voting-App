@@ -200,7 +200,7 @@ function renderChart(approved, others) {
             labels: ['Approved Voters', 'Others (Pending/Suspended)'],
             datasets: [{
                 data: [approved, others],
-                backgroundColor: ['#9b2335', '#f5c6cb'],
+                backgroundColor: ['#9e1b2e', '#f6c2c8'],
                 borderWidth: 0,
                 hoverOffset: 4
             }]
@@ -217,7 +217,7 @@ function renderChart(approved, others) {
                         padding: 20,
                         font: {
                             weight: 'bold',
-                            family: 'Inter'
+                            family: 'Plus Jakarta Sans'
                         }
                     }
                 }

@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NUTFS E‑Voting System</title>
-    <meta name="description" content="Enterprise-grade digital voting for NUTFS members. Secure, auditable, and accessible from anywhere.">
+    <title>NUTFS UCC Chapter — E‑Voting</title>
+    <meta name="description" content="The official digital ballot of the NUTFS UCC Chapter (NUC). Secure, transparent, and verifiable elections for every member.">
+    <link rel="icon" type="image/png" href="/images/NUTFS.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet">
@@ -17,10 +18,10 @@
     <header class="nav-glass">
         <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
             <a href="/" class="flex items-center gap-3 group">
-                <img src="/images/NUTFS.png" alt="NUTFS" class="h-8 w-auto rounded-md ring-1 ring-black/[0.06]">
-                <div class="hidden sm:block">
-                    <span class="block text-sm font-bold tracking-tight text-ink leading-none">NUTFS</span>
-                    <span class="block text-[10px] font-semibold uppercase tracking-widest text-ink-subtle mt-0.5">E‑Voting Platform</span>
+                <img src="/images/NUTFS.png" alt="NUTFS UCC Chapter" class="h-9 w-auto">
+                <div class="hidden sm:block leading-none">
+                    <span class="block text-sm font-extrabold tracking-tight text-ink">NUTFS UCC Chapter</span>
+                    <span class="block text-[10px] font-semibold uppercase tracking-[0.18em] text-church-600 mt-1">NUC · E‑Voting</span>
                 </div>
             </a>
             <nav class="flex items-center gap-2">
@@ -33,21 +34,24 @@
     <main id="main">
         <!-- Hero -->
         <section class="relative overflow-hidden">
-            <div class="absolute inset-0 bg-grid-pattern bg-grid opacity-60 pointer-events-none"></div>
+            <div class="absolute inset-0 bg-grid-pattern bg-grid opacity-70 pointer-events-none"></div>
             <div class="absolute inset-0 bg-wine-radial pointer-events-none"></div>
             <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-20 sm:pt-24 sm:pb-28">
                 <div class="grid lg:grid-cols-2 gap-14 lg:gap-20 items-center">
                     <div class="animate-fade-in">
-                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-church-50 border border-church-200/60 mb-8">
-                            <span class="w-1.5 h-1.5 rounded-full bg-church-600 animate-pulse"></span>
-                            <span class="section-label !text-church-700">2026 Election Cycle Open</span>
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-church-200/70 shadow-xs mb-8">
+                            <span class="relative flex h-2 w-2">
+                                <span class="absolute inline-flex h-full w-full rounded-full bg-church-500 opacity-60 animate-ping"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-church-600"></span>
+                            </span>
+                            <span class="section-label !text-church-700">2026 Election Cycle · Now Open</span>
                         </div>
-                        <h1 class="display-heading text-display-md sm:text-display-lg lg:text-[3.75rem] leading-[1.06]">
-                            Institutional voting,<br>
-                            <span class="text-church-700 italic">built for trust.</span>
+                        <h1 class="display-heading text-display-md sm:text-display-lg lg:text-[3.75rem] leading-[1.05]">
+                            Every voice,<br>
+                            <span class="text-church-700 italic">faithfully counted.</span>
                         </h1>
                         <p class="mt-6 text-lg text-ink-muted leading-relaxed max-w-md">
-                            A secure, auditable platform for NUTFS members to cast ballots, track turnout, and publish verified results — without compromise.
+                            The official digital ballot of the <strong class="text-ink font-semibold">NUTFS UCC Chapter</strong>. Cast your vote, follow live turnout, and trust results that are sealed end‑to‑end.
                         </p>
                         <div class="mt-10 flex flex-col sm:flex-row gap-3">
                             <a href="/pages/register.html" class="btn-wine px-7 py-3.5 text-base">
@@ -58,12 +62,12 @@
                         </div>
                         <dl class="mt-12 grid grid-cols-3 gap-6 pt-8 border-t border-black/[0.06] max-w-md">
                             <div>
-                                <dt class="text-2xl font-bold text-ink tracking-tight">256-bit</dt>
-                                <dd class="text-xs text-ink-subtle mt-1 font-medium">Encryption</dd>
+                                <dt class="text-2xl font-bold text-ink tracking-tight">256‑bit</dt>
+                                <dd class="text-xs text-ink-subtle mt-1 font-medium">Encrypted ballots</dd>
                             </div>
                             <div>
-                                <dt class="text-2xl font-bold text-ink tracking-tight">100%</dt>
-                                <dd class="text-xs text-ink-subtle mt-1 font-medium">Audit trail</dd>
+                                <dt class="text-2xl font-bold text-ink tracking-tight">1 vote</dt>
+                                <dd class="text-xs text-ink-subtle mt-1 font-medium">Per position</dd>
                             </div>
                             <div>
                                 <dt class="text-2xl font-bold text-ink tracking-tight">Live</dt>
@@ -74,20 +78,20 @@
 
                     <!-- Product preview -->
                     <div class="relative animate-fade-in lg:pl-4" style="animation-delay:0.1s">
-                        <div class="card-premium p-1 shadow-premium-lg">
-                            <div class="rounded-xl overflow-hidden bg-canvas-alt border border-black/[0.04]">
+                        <div class="card-premium p-1.5 shadow-premium-lg">
+                            <div class="rounded-2xl overflow-hidden bg-canvas-alt border border-black/[0.04]">
                                 <div class="px-5 py-4 border-b border-black/[0.06] flex items-center justify-between bg-white">
                                     <div>
-                                        <p class="text-xs font-semibold text-ink-subtle uppercase tracking-wider">Active ballot</p>
+                                        <p class="text-[10px] font-bold text-church-600 uppercase tracking-[0.14em]">Active ballot</p>
                                         <p class="text-sm font-bold text-ink mt-0.5">General Election 2026</p>
                                     </div>
-                                    <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-50 border border-green-200/80 px-2.5 py-1 rounded-md">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span>Open
+                                    <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-50 border border-green-200/80 px-2.5 py-1 rounded-full">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse"></span>Open
                                     </span>
                                 </div>
                                 <div class="p-5 space-y-3 bg-white">
-                                    <div class="flex items-center gap-3 p-3 rounded-lg border-2 border-church-700 bg-church-50/50">
-                                        <div class="w-9 h-9 rounded-full bg-church-700 text-white text-xs font-bold flex items-center justify-center shrink-0">JA</div>
+                                    <div class="flex items-center gap-3 p-3 rounded-xl border-2 border-church-700 bg-church-50/60">
+                                        <div class="w-9 h-9 rounded-full bg-ember-gradient text-white text-xs font-bold flex items-center justify-center shrink-0">JA</div>
                                         <div class="flex-1 min-w-0">
                                             <p class="text-sm font-semibold text-ink truncate">James Anderson</p>
                                             <p class="text-xs text-ink-subtle">President</p>
@@ -96,8 +100,8 @@
                                             <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                                         </div>
                                     </div>
-                                    <div class="flex items-center gap-3 p-3 rounded-lg border border-black/[0.08] bg-white">
-                                        <div class="w-9 h-9 rounded-full bg-church-200 text-church-800 text-xs font-bold flex items-center justify-center shrink-0">OB</div>
+                                    <div class="flex items-center gap-3 p-3 rounded-xl border border-black/[0.08] bg-white">
+                                        <div class="w-9 h-9 rounded-full bg-church-100 text-church-800 text-xs font-bold flex items-center justify-center shrink-0">OB</div>
                                         <div class="flex-1 min-w-0">
                                             <p class="text-sm font-semibold text-ink truncate">Olivia Brooks</p>
                                             <p class="text-xs text-ink-subtle">President</p>
@@ -110,7 +114,7 @@
                                             <span>2 of 4 positions</span>
                                         </div>
                                         <div class="h-1.5 bg-canvas-alt rounded-full overflow-hidden">
-                                            <div class="h-full w-1/2 bg-church-700 rounded-full"></div>
+                                            <div class="h-full w-1/2 bg-ember-gradient rounded-full"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -130,37 +134,37 @@
             <div class="max-w-6xl mx-auto px-6 py-20">
                 <div class="text-center max-w-2xl mx-auto mb-14">
                     <p class="section-label mb-3">Platform capabilities</p>
-                    <h2 class="display-heading text-3xl sm:text-4xl">Everything required for credible elections</h2>
-                    <p class="mt-4 text-ink-muted leading-relaxed">From voter verification to certified results — one integrated system designed for organizational governance.</p>
+                    <h2 class="display-heading text-3xl sm:text-4xl">Everything a fellowship needs for a credible election</h2>
+                    <p class="mt-4 text-ink-muted leading-relaxed">From member verification to certified results — one integrated system, built for the governance of the NUTFS UCC Chapter.</p>
                 </div>
                 <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                    <article class="card-premium p-6 hover:shadow-card-hover transition-shadow duration-200">
-                        <div class="w-10 h-10 rounded-lg bg-church-50 border border-church-100 flex items-center justify-center mb-4">
+                    <article class="card-premium p-6 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
+                        <div class="w-11 h-11 rounded-xl bg-church-50 border border-church-100 flex items-center justify-center mb-4">
                             <svg class="w-5 h-5 text-church-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                         </div>
-                        <h3 class="font-bold text-ink text-sm mb-2">End-to-end security</h3>
-                        <p class="text-sm text-ink-muted leading-relaxed">Encrypted transit and storage with role-based access at every layer.</p>
+                        <h3 class="font-bold text-ink text-sm mb-2">End‑to‑end security</h3>
+                        <p class="text-sm text-ink-muted leading-relaxed">Encrypted in transit and at rest, with role‑based access guarding every layer.</p>
                     </article>
-                    <article class="card-premium p-6 hover:shadow-card-hover transition-shadow duration-200">
-                        <div class="w-10 h-10 rounded-lg bg-church-50 border border-church-100 flex items-center justify-center mb-4">
+                    <article class="card-premium p-6 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
+                        <div class="w-11 h-11 rounded-xl bg-church-50 border border-church-100 flex items-center justify-center mb-4">
                             <svg class="w-5 h-5 text-church-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                         </div>
-                        <h3 class="font-bold text-ink text-sm mb-2">Verified voters only</h3>
-                        <p class="text-sm text-ink-muted leading-relaxed">Admin-approved membership with one vote per position, enforced by policy.</p>
+                        <h3 class="font-bold text-ink text-sm mb-2">Verified members only</h3>
+                        <p class="text-sm text-ink-muted leading-relaxed">Admin‑approved membership with one ballot per position, enforced by policy.</p>
                     </article>
-                    <article class="card-premium p-6 hover:shadow-card-hover transition-shadow duration-200">
-                        <div class="w-10 h-10 rounded-lg bg-church-50 border border-church-100 flex items-center justify-center mb-4">
+                    <article class="card-premium p-6 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
+                        <div class="w-11 h-11 rounded-xl bg-church-50 border border-church-100 flex items-center justify-center mb-4">
                             <svg class="w-5 h-5 text-church-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                         </div>
-                        <h3 class="font-bold text-ink text-sm mb-2">Real-time tally</h3>
-                        <p class="text-sm text-ink-muted leading-relaxed">Live turnout metrics and instant result aggregation when polls close.</p>
+                        <h3 class="font-bold text-ink text-sm mb-2">Real‑time tally</h3>
+                        <p class="text-sm text-ink-muted leading-relaxed">Live turnout metrics and instant result aggregation the moment polls close.</p>
                     </article>
-                    <article class="card-premium p-6 hover:shadow-card-hover transition-shadow duration-200">
-                        <div class="w-10 h-10 rounded-lg bg-church-50 border border-church-100 flex items-center justify-center mb-4">
+                    <article class="card-premium p-6 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
+                        <div class="w-11 h-11 rounded-xl bg-church-50 border border-church-100 flex items-center justify-center mb-4">
                             <svg class="w-5 h-5 text-church-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                         </div>
-                        <h3 class="font-bold text-ink text-sm mb-2">Full audit trail</h3>
-                        <p class="text-sm text-ink-muted leading-relaxed">Complete election history with publish controls for certified outcomes.</p>
+                        <h3 class="font-bold text-ink text-sm mb-2">Certified results</h3>
+                        <p class="text-sm text-ink-muted leading-relaxed">A complete election history with publish controls for officially certified outcomes.</p>
                     </article>
                 </div>
             </div>
@@ -170,38 +174,42 @@
         <section class="max-w-6xl mx-auto px-6 py-20">
             <div class="grid lg:grid-cols-2 gap-16 items-center">
                 <div>
-                    <p class="section-label mb-3">Process</p>
+                    <p class="section-label mb-3">The process</p>
                     <h2 class="display-heading text-3xl sm:text-4xl mb-6">Three steps to cast your vote</h2>
                     <ol class="space-y-8">
                         <li class="flex gap-5">
-                            <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-church-700 text-white text-sm font-bold flex items-center justify-center">1</span>
+                            <span class="flex-shrink-0 w-9 h-9 rounded-xl bg-ember-gradient text-white text-sm font-bold flex items-center justify-center shadow-ember">1</span>
                             <div>
                                 <h3 class="font-bold text-ink mb-1">Create your account</h3>
-                                <p class="text-sm text-ink-muted leading-relaxed">Register with your credentials. An administrator verifies your membership status.</p>
+                                <p class="text-sm text-ink-muted leading-relaxed">Register with your details. A chapter administrator verifies your membership.</p>
                             </div>
                         </li>
                         <li class="flex gap-5">
-                            <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-church-700 text-white text-sm font-bold flex items-center justify-center">2</span>
+                            <span class="flex-shrink-0 w-9 h-9 rounded-xl bg-ember-gradient text-white text-sm font-bold flex items-center justify-center shadow-ember">2</span>
                             <div>
                                 <h3 class="font-bold text-ink mb-1">Enter the voting booth</h3>
                                 <p class="text-sm text-ink-muted leading-relaxed">Review candidates for each open position and submit your selections securely.</p>
                             </div>
                         </li>
                         <li class="flex gap-5">
-                            <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-church-700 text-white text-sm font-bold flex items-center justify-center">3</span>
+                            <span class="flex-shrink-0 w-9 h-9 rounded-xl bg-ember-gradient text-white text-sm font-bold flex items-center justify-center shadow-ember">3</span>
                             <div>
                                 <h3 class="font-bold text-ink mb-1">View certified results</h3>
-                                <p class="text-sm text-ink-muted leading-relaxed">Once the election closes and results are published, outcomes are available to all members.</p>
+                                <p class="text-sm text-ink-muted leading-relaxed">Once the election closes and results are published, outcomes are open to all members.</p>
                             </div>
                         </li>
                     </ol>
                 </div>
                 <div class="card-premium p-8 bg-wine-gradient text-white relative overflow-hidden">
-                    <div class="absolute inset-0 bg-grid-pattern bg-grid opacity-10"></div>
+                    <div class="absolute inset-0 bg-grid-pattern bg-grid opacity-[0.12]"></div>
+                    <div class="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-flame-glow blur-xl opacity-70 pointer-events-none"></div>
                     <div class="relative">
-                        <p class="text-church-200 text-sm font-semibold uppercase tracking-widest mb-4">Ready to participate?</p>
-                        <h3 class="font-display text-3xl font-semibold leading-tight mb-4">Your vote defines our leadership.</h3>
-                        <p class="text-church-100/80 text-sm leading-relaxed mb-8 max-w-sm">Join thousands of NUTFS members exercising their democratic rights through a platform built for integrity.</p>
+                        <span class="inline-flex w-10 h-10 rounded-xl bg-white/10 ring-1 ring-white/15 items-center justify-center mb-5">
+                            <svg class="w-5 h-5 text-ember-200" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C9.5 6 6 8 6 13a6 6 0 0012 0c0-2.2-1-3.8-2.2-5.3-.4 1.2-1.1 2-2 2.3.4-2.6-.3-5.4-1.8-8z"/></svg>
+                        </span>
+                        <p class="text-ember-200 text-xs font-bold uppercase tracking-[0.16em] mb-3">Ready to participate?</p>
+                        <h3 class="font-display text-3xl font-semibold leading-tight mb-4">Your vote shapes our leadership.</h3>
+                        <p class="text-church-100/80 text-sm leading-relaxed mb-8 max-w-sm">Join your fellow NUTFS UCC Chapter members in exercising your voice through a platform built for integrity.</p>
                         <a href="/pages/register.html" class="inline-flex items-center gap-2 bg-white text-church-900 font-semibold text-sm px-5 py-3 rounded-lg hover:bg-church-50 transition-colors">
                             Create free account
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
@@ -217,11 +225,11 @@
         <div class="max-w-6xl mx-auto px-6 py-14">
             <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
                 <div class="sm:col-span-2 lg:col-span-1">
-                    <a href="/" class="flex items-center gap-2 mb-4">
-                        <img src="/images/NUTFS.png" alt="NUTFS" class="h-8 rounded-md bg-white/10 p-0.5">
-                        <span class="font-bold text-white text-sm">NUTFS E‑Voting</span>
+                    <a href="/" class="flex items-center gap-2.5 mb-4">
+                        <img src="/images/NUTFS.png" alt="NUTFS" class="h-9 rounded-md bg-white/95 p-1">
+                        <span class="font-bold text-white text-sm leading-tight">NUTFS UCC Chapter<br><span class="text-church-400 font-medium text-xs">NUC · E‑Voting</span></span>
                     </a>
-                    <p class="text-sm leading-relaxed text-church-400 max-w-xs">Secure digital elections for NUTFS organizational governance.</p>
+                    <p class="text-sm leading-relaxed text-church-400 max-w-xs">Secure digital elections for the governance of the NUTFS UCC Chapter.</p>
                 </div>
                 <div>
                     <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Platform</h4>
@@ -241,12 +249,12 @@
                     <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Contact</h4>
                     <ul class="space-y-2.5 text-sm">
                         <li><a href="mailto:support@nutfs.org" class="hover:text-white transition-colors">support@nutfs.org</a></li>
-                        <li>NUTFS Headquarters</li>
+                        <li>NUTFS UCC Chapter Office</li>
                     </ul>
                 </div>
             </div>
             <div class="border-t border-church-900 mt-12 pt-8 flex flex-col sm:flex-row justify-between gap-4 text-xs text-church-500">
-                <p>&copy; 2026 NUTFS E‑Voting System. All rights reserved.</p>
+                <p>&copy; 2026 NUTFS UCC Chapter (NUC). All rights reserved.</p>
                 <p>Built for transparent governance</p>
             </div>
         </div>

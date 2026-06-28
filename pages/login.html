@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Sign in — NUTFS E‑Voting</title>
+    <title>Sign in — NUTFS UCC Chapter E‑Voting</title>
+    <link rel="icon" type="image/png" href="/images/NUTFS.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,40 +13,44 @@
 
     <!-- Brand panel -->
     <aside class="hidden lg:flex lg:w-[480px] xl:w-[520px] shrink-0 bg-wine-gradient relative overflow-hidden flex-col justify-between p-12">
-        <div class="absolute inset-0 bg-grid-pattern bg-grid opacity-10"></div>
+        <div class="absolute inset-0 bg-grid-pattern bg-grid opacity-[0.12]"></div>
+        <div class="absolute -bottom-24 -left-20 w-96 h-96 rounded-full bg-flame-glow blur-2xl opacity-80 pointer-events-none animate-ember-flicker"></div>
         <div class="relative">
-            <a href="/"><img src="/images/NUTFS.png" alt="NUTFS" class="h-10 rounded-md bg-white/10 p-1 ring-1 ring-white/10"></a>
+            <a href="/" class="inline-flex items-center gap-3">
+                <img src="/images/NUTFS.png" alt="NUTFS" class="h-11 rounded-lg bg-white/95 p-1">
+                <span class="text-white font-bold leading-tight">NUTFS UCC Chapter<br><span class="text-church-200/80 font-medium text-xs">NUC · E‑Voting</span></span>
+            </a>
         </div>
         <div class="relative">
-            <h1 class="font-display text-4xl font-semibold text-white leading-tight tracking-tight">
+            <h1 class="font-display text-[2.75rem] font-semibold text-white leading-[1.1] tracking-tight">
                 Secure access to<br>your ballot.
             </h1>
-            <p class="mt-4 text-church-200/90 text-sm leading-relaxed max-w-sm">
+            <p class="mt-4 text-church-100/85 text-sm leading-relaxed max-w-sm">
                 Sign in to cast votes, monitor election progress, and view published results from any device.
             </p>
             <ul class="mt-10 space-y-4">
-                <li class="flex items-center gap-3 text-sm text-church-100/80">
-                    <span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                <li class="flex items-center gap-3 text-sm text-church-100/85">
+                    <span class="w-9 h-9 rounded-xl bg-white/10 ring-1 ring-white/10 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4 text-ember-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                     </span>
-                    Bank-grade encryption
+                    Bank‑grade encryption
                 </li>
-                <li class="flex items-center gap-3 text-sm text-church-100/80">
-                    <span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <li class="flex items-center gap-3 text-sm text-church-100/85">
+                    <span class="w-9 h-9 rounded-xl bg-white/10 ring-1 ring-white/10 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4 text-ember-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </span>
                     Verified member access
                 </li>
             </ul>
         </div>
-        <p class="relative text-xs text-church-300/60">&copy; 2026 NUTFS E‑Voting</p>
+        <p class="relative text-xs text-church-300/60">&copy; 2026 NUTFS UCC Chapter (NUC)</p>
     </aside>
 
     <!-- Form panel -->
     <main class="flex-1 flex items-center justify-center px-6 py-12">
         <div class="w-full max-w-[400px] animate-fade-in">
             <div class="lg:hidden mb-8 flex justify-center">
-                <a href="/"><img src="/images/NUTFS.png" alt="NUTFS" class="h-10 rounded-md ring-1 ring-black/[0.06]"></a>
+                <a href="/"><img src="/images/NUTFS.png" alt="NUTFS" class="h-12"></a>
             </div>
 
             <a href="/" class="inline-flex items-center gap-1.5 text-sm font-medium text-ink-subtle hover:text-ink mb-8 transition-colors">
@@ -53,12 +58,15 @@
                 Back
             </a>
 
-            <h2 class="font-display text-3xl font-semibold text-ink tracking-tight">Welcome back</h2>
-            <p class="mt-2 text-sm text-ink-muted">
+            <h2 class="font-display text-[2rem] font-semibold text-ink tracking-tight leading-none">Welcome back</h2>
+            <p class="mt-2.5 text-sm text-ink-muted">
                 No account? <a href="/pages/register.html" class="font-semibold text-church-700 hover:text-church-800">Register here</a>
             </p>
 
-            <div id="alert-container" class="hidden rounded-lg p-4 mt-6 border text-sm font-medium"></div>
+            <div id="alert-container" class="hidden mt-6 rounded-xl p-4 border flex items-start gap-3">
+                <span id="alert-icon-container" class="shrink-0 mt-0.5"></span>
+                <span id="alert-message" class="text-sm font-medium leading-relaxed"></span>
+            </div>
 
             <form id="login-form" class="mt-8 space-y-5">
                 <div class="relative m-field" id="field-email">
