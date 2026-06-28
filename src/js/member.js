@@ -121,11 +121,13 @@ async function loadDashboardData() {
         // Load positions and candidates
         const [{ data: posData }, { data: canData }] = await Promise.all([
             insforge.database.from('positions').select('*'),
-            insforge.database.from('candidates').select('*')
+            insforge.database.from('candidates').select('*').eq('election_id', activeElection.id)
         ]);
 
-        positions = posData || [];
         candidates = canData || [];
+        // Only consider positions that have candidates in this election.
+        const activePositionIds = new Set(candidates.map(c => c.position_id));
+        positions = (posData || []).filter(p => activePositionIds.has(p.id));
 
         await loadUserVotes();
         renderProgress();

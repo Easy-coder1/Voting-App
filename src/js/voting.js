@@ -144,11 +144,15 @@ async function loadBoothData() {
 
         const [{ data: posData }, { data: canData }] = await Promise.all([
             insforge.database.from('positions').select('*'),
-            insforge.database.from('candidates').select('*')
+            insforge.database.from('candidates').select('*').eq('election_id', activeElection.id)
         ]);
 
-        positions = posData || [];
         candidates = canData || [];
+        // Only consider positions that actually have candidates in this election,
+        // so progress and completion reflect this election's ballot, not every
+        // position that ever existed.
+        const activePositionIds = new Set(candidates.map(c => c.position_id));
+        positions = (posData || []).filter(p => activePositionIds.has(p.id));
 
         await loadUserVotes();
         updateBoothProgress();

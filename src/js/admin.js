@@ -93,7 +93,7 @@ function setupTabs() {
             // Loop through all buttons to apply correct responsive classes
             btns.forEach(b => {
                 const targetTab = b.getAttribute('data-tab');
-                const isMobile = b.closest('nav') !== null;
+                const isMobile = b.closest('aside') === null;
                 
                 if (targetTab === tabId) {
                     if (isMobile) {
@@ -242,7 +242,7 @@ async function loadMembers() {
 
     members.forEach(m => {
         const div = document.createElement('div');
-        div.className = 'flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition duration-150 gap-4 bg-white';
+        div.className = 'flex flex-row flex-wrap justify-between items-center p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition duration-150 gap-4 bg-white';
         
         const initials = m.full_name.split(' ').map(n => n[0]).join('').substring(0, 2);
         const statusColors = {
@@ -252,6 +252,7 @@ async function loadMembers() {
             'suspended': 'bg-slate-100 text-slate-650 border-slate-200 hover:bg-slate-200'
         };
 
+        const votingEnabled = m.account_status === 'approved';
         div.innerHTML = `
             <div class="flex items-center space-x-4">
                 <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm">${initials}</div>
@@ -260,22 +261,20 @@ async function loadMembers() {
                     <p class="text-xs text-slate-400 font-semibold mt-0.5">${m.email}</p>
                 </div>
             </div>
-            <div class="flex flex-wrap items-center gap-4 w-full sm:w-auto">
-                <div class="flex flex-col space-y-1 w-full sm:w-auto min-w-[120px]">
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col space-y-1 min-w-[120px]">
                     <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Account Status</span>
                     <select onchange="window.updateMemberStatus('${m.id}', this.value)" class="text-xs rounded-full border px-3 py-1.5 font-bold cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-church-500 shadow-sm outline-none ${statusColors[m.account_status] || ''}">
                         <option value="pending" ${m.account_status === 'pending' ? 'selected' : ''}>Pending</option>
                         <option value="approved" ${m.account_status === 'approved' ? 'selected' : ''}>Approved</option>
-                        <option value="rejected" ${m.account_status === 'rejected' ? 'selected' : ''}>Rejected</option>
-                        <option value="suspended" ${m.account_status === 'suspended' ? 'selected' : ''}>Suspended</option>
                     </select>
                 </div>
-                <div class="flex flex-col space-y-1 w-full sm:w-auto">
+                <div class="flex flex-col space-y-1">
                     <span class="text-[10px] text-slate-450 font-bold uppercase tracking-wider">Voting Rights</span>
-                    <button onclick="window.toggleVotingRights('${m.id}', ${!m.voting_rights})" 
-                        class="text-xs px-3.5 py-1.5 rounded-full font-bold shadow-sm transition active:scale-95 cursor-pointer border ${m.voting_rights ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' : 'bg-red-50 text-red-650 border-red-200 hover:bg-red-100'}">
-                        ${m.voting_rights ? 'ENABLED ✓' : 'DISABLED'}
-                    </button>
+                    <span title="Voting rights are controlled by the account status"
+                        class="text-xs px-3.5 py-1.5 rounded-full font-bold shadow-sm border text-center cursor-not-allowed ${votingEnabled ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-650 border-red-200'}">
+                        ${votingEnabled ? 'ENABLED ✓' : 'DISABLED'}
+                    </span>
                 </div>
             </div>
         `;
@@ -304,19 +303,6 @@ window.updateMemberStatus = async (id, status) => {
     }
 };
 
-window.toggleVotingRights = async (id, right) => {
-    try {
-        const { error } = await insforge.database.from('profiles').update({ voting_rights: right }).eq('id', id);
-        if (error) {
-            alert('Error updating voting rights: ' + error.message);
-        } else {
-            loadMembers();
-        }
-    } catch (err) {
-        alert('Exception updating voting rights: ' + err.message);
-    }
-};
-
 // ----------------------
 // ELECTION MANAGEMENT
 // ----------------------
@@ -329,9 +315,31 @@ function setupForms() {
         const start = document.getElementById('el-start').value;
         const end = document.getElementById('el-end').value;
 
-        await insforge.database.from('elections').insert([{ title, start_date: start, end_date: end, status: 'upcoming' }]);
+        const { data: created, error } = await insforge.database
+            .from('elections')
+            .insert([{ title, start_date: start, end_date: end, status: 'upcoming' }])
+            .select();
+
+        if (error || !created || created.length === 0) {
+            alert('Error creating election: ' + (error?.message || 'Unknown error'));
+            return;
+        }
+
+        // Attach the current draft candidates (not yet tied to any election) to
+        // this new election, then clear the Candidates page for the next set.
+        const newElectionId = created[0].id;
+        const { error: attachError } = await insforge.database
+            .from('candidates')
+            .update({ election_id: newElectionId })
+            .is('election_id', null);
+
+        if (attachError) {
+            alert('Election created, but candidates could not be attached: ' + attachError.message);
+        }
+
         e.target.reset();
         loadElections();
+        loadCandidates();
     });
 
     document.getElementById('add-candidate-form').addEventListener('submit', async (e) => {
@@ -491,6 +499,9 @@ async function loadElections() {
                 <button onclick="window.toggleResults('${el.id}', ${!el.results_published})" class="text-xs bg-church-50 border border-church-200 text-church-700 px-4 py-2.5 rounded-full font-bold hover:bg-church-100 hover:text-church-900 transition-all duration-300 active:scale-95">
                     Toggle Publish
                 </button>
+                <button onclick="window.deleteElection('${el.id}', '${(el.title || '').replace(/'/g, "\\'")}')" class="text-xs bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-full font-bold hover:bg-red-100 hover:text-red-700 transition-all duration-300 active:scale-95">
+                    Delete
+                </button>
             </div>
         `;
         list.appendChild(div);
@@ -511,6 +522,29 @@ window.updateElectionStatus = async (id, status) => {
     }
 };
 
+window.deleteElection = async (id, title) => {
+    if (!confirm(`Delete election "${title}"? This will permanently remove the election and all of its votes. This action cannot be undone.`)) {
+        return;
+    }
+    try {
+        const { error: votesError } = await insforge.database.from('votes').delete().eq('election_id', id);
+        if (votesError) {
+            alert('Error deleting election votes: ' + votesError.message);
+            return;
+        }
+
+        const { error } = await insforge.database.from('elections').delete().eq('id', id);
+        if (error) {
+            alert('Error deleting election: ' + error.message);
+        } else {
+            loadElections();
+            loadAnalytics();
+        }
+    } catch (err) {
+        alert('Exception deleting election: ' + err.message);
+    }
+};
+
 window.toggleResults = async (id, pub) => {
     try {
         const { error } = await insforge.database.from('elections').update({ results_published: pub }).eq('id', id);
@@ -527,7 +561,7 @@ window.toggleResults = async (id, pub) => {
 window.viewElectionResults = (electionId) => {
     // Switch to results tab and select this election
     document.querySelectorAll('.tab-btn').forEach(b => {
-        const isMobile = b.closest('nav') !== null;
+        const isMobile = b.closest('aside') === null;
         if (b.getAttribute('data-tab') === 'results') {
             if (isMobile) {
                 b.className = 'tab-btn flex flex-col items-center p-2 text-church-800 transition duration-300';
@@ -568,11 +602,32 @@ async function loadPositions() {
 }
 
 async function loadCandidates() {
-    const { data: candidates } = await insforge.database.from('candidates').select('*, positions(position_name)');
+    // Only show "draft" candidates that haven't been attached to an election yet.
+    // Once an election is created, its candidates move into that election and
+    // disappear from this page so a fresh set can be added for the next vote.
+    const { data: candidates } = await insforge.database
+        .from('candidates')
+        .select('*, positions(position_name)')
+        .is('election_id', null);
     const list = document.getElementById('candidates-list');
     list.innerHTML = '';
     
     if(!candidates) return;
+
+    if (candidates.length === 0) {
+        list.innerHTML = `
+            <div class="col-span-full flex flex-col items-center justify-center py-12 text-center space-y-3">
+                <div class="w-14 h-14 rounded-2xl bg-church-50 border border-church-100 flex items-center justify-center">
+                    <svg class="w-7 h-7 text-church-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-slate-600">No candidates yet</p>
+                    <p class="text-xs font-semibold text-slate-400 mt-1">Add candidates here, then create an election to lock them in for voting.</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
 
     candidates.forEach(c => {
         const div = document.createElement('div');
@@ -770,9 +825,9 @@ async function renderResults(election) {
 
     // Show loading state
     contentEl.innerHTML = `
-        <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-2">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-400"></div>
-            <span class="text-xs font-semibold">Loading results...</span>
+        <div class="flex flex-col items-center justify-center py-16 text-center text-slate-400 space-y-3">
+            <div class="animate-spin rounded-full h-9 w-9 border-2 border-slate-200 border-t-church-600"></div>
+            <span class="text-xs font-bold uppercase tracking-wider">Tallying results…</span>
         </div>
     `;
 
@@ -792,9 +847,14 @@ async function renderResults(election) {
 
         if (!results || results.length === 0) {
             contentEl.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-3">
-                    <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                    <span class="text-sm font-semibold">No candidates or votes found for this election yet.</span>
+                <div class="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+                        <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-600">No results yet</p>
+                        <p class="text-xs font-semibold text-slate-400 mt-1">No candidates or votes have been recorded for this election.</p>
+                    </div>
                 </div>
             `;
             return;
@@ -807,43 +867,58 @@ async function renderResults(election) {
             grouped[r.position_name].push(r);
         });
 
+        const initialsOf = (name) => (name || '?').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
         // Render tallies
-        let html = '';
+        let html = '<div class="space-y-6">';
         for (const [posName, cans] of Object.entries(grouped)) {
             const totalInPos = cans[0]?.total_votes_in_position || 0;
-            
+            const leaderVotes = cans[0]?.vote_count || 0;
+            const isTie = leaderVotes > 0 && (cans[1]?.vote_count || 0) === leaderVotes;
+
             html += `
-                <div class="mb-10 last:mb-0 border-b border-slate-100 pb-8 last:border-b-0 last:pb-0">
-                    <div class="flex items-center justify-between mb-5">
-                        <h4 class="text-xl font-bold text-church-900 tracking-tight">${posName}</h4>
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">${totalInPos} vote${totalInPos !== 1 ? 's' : ''} cast</span>
-                    </div>
-                    <div class="space-y-4">`;
+                <section class="rounded-3xl border border-slate-100 bg-white shadow-soft overflow-hidden">
+                    <header class="flex items-center justify-between gap-3 px-5 py-4 bg-gradient-to-r from-church-900 to-church-700 text-white">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <svg class="w-5 h-5 text-church-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                            <h4 class="text-base sm:text-lg font-extrabold tracking-tight truncate">${posName}</h4>
+                        </div>
+                        <span class="flex-shrink-0 text-[11px] font-bold uppercase tracking-wider bg-white/15 border border-white/20 px-3 py-1 rounded-full">${totalInPos} vote${totalInPos !== 1 ? 's' : ''}</span>
+                    </header>
+                    <div class="p-4 sm:p-5 space-y-3">`;
 
             cans.forEach((c, index) => {
-                const isWinner = index === 0 && c.vote_count > 0 && c.vote_count > (cans[1]?.vote_count || 0);
+                const isWinner = !isTie && index === 0 && c.vote_count > 0;
                 const pct = totalInPos > 0 ? Math.round((c.vote_count / totalInPos) * 100) : 0;
+                const rankBadge = isWinner
+                    ? '<span class="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-white flex items-center justify-center text-sm shadow-soft">👑</span>'
+                    : `<span class="w-8 h-8 flex-shrink-0 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-sm font-black">${index + 1}</span>`;
 
                 html += `
-                    <div class="bg-slate-50 border border-slate-100 hover:shadow-soft rounded-2xl p-5 transition duration-300 relative overflow-hidden ${isWinner ? 'ring-2 ring-gold-500/50 bg-gold-50/20' : ''}">
-                        <div class="flex justify-between items-center mb-3 relative z-10">
-                            <div class="flex items-center space-x-2">
-                                <span class="font-extrabold text-base ${isWinner ? 'text-church-900' : 'text-church-700'}">${c.candidate_name}</span>
-                                ${isWinner ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gold-100 text-gold-800 uppercase tracking-wider">Winner 👑</span>' : ''}
+                    <div class="relative overflow-hidden rounded-2xl border p-4 transition duration-300 hover:shadow-card-hover ${isWinner ? 'border-gold-300 bg-gold-50/50' : 'border-slate-100 bg-slate-50/60'}">
+                        <div class="flex items-center gap-3 sm:gap-4">
+                            ${rankBadge}
+                            <span class="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">${initialsOf(c.candidate_name)}</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="font-extrabold text-sm sm:text-base ${isWinner ? 'text-church-900' : 'text-slate-700'} truncate">${c.candidate_name}</span>
+                                    ${isWinner ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-gold-100 text-gold-800 uppercase tracking-wider">Leading</span>' : ''}
+                                </div>
+                                <div class="mt-2 w-full h-2 bg-slate-200/70 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-700 ${isWinner ? 'bg-gradient-to-r from-gold-500 to-gold-400' : 'bg-gradient-to-r from-church-700 to-church-500'}" style="width: ${pct}%"></div>
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <span class="font-black text-church-900">${c.vote_count} votes</span>
-                                <span class="text-xs text-slate-400 font-semibold ml-1.5">(${pct}%)</span>
+                            <div class="text-right flex-shrink-0">
+                                <span class="block font-black text-lg leading-none ${isWinner ? 'text-gold-700' : 'text-church-900'}">${c.vote_count}</span>
+                                <span class="text-[11px] text-slate-400 font-bold">${pct}%</span>
                             </div>
-                        </div>
-                        <div class="w-full h-2.5 bg-slate-200/60 rounded-full relative overflow-hidden">
-                            <div class="h-full rounded-full transition-all duration-1000 ${isWinner ? 'bg-gradient-to-r from-gold-500 to-gold-400' : 'bg-gradient-to-r from-church-700 to-church-500'}" style="width: ${pct}%"></div>
                         </div>
                     </div>`;
             });
 
-            html += `</div></div>`;
+            html += `</div></section>`;
         }
+        html += '</div>';
 
         // If election is open, show a live banner
         if (election.status === 'open') {
@@ -874,9 +949,11 @@ async function renderResults(election) {
     } catch (err) {
         console.error('Error loading results:', err);
         contentEl.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-12 text-center text-red-500 border border-red-200/50 bg-red-50/50 rounded-3xl p-6">
-                <svg class="w-10 h-10 text-red-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <span class="font-bold mb-1">Failed to load results</span>
+            <div class="flex flex-col items-center justify-center py-14 text-center text-red-500 border border-red-200/60 bg-red-50/50 rounded-3xl p-6 space-y-2">
+                <div class="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center">
+                    <svg class="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <span class="font-bold text-sm">Failed to load results</span>
                 <span class="text-xs opacity-80">${err.message}</span>
             </div>
         `;
@@ -887,27 +964,49 @@ function renderTurnoutCards(container, turnout, election) {
     if (!container) return;
 
     const data = turnout && turnout.length > 0 ? turnout[0] : null;
-    const totalVotes = election.status === 'open' ? null : (data ? data.votes_cast : 0);
-    
-    container.innerHTML = data ? `
-        <div class="bg-white border border-slate-100 rounded-2xl p-4">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Total Members</span>
-            <span class="text-xl font-black text-church-900">${data.total_members}</span>
+
+    if (!data) {
+        container.innerHTML = `
+            <div class="col-span-2 sm:col-span-4 flex items-center justify-center py-6 text-slate-400 text-sm font-semibold bg-slate-50/60 border border-dashed border-slate-200 rounded-2xl">
+                Turnout data not available yet
+            </div>`;
+        return;
+    }
+
+    const turnoutPct = Math.max(0, Math.min(100, Number(data.turnout_percentage) || 0));
+
+    const stat = (label, value, sub, ring, iconPath) => `
+        <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-soft hover:shadow-card-hover transition-all duration-300">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">${label}</span>
+                <span class="w-8 h-8 rounded-xl ${ring} flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}"></path></svg>
+                </span>
+            </div>
+            <span class="text-2xl font-black text-church-900 leading-none">${value}</span>
+            <span class="block mt-1.5 text-[11px] font-semibold text-slate-400">${sub}</span>
+        </div>`;
+
+    const peopleIcon = 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a3 3 0 10-2.83-5';
+    const checkIcon = 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
+    const ballotIcon = 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
+
+    container.innerHTML = `
+        ${stat('Total Members', data.total_members, 'On the register', 'bg-church-50 text-church-700', peopleIcon)}
+        ${stat('Eligible Voters', data.approved_voters, 'Approved to vote', 'bg-emerald-50 text-emerald-600', checkIcon)}
+        ${stat('Votes Cast', data.votes_cast, election.status === 'open' ? 'Counting live' : 'Total ballots', 'bg-ember-50 text-ember-600', ballotIcon)}
+        <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl p-4 shadow-premium flex items-center gap-4">
+            <div class="relative w-14 h-14 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
+                <div class="absolute inset-[5px] rounded-full bg-church-900 flex items-center justify-center">
+                    <span class="text-[13px] font-black">${turnoutPct}%</span>
+                </div>
+            </div>
+            <div class="min-w-0">
+                <span class="block text-[11px] font-bold uppercase tracking-wider text-white/60">Turnout</span>
+                <span class="block text-lg font-black leading-tight">${data.votes_cast}/${data.approved_voters}</span>
+                <span class="block text-[11px] font-semibold text-white/60">voters participated</span>
+            </div>
         </div>
-        <div class="bg-white border border-slate-100 rounded-2xl p-4">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Eligible Voters</span>
-            <span class="text-xl font-black text-church-900">${data.approved_voters}</span>
-        </div>
-        <div class="bg-white border border-slate-100 rounded-2xl p-4">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Votes Cast</span>
-            <span class="text-xl font-black text-church-900">${data.votes_cast}</span>
-        </div>
-        <div class="bg-white border border-slate-100 rounded-2xl p-4">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Turnout</span>
-            <span class="text-xl font-black text-church-900">${data.turnout_percentage}%</span>
-        </div>
-    ` : `
-        <div class="col-span-4 text-center py-4 text-slate-400 text-sm font-semibold">Turnout data not available</div>
     `;
 }
 
