@@ -81,10 +81,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+function setPageHeader(titleText, subtitleText) {
+    const title = document.getElementById('page-title');
+    const subtitle = document.getElementById('page-subtitle');
+    if (title) title.textContent = titleText;
+    if (subtitle) subtitle.textContent = subtitleText;
+}
+
 function setupTabs() {
     const btns = document.querySelectorAll('.tab-btn');
     const contents = document.querySelectorAll('.tab-content');
-    const title = document.getElementById('page-title');
 
     btns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -114,15 +120,33 @@ function setupTabs() {
             contents.forEach(c => c.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
 
-            // Format tab name
-            const tabNames = {
-                'analytics': 'Analytics',
-                'members': 'Member Management',
-                'elections': 'Election Management',
-                'candidates': 'Candidate Management',
-                'results': 'Election Results'
+            const tabMeta = {
+                analytics: {
+                    title: 'Analytics',
+                    subtitle: 'Member stats, turnout, and live election status'
+                },
+                members: {
+                    title: 'Member Management',
+                    subtitle: 'Approve accounts and manage voting rights'
+                },
+                elections: {
+                    title: 'Election Management',
+                    subtitle: 'Create elections and control ballot status'
+                },
+                candidates: {
+                    title: 'Candidate Management',
+                    subtitle: 'Add candidates for the next election'
+                },
+                results: {
+                    title: 'Election Results',
+                    subtitle: 'View tallies, turnout, and publish results'
+                }
             };
-            title.textContent = tabNames[tabId] || tabId.charAt(0).toUpperCase() + tabId.slice(1);
+            const meta = tabMeta[tabId] || {
+                title: tabId.charAt(0).toUpperCase() + tabId.slice(1),
+                subtitle: ''
+            };
+            setPageHeader(meta.title, meta.subtitle);
 
             if (tabId === 'members') loadMembers();
             if (tabId === 'elections') loadElections();
@@ -578,7 +602,7 @@ window.viewElectionResults = (electionId) => {
     });
     document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
     document.getElementById('tab-results').classList.remove('hidden');
-    document.getElementById('page-title').textContent = 'Election Results';
+    setPageHeader('Election Results', 'View tallies, turnout, and publish results');
     
     // Trigger results load with this election pre-selected
     loadResultsTab(electionId);
