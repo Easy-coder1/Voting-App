@@ -3,87 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard — NUTFS E‑Voting</title>
+    <title>Dashboard — NUTFS UCC Chapter E‑Voting</title>
+    <link rel="icon" type="image/png" href="/images/NUTFS.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./dashboard.css">
 </head>
-<body>
+<body class="app">
 
-    <!-- NAVBAR -->
-    <nav class="topbar">
-        <a href="/" class="topbar-brand">
-            <img src="/images/NUTFS.png" alt="NUTFS Logo">
-            <span class="topbar-brand-text">E‑Voting</span>
-        </a>
-        <div class="topbar-right">
-            <div class="user-pill">
-                <div id="user-avatar-badge" class="user-avatar">U</div>
-                <span id="user-name" class="user-name">Loading…</span>
-            </div>
-            <button id="logout-btn" class="logout-btn">Sign out</button>
-        </div>
-    </nav>
-
-    <!-- MAIN -->
-    <main class="main-wrap">
-
-        <!-- Alert Banner -->
-        <div id="status-banner" class="alert-banner" role="alert">
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            <span>Your account is not approved for voting. Please contact the Election Committee.</span>
-        </div>
-
-        <!-- SIDEBAR -->
-        <aside class="sidebar fade-up" style="animation-delay:0.05s">
-            <div class="card">
-                <div class="card-strip"></div>
-                <div class="card-header">
-                    <div class="card-title"><span class="card-dot" style="background:var(--brand)"></span> Election</div>
+    <header class="app-header">
+        <div class="app-header-inner">
+            <a href="/" class="app-brand">
+                <img src="/images/NUTFS.png" alt="NUTFS UCC Chapter">
+                <div>
+                    <span class="app-brand-name">NUTFS UCC Chapter</span>
+                    <span class="app-brand-tag">NUC · Member Portal</span>
                 </div>
-                <div class="card-body">
-                    <div id="election-info">
-                        <div class="skeleton" style="padding:30px 0"><div class="spinner"></div></div>
+            </a>
+            <div class="app-header-actions">
+                <div class="user-pill">
+                    <div id="user-avatar-badge" class="user-avatar">U</div>
+                    <span id="user-name" class="user-name">Loading…</span>
+                </div>
+                <button id="logout-btn" class="btn-ghost">Sign out</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-body">
+        <div class="page-header fade-up">
+            <p class="section-eyebrow">Voter dashboard</p>
+            <h1 class="page-title">Your ballot, <span id="greeting-name">at a glance</span></h1>
+            <p class="page-subtitle">Track the active election, your voting progress, and published results.</p>
+        </div>
+
+        <div id="status-banner" class="alert-banner" role="alert"></div>
+
+        <div id="metrics-row" class="metrics-grid"></div>
+
+        <div class="dashboard-grid">
+            <aside class="sidebar fade-up">
+                <div class="card">
+                    <div class="card-strip"></div>
+                    <div class="card-header">
+                        <div class="card-title"><span class="card-dot" style="background:var(--brand)"></span> Election</div>
+                    </div>
+                    <div class="card-body">
+                        <div id="election-info">
+                            <div class="skeleton" style="padding:24px 0"><div class="spinner"></div></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="card">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><span class="card-dot" style="background:var(--gold)"></span> Your progress</div>
+                    </div>
+                    <div class="card-body">
+                        <ul id="progress-list" class="stepper">
+                            <li style="color:var(--text-3);font-size:13px;padding:8px 0">Loading positions…</li>
+                        </ul>
+                    </div>
+                </div>
+            </aside>
+
+            <section class="card main-panel fade-up" style="animation-delay:0.08s">
                 <div class="card-header">
-                    <div class="card-title"><span class="card-dot" style="background:var(--gold)"></span> Your Progress</div>
+                    <div class="card-title"><span class="card-dot" style="background:var(--brand)"></span> <span id="panel-label">Ballot</span></div>
                 </div>
-                <div class="card-body">
-                    <ul id="progress-list" class="stepper">
-                        <li style="color:var(--text-3);font-size:13px;padding:8px 0">Loading positions…</li>
-                    </ul>
+                <div id="panel-content" class="card-body">
+                    <div class="skeleton">
+                        <div class="spinner"></div>
+                        <span style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em">Loading ballot</span>
+                    </div>
                 </div>
-            </div>
-        </aside>
+            </section>
+        </div>
+    </div>
 
-        <!-- MAIN PANEL -->
-        <section class="card main-panel fade-up" style="animation-delay:0.12s">
-            <div class="card-header" style="padding:22px 26px 0">
-                <div class="card-title"><span class="card-dot" style="background:var(--brand)"></span> <span id="panel-label">Ballot</span></div>
-            </div>
-            <div id="panel-content" class="card-body" style="padding:24px 26px 28px">
-                <div class="skeleton"><div class="spinner"></div><span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em">Loading ballot</span></div>
-            </div>
-        </section>
-    </main>
-
-    <!-- MOBILE BOTTOM NAV -->
     <nav class="bottom-nav" aria-label="Mobile navigation">
         <a href="/pages/member/dashboard.html" class="bottom-nav-item active">
-            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             Home
         </a>
         <a href="/pages/member/voting.html" class="bottom-nav-item">
-            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Vote
         </a>
         <button id="logout-btn-mobile" class="bottom-nav-item">
-            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            Sign out
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Exit
         </button>
     </nav>
 

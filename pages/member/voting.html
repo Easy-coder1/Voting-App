@@ -3,42 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voting Booth — NUTFS E‑Voting</title>
+    <title>Voting Booth — NUTFS UCC Chapter E‑Voting</title>
+    <link rel="icon" type="image/png" href="/images/NUTFS.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./voting.css">
 </head>
-<body>
+<body class="app">
 
-    <!-- TOPBAR -->
-    <nav class="topbar">
-        <div class="topbar-left">
+    <header class="app-header">
+        <div class="app-header-inner">
             <a href="/pages/member/dashboard.html" class="topbar-back">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                Dashboard
+                Back to dashboard
             </a>
-        </div>
-        <div class="topbar-right">
-            <div class="user-pill">
-                <div id="user-avatar-badge" class="user-avatar">U</div>
-                <span id="user-name" class="user-name">Loading…</span>
+            <div class="app-header-actions">
+                <div class="user-pill">
+                    <div id="user-avatar-badge" class="user-avatar">U</div>
+                    <span id="user-name" class="user-name">Loading…</span>
+                </div>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <!-- MAIN -->
-    <main class="main-wrap">
-
-        <!-- Alert Banner -->
+    <div class="booth-wrap">
         <div id="status-banner" class="alert-banner" role="alert"></div>
 
-        <!-- Voting Panel -->
-        <div class="card" style="min-height:450px">
+        <div class="card" style="min-height:420px">
             <div class="booth-header">
-                <div>
-                    <h2 class="booth-title" id="panel-title">Voting Booth</h2>
-                    <p class="booth-sub" id="election-title-sub">Loading active election…</p>
+                <div class="booth-header-lead">
+                    <span class="flame-chip" aria-hidden="true">
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C9.5 6 6 8 6 13a6 6 0 0012 0c0-2.2-1-3.8-2.2-5.3-.4 1.2-1.1 2-2 2.3.4-2.6-.3-5.4-1.8-8z"/></svg>
+                    </span>
+                    <div>
+                        <h1 class="booth-title" id="panel-title">Voting booth</h1>
+                        <p class="booth-sub" id="election-title-sub">Loading election…</p>
+                    </div>
                 </div>
                 <div class="booth-progress-pill">
                     <span>Progress</span>
@@ -48,31 +49,29 @@
             <div class="booth-body" id="panel-content">
                 <div class="skeleton">
                     <div class="spinner"></div>
-                    <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em">Loading ballot</span>
+                    <span style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em">Loading ballot</span>
                 </div>
             </div>
         </div>
-    </main>
-
-    <!-- MOBILE BOTTOM ACTION BAR -->
-    <div class="action-bar" id="mobile-action-bar" style="display:none">
-        <span class="action-bar-text" id="action-bar-text">0 selected</span>
-        <button class="action-bar-btn" id="action-bar-submit" disabled>Submit</button>
     </div>
 
-    <!-- CONFIRMATION MODAL -->
+    <div class="action-bar" id="mobile-action-bar" style="display:none">
+        <span class="action-bar-text" id="action-bar-text">0 selected</span>
+        <button class="action-bar-btn" id="action-bar-submit" disabled>Submit votes</button>
+    </div>
+
     <div class="overlay" id="vote-modal">
         <div class="modal">
             <div class="modal-handle"></div>
             <div class="modal-header">
-                <h3 class="modal-title">Confirm All Votes</h3>
+                <h2 class="modal-title">Confirm your votes</h2>
             </div>
             <div class="modal-body">
                 <div id="modal-text"></div>
             </div>
             <div class="modal-footer">
-                <button id="modal-confirm" class="btn-primary">Confirm & Submit</button>
-                <button id="modal-cancel" class="btn-secondary">Review Again</button>
+                <button id="modal-confirm" class="btn-primary">Confirm & submit</button>
+                <button id="modal-cancel" class="btn-secondary">Review again</button>
             </div>
         </div>
     </div>

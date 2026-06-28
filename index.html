@@ -3,173 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NUTFS E‑Voting System</title>
-    <meta name="description" content="Secure, transparent digital voting for NUTFS members. Participate in elections from anywhere.">
+    <title>NUTFS UCC Chapter — E‑Voting</title>
+    <meta name="description" content="The official digital ballot of the NUTFS UCC Chapter (NUC). Secure, transparent, and verifiable elections for every member.">
+    <link rel="icon" type="image/png" href="/images/NUTFS.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet">
 </head>
-<body class="bg-slate-50 flex flex-col min-h-screen relative overflow-x-hidden">
+<body class="bg-canvas text-ink antialiased">
 
-    <!-- Ambient Backdrop Glows -->
-    <div class="glow-aura w-[400px] h-[400px] bg-church-200/40 top-[-120px] right-[-80px] animate-glow-pulse"></div>
-    <div class="glow-aura w-[300px] h-[300px] bg-violet-200/30 bottom-[80px] left-[-120px] animate-glow-pulse" style="animation-delay:-3s;"></div>
-    <div class="glow-aura w-[250px] h-[250px] bg-gold-200/20 top-[40%] left-[30%] animate-glow-pulse" style="animation-delay:-5s;"></div>
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-church-800 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg">Skip to content</a>
 
-    <!-- Skip to content (a11y) -->
-    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-church-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg">Skip to content</a>
-
-    <!-- Navbar -->
-    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
-                <a href="/" class="flex items-center space-x-2.5">
-                    <img src="/images/NUTFS.png" alt="NUTFS Logo" class="h-8 w-auto rounded-lg shadow-sm bg-white p-0.5">
-                    <span class="text-lg font-black tracking-tight font-heading bg-gradient-to-r from-church-700 to-church-500 bg-clip-text text-transparent hidden sm:inline">NUTFS E‑Voting</span>
-                </a>
-                <div class="flex items-center space-x-3">
-                    <a href="/pages/login.html" class="text-slate-600 hover:text-church-600 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:bg-church-50">Login</a>
-                    <a href="/pages/register.html" class="bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 text-white px-5 py-2 rounded-full text-sm font-bold shadow-premium hover:shadow-premium-lg transition-all duration-300 active:scale-95">Register</a>
+    <!-- Navigation -->
+    <header class="nav-glass">
+        <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3 group">
+                <img src="/images/NUTFS.png" alt="NUTFS UCC Chapter" class="h-9 w-auto">
+                <div class="hidden sm:block leading-none">
+                    <span class="block text-sm font-extrabold tracking-tight text-ink">NUTFS UCC Chapter</span>
+                    <span class="block text-[10px] font-semibold uppercase tracking-[0.18em] text-church-600 mt-1">NUC · E‑Voting</span>
                 </div>
-            </div>
+            </a>
+            <nav class="flex items-center gap-2">
+                <a href="/pages/login.html" class="btn-ghost-nav hidden sm:inline-flex">Sign in</a>
+                <a href="/pages/register.html" class="btn-wine">Get started</a>
+            </nav>
         </div>
-    </nav>
+    </header>
 
-    <!-- Hero Section -->
-    <main id="main" class="flex-grow relative z-10">
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 sm:pt-20 sm:pb-24">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-
-                <!-- Left: Copy + CTAs -->
-                <div class="text-center lg:text-left animate-fade-in">
-                    <div class="inline-flex items-center gap-2 bg-church-50 border border-church-200/60 text-church-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
-                        <span class="w-2 h-2 rounded-full bg-church-500 animate-pulse"></span>
-                        2026 Election Now Open
-                    </div>
-
-                    <h1 class="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.08]">
-                        Secure & Transparent
-                        <span class="bg-gradient-to-r from-church-600 via-church-500 to-violet-500 bg-clip-text text-transparent">NUTFS Elections</span>
-                    </h1>
-
-                    <p class="mt-6 text-lg text-slate-500 leading-relaxed max-w-lg mx-auto lg:mx-0">
-                        Participate in our secure digital voting process. Your voice shapes our leadership — from anywhere, on any device.
-                    </p>
-
-                    <div class="flex flex-col sm:flex-row gap-3 mt-8 justify-center lg:justify-start">
-                        <a href="/pages/register.html" class="inline-flex justify-center items-center px-8 py-4 rounded-full text-base font-bold text-white bg-gradient-to-r from-church-600 to-church-500 hover:from-church-500 hover:to-church-400 shadow-premium hover:shadow-premium-lg transition-all duration-300 active:scale-95">
-                            Get Started Free
-                            <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                        </a>
-                        <a href="/pages/login.html" class="inline-flex justify-center items-center px-8 py-4 border border-slate-200 rounded-full text-base font-bold text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all duration-300 active:scale-95">
-                            I have an account
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Right: Visual Card -->
-                <div class="relative animate-fade-in" style="animation-delay:0.15s">
-                    <div class="bg-white border border-slate-200/60 rounded-3xl shadow-soft-lg p-6 sm:p-8 relative overflow-hidden">
-                        <!-- Decorative strip -->
-                        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-church-500 via-violet-400 to-church-400"></div>
-
-                        <div class="flex items-center gap-3 mb-6">
-                            <div class="w-10 h-10 rounded-xl bg-church-50 flex items-center justify-center">
-                                <svg class="w-5 h-5 text-church-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+    <main id="main">
+        <!-- Hero -->
+        <section class="relative overflow-hidden">
+            <div class="absolute inset-0 bg-grid-pattern bg-grid opacity-70 pointer-events-none"></div>
+            <div class="absolute inset-0 bg-wine-radial pointer-events-none"></div>
+            <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-20 sm:pt-24 sm:pb-28">
+                <div class="grid lg:grid-cols-2 gap-14 lg:gap-20 items-center">
+                    <div class="animate-fade-in">
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-church-200/70 shadow-xs mb-8">
+                            <span class="relative flex h-2 w-2">
+                                <span class="absolute inline-flex h-full w-full rounded-full bg-church-500 opacity-60 animate-ping"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-church-600"></span>
+                            </span>
+                            <span class="section-label !text-church-700">2026 Election Cycle · Now Open</span>
+                        </div>
+                        <h1 class="display-heading text-display-md sm:text-display-lg lg:text-[3.75rem] leading-[1.05]">
+                            Every voice,<br>
+                            <span class="text-church-700 italic">faithfully counted.</span>
+                        </h1>
+                        <p class="mt-6 text-lg text-ink-muted leading-relaxed max-w-md">
+                            The official digital ballot of the <strong class="text-ink font-semibold">NUTFS UCC Chapter</strong>. Cast your vote, follow live turnout, and trust results that are sealed end‑to‑end.
+                        </p>
+                        <div class="mt-10 flex flex-col sm:flex-row gap-3">
+                            <a href="/pages/register.html" class="btn-wine px-7 py-3.5 text-base">
+                                Register to vote
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                            </a>
+                            <a href="/pages/login.html" class="btn-outline px-7 py-3.5 text-base">Member sign in</a>
+                        </div>
+                        <dl class="mt-12 grid grid-cols-3 gap-6 pt-8 border-t border-black/[0.06] max-w-md">
+                            <div>
+                                <dt class="text-2xl font-bold text-ink tracking-tight">256‑bit</dt>
+                                <dd class="text-xs text-ink-subtle mt-1 font-medium">Encrypted ballots</dd>
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-slate-900">Active Election</p>
-                                <p class="text-xs text-slate-400 font-medium">Closes in 3d 14h 22m</p>
+                                <dt class="text-2xl font-bold text-ink tracking-tight">1 vote</dt>
+                                <dd class="text-xs text-ink-subtle mt-1 font-medium">Per position</dd>
                             </div>
-                            <span class="ml-auto inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                Open
-                            </span>
-                        </div>
-
-                        <!-- Mock candidate cards -->
-                        <div class="space-y-3 mb-6">
-                            <div class="flex items-center gap-3 p-3 rounded-xl border border-church-200 bg-church-50/50">
-                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-church-500 to-violet-500 flex items-center justify-center text-white text-xs font-bold">JA</div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-bold text-slate-900 truncate">Candidate A</p>
-                                    <p class="text-xs text-slate-400">President</p>
-                                </div>
-                                <div class="w-6 h-6 rounded-full border-2 border-church-500 bg-church-500 flex items-center justify-center">
-                                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                                </div>
+                            <div>
+                                <dt class="text-2xl font-bold text-ink tracking-tight">Live</dt>
+                                <dd class="text-xs text-ink-subtle mt-1 font-medium">Turnout data</dd>
                             </div>
-                            <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-200">
-                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold">OB</div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-bold text-slate-900 truncate">Candidate B</p>
-                                    <p class="text-xs text-slate-400">President</p>
-                                </div>
-                                <div class="w-6 h-6 rounded-full border-2 border-slate-300"></div>
-                            </div>
-                        </div>
-
-                        <!-- Progress bar -->
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-400 mb-2">
-                            <span>Progress</span>
-                            <span>2 / 4 positions</span>
-                        </div>
-                        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div class="h-full bg-gradient-to-r from-church-500 to-violet-400 rounded-full" style="width:50%"></div>
-                        </div>
+                        </dl>
                     </div>
 
-                    <!-- Floating badge -->
-                    <div class="absolute -top-3 -right-3 sm:top-4 sm:-right-4 bg-white border border-slate-200 rounded-2xl shadow-soft px-4 py-2.5 flex items-center gap-2 animate-scale-in">
-                        <span class="text-xl">🗳️</span>
-                        <div>
-                            <p class="text-xs font-bold text-slate-900">1,247 votes</p>
-                            <p class="text-[10px] text-slate-400 font-medium">cast & counting</p>
+                    <!-- Product preview -->
+                    <div class="relative animate-fade-in lg:pl-4" style="animation-delay:0.1s">
+                        <div class="card-premium p-1.5 shadow-premium-lg">
+                            <div class="rounded-2xl overflow-hidden bg-canvas-alt border border-black/[0.04]">
+                                <div class="px-5 py-4 border-b border-black/[0.06] flex items-center justify-between bg-white">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-church-600 uppercase tracking-[0.14em]">Active ballot</p>
+                                        <p class="text-sm font-bold text-ink mt-0.5">General Election 2026</p>
+                                    </div>
+                                    <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-50 border border-green-200/80 px-2.5 py-1 rounded-full">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse"></span>Open
+                                    </span>
+                                </div>
+                                <div class="p-5 space-y-3 bg-white">
+                                    <div class="flex items-center gap-3 p-3 rounded-xl border-2 border-church-700 bg-church-50/60">
+                                        <div class="w-9 h-9 rounded-full bg-ember-gradient text-white text-xs font-bold flex items-center justify-center shrink-0">JA</div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-semibold text-ink truncate">James Anderson</p>
+                                            <p class="text-xs text-ink-subtle">President</p>
+                                        </div>
+                                        <div class="w-5 h-5 rounded-full bg-church-700 flex items-center justify-center shrink-0">
+                                            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3 p-3 rounded-xl border border-black/[0.08] bg-white">
+                                        <div class="w-9 h-9 rounded-full bg-church-100 text-church-800 text-xs font-bold flex items-center justify-center shrink-0">OB</div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-semibold text-ink truncate">Olivia Brooks</p>
+                                            <p class="text-xs text-ink-subtle">President</p>
+                                        </div>
+                                        <div class="w-5 h-5 rounded-full border-2 border-black/10 shrink-0"></div>
+                                    </div>
+                                    <div class="pt-2">
+                                        <div class="flex justify-between text-xs font-medium text-ink-subtle mb-2">
+                                            <span>Ballot progress</span>
+                                            <span>2 of 4 positions</span>
+                                        </div>
+                                        <div class="h-1.5 bg-canvas-alt rounded-full overflow-hidden">
+                                            <div class="h-full w-1/2 bg-ember-gradient rounded-full"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="absolute -bottom-4 -left-4 sm:left-auto sm:-right-6 card-premium px-4 py-3 shadow-soft-lg animate-scale-in">
+                            <p class="text-xs font-bold text-ink">1,247 ballots cast</p>
+                            <p class="text-[10px] text-ink-subtle font-medium">Updated in real time</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Trust Strip -->
-        <section class="border-y border-slate-200/60 bg-white/60 backdrop-blur-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-church-50 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-4.5 h-4.5 text-church-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <!-- Features -->
+        <section class="border-y border-black/[0.06] bg-white">
+            <div class="max-w-6xl mx-auto px-6 py-20">
+                <div class="text-center max-w-2xl mx-auto mb-14">
+                    <p class="section-label mb-3">Platform capabilities</p>
+                    <h2 class="display-heading text-3xl sm:text-4xl">Everything a fellowship needs for a credible election</h2>
+                    <p class="mt-4 text-ink-muted leading-relaxed">From member verification to certified results — one integrated system, built for the governance of the NUTFS UCC Chapter.</p>
+                </div>
+                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <article class="card-premium p-6 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
+                        <div class="w-11 h-11 rounded-xl bg-church-50 border border-church-100 flex items-center justify-center mb-4">
+                            <svg class="w-5 h-5 text-church-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                         </div>
-                        <div>
-                            <p class="text-xs font-bold text-slate-900">End‑to‑End</p>
-                            <p class="text-[10px] text-slate-400 font-medium">Encrypted</p>
+                        <h3 class="font-bold text-ink text-sm mb-2">End‑to‑end security</h3>
+                        <p class="text-sm text-ink-muted leading-relaxed">Encrypted in transit and at rest, with role‑based access guarding every layer.</p>
+                    </article>
+                    <article class="card-premium p-6 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
+                        <div class="w-11 h-11 rounded-xl bg-church-50 border border-church-100 flex items-center justify-center mb-4">
+                            <svg class="w-5 h-5 text-church-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-4.5 h-4.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <h3 class="font-bold text-ink text-sm mb-2">Verified members only</h3>
+                        <p class="text-sm text-ink-muted leading-relaxed">Admin‑approved membership with one ballot per position, enforced by policy.</p>
+                    </article>
+                    <article class="card-premium p-6 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
+                        <div class="w-11 h-11 rounded-xl bg-church-50 border border-church-100 flex items-center justify-center mb-4">
+                            <svg class="w-5 h-5 text-church-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                         </div>
-                        <div>
-                            <p class="text-xs font-bold text-slate-900">Verified</p>
-                            <p class="text-[10px] text-slate-400 font-medium">Voters Only</p>
+                        <h3 class="font-bold text-ink text-sm mb-2">Real‑time tally</h3>
+                        <p class="text-sm text-ink-muted leading-relaxed">Live turnout metrics and instant result aggregation the moment polls close.</p>
+                    </article>
+                    <article class="card-premium p-6 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
+                        <div class="w-11 h-11 rounded-xl bg-church-50 border border-church-100 flex items-center justify-center mb-4">
+                            <svg class="w-5 h-5 text-church-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-4.5 h-4.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-slate-900">Real‑Time</p>
-                            <p class="text-[10px] text-slate-400 font-medium">Tally</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-4.5 h-4.5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-slate-900">Audit</p>
-                            <p class="text-[10px] text-slate-400 font-medium">Trail Included</p>
-                        </div>
+                        <h3 class="font-bold text-ink text-sm mb-2">Certified results</h3>
+                        <p class="text-sm text-ink-muted leading-relaxed">A complete election history with publish controls for officially certified outcomes.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- How it works -->
+        <section class="max-w-6xl mx-auto px-6 py-20">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <div>
+                    <p class="section-label mb-3">The process</p>
+                    <h2 class="display-heading text-3xl sm:text-4xl mb-6">Three steps to cast your vote</h2>
+                    <ol class="space-y-8">
+                        <li class="flex gap-5">
+                            <span class="flex-shrink-0 w-9 h-9 rounded-xl bg-ember-gradient text-white text-sm font-bold flex items-center justify-center shadow-ember">1</span>
+                            <div>
+                                <h3 class="font-bold text-ink mb-1">Create your account</h3>
+                                <p class="text-sm text-ink-muted leading-relaxed">Register with your details. A chapter administrator verifies your membership.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-5">
+                            <span class="flex-shrink-0 w-9 h-9 rounded-xl bg-ember-gradient text-white text-sm font-bold flex items-center justify-center shadow-ember">2</span>
+                            <div>
+                                <h3 class="font-bold text-ink mb-1">Enter the voting booth</h3>
+                                <p class="text-sm text-ink-muted leading-relaxed">Review candidates for each open position and submit your selections securely.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-5">
+                            <span class="flex-shrink-0 w-9 h-9 rounded-xl bg-ember-gradient text-white text-sm font-bold flex items-center justify-center shadow-ember">3</span>
+                            <div>
+                                <h3 class="font-bold text-ink mb-1">View certified results</h3>
+                                <p class="text-sm text-ink-muted leading-relaxed">Once the election closes and results are published, outcomes are open to all members.</p>
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+                <div class="card-premium p-8 bg-wine-gradient text-white relative overflow-hidden">
+                    <div class="absolute inset-0 bg-grid-pattern bg-grid opacity-[0.12]"></div>
+                    <div class="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-flame-glow blur-xl opacity-70 pointer-events-none"></div>
+                    <div class="relative">
+                        <span class="inline-flex w-10 h-10 rounded-xl bg-white/10 ring-1 ring-white/15 items-center justify-center mb-5">
+                            <svg class="w-5 h-5 text-ember-200" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C9.5 6 6 8 6 13a6 6 0 0012 0c0-2.2-1-3.8-2.2-5.3-.4 1.2-1.1 2-2 2.3.4-2.6-.3-5.4-1.8-8z"/></svg>
+                        </span>
+                        <p class="text-ember-200 text-xs font-bold uppercase tracking-[0.16em] mb-3">Ready to participate?</p>
+                        <h3 class="font-display text-3xl font-semibold leading-tight mb-4">Your vote shapes our leadership.</h3>
+                        <p class="text-church-100/80 text-sm leading-relaxed mb-8 max-w-sm">Join your fellow NUTFS UCC Chapter members in exercising your voice through a platform built for integrity.</p>
+                        <a href="/pages/register.html" class="inline-flex items-center gap-2 bg-white text-church-900 font-semibold text-sm px-5 py-3 rounded-lg hover:bg-church-50 transition-colors">
+                            Create free account
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -177,53 +221,41 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-slate-900 text-slate-400 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <!-- Brand -->
+    <footer class="bg-church-950 text-church-300 border-t border-church-900">
+        <div class="max-w-6xl mx-auto px-6 py-14">
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
                 <div class="sm:col-span-2 lg:col-span-1">
-                    <a href="/" class="flex items-center gap-2 mb-4">
-                        <img src="/images/NUTFS.png" alt="NUTFS Logo" class="h-8 w-auto rounded-lg bg-white/10 p-1">
-                        <span class="text-base font-black text-white tracking-tight">NUTFS E‑Voting</span>
+                    <a href="/" class="flex items-center gap-2.5 mb-4">
+                        <img src="/images/NUTFS.png" alt="NUTFS" class="h-9 rounded-md bg-white/95 p-1">
+                        <span class="font-bold text-white text-sm leading-tight">NUTFS UCC Chapter<br><span class="text-church-400 font-medium text-xs">NUC · E‑Voting</span></span>
                     </a>
-                    <p class="text-sm leading-relaxed max-w-xs">A secure, transparent platform for NUTFS members to participate in democratic elections.</p>
+                    <p class="text-sm leading-relaxed text-church-400 max-w-xs">Secure digital elections for the governance of the NUTFS UCC Chapter.</p>
                 </div>
-                <!-- Product -->
                 <div>
-                    <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Product</h4>
+                    <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Platform</h4>
                     <ul class="space-y-2.5 text-sm">
-                        <li><a href="/pages/register.html" class="hover:text-white transition-colors">Register to Vote</a></li>
-                        <li><a href="/pages/login.html" class="hover:text-white transition-colors">Sign In</a></li>
-                        <li><a href="#main" class="hover:text-white transition‑colors">How It Works</a></li>
+                        <li><a href="/pages/register.html" class="hover:text-white transition-colors">Register</a></li>
+                        <li><a href="/pages/login.html" class="hover:text-white transition-colors">Sign in</a></li>
                     </ul>
                 </div>
-                <!-- Support -->
                 <div>
-                    <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Support</h4>
+                    <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Legal</h4>
                     <ul class="space-y-2.5 text-sm">
-                        <li><a href="mailto:support@nutfs.org" class="hover:text-white transition-colors">Contact Support</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors">Privacy Policy</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors">Terms of Service</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Privacy policy</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Terms of service</a></li>
                     </ul>
                 </div>
-                <!-- Contact -->
                 <div>
                     <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Contact</h4>
                     <ul class="space-y-2.5 text-sm">
-                        <li class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                            <a href="mailto:support@nutfs.org" class="hover:text-white transition-colors">support@nutfs.org</a>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            <span>NUTFS Headquarters</span>
-                        </li>
+                        <li><a href="mailto:support@nutfs.org" class="hover:text-white transition-colors">support@nutfs.org</a></li>
+                        <li>NUTFS UCC Chapter Office</li>
                     </ul>
                 </div>
             </div>
-            <div class="border-t border-slate-800 mt-10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <p class="text-xs text-slate-500">&copy; 2026 NUTFS E‑Voting System. All rights reserved.</p>
-                <p class="text-xs text-slate-600">Built with ❤️ for democracy</p>
+            <div class="border-t border-church-900 mt-12 pt-8 flex flex-col sm:flex-row justify-between gap-4 text-xs text-church-500">
+                <p>&copy; 2026 NUTFS UCC Chapter (NUC). All rights reserved.</p>
+                <p>Built for transparent governance</p>
             </div>
         </div>
     </footer>
