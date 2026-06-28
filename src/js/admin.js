@@ -270,9 +270,9 @@ async function loadMembers() {
                     </select>
                 </div>
                 <div class="flex flex-col space-y-1">
-                    <span class="text-[10px] text-slate-450 font-bold uppercase tracking-wider">Voting Rights</span>
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Voting Rights</span>
                     <span title="Voting rights are controlled by the account status"
-                        class="text-xs px-3.5 py-1.5 rounded-full font-bold shadow-sm border text-center cursor-not-allowed ${votingEnabled ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-650 border-red-200'}">
+                        class="text-xs px-3.5 py-1.5 rounded-full font-bold shadow-sm border text-center cursor-not-allowed ${votingEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}">
                         ${votingEnabled ? 'ENABLED ✓' : 'DISABLED'}
                     </span>
                 </div>
@@ -472,14 +472,14 @@ async function loadElections() {
         const statusColors = {
             'upcoming': 'bg-blue-50 text-blue-700 border-blue-100',
             'open': 'bg-emerald-50 text-emerald-700 border-emerald-100 animate-pulse',
-            'closed': 'bg-slate-150 text-slate-600 border-slate-200'
+            'closed': 'bg-slate-100 text-slate-600 border-slate-200'
         };
 
         div.innerHTML = `
             <div class="space-y-2">
                 <h4 class="font-extrabold text-lg text-slate-800 tracking-tight leading-tight">${el.title}</h4>
                 <p class="text-sm text-slate-400 font-semibold flex items-center space-x-1.5">
-                    <svg class="w-4 h-4 text-slate-350" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     <span>${new Date(el.start_date).toLocaleDateString()} - ${new Date(el.end_date).toLocaleDateString()}</span>
                 </p>
                 <div class="mt-3 text-xs font-bold flex items-center space-x-2 flex-wrap gap-2">
@@ -647,7 +647,7 @@ async function loadCandidates() {
             ${photoElement}
             <h4 class="font-extrabold text-slate-800 text-base text-center tracking-tight mb-1 leading-tight">${c.full_name}</h4>
             <p class="text-[10px] text-church-700 font-extrabold mb-6 bg-church-50 border border-church-100 px-3 py-1 rounded-full uppercase tracking-wider">${c.positions?.position_name || 'Staff'}</p>
-            <button onclick="window.deleteCandidate('${c.id}')" class="text-xs font-bold text-red-650 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2.5 rounded-full transition-all active:scale-95 w-full">Delete</button>
+            <button onclick="window.deleteCandidate('${c.id}')" class="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2.5 rounded-full transition-all active:scale-95 w-full">Delete</button>
         `;
         list.appendChild(div);
     });
@@ -794,7 +794,7 @@ async function renderResults(election) {
     const statusColors = {
         'upcoming': 'bg-blue-50 text-blue-700 border-blue-100',
         'open': 'bg-emerald-50 text-emerald-700 border-emerald-100',
-        'closed': 'bg-slate-150 text-slate-600 border-slate-200'
+        'closed': 'bg-slate-100 text-slate-600 border-slate-200'
     };
     statusEl.className = `inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${statusColors[election.status] || 'bg-slate-100 text-slate-500'}`;
     statusEl.innerHTML = `${election.status}${election.status === 'open' ? ' <span class="animate-pulse">🔴</span>' : ''}`;
