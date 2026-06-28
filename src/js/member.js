@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Dashboard init error:', err);
         const panel = document.getElementById('panel-content');
         if (panel) {
-            panel.innerHTML = `<div style="text-align:center;padding:40px 16px;color:#b91c1c;font-weight:600;font-size:14px">Failed to load dashboard: ${err.message}.<br>Please try refreshing or <a style="color:#6366f1;text-decoration:underline" href="/pages/login.html">log in again</a>.</div>`;
+            panel.innerHTML = `<div style="text-align:center;padding:40px 16px;color:#b91c1c;font-weight:600;font-size:14px">Failed to load dashboard: ${err.message}.<br>Please try refreshing or <a style="color:#9b2335;text-decoration:underline" href="/pages/login.html">log in again</a>.</div>`;
         }
     }
 });
@@ -169,17 +169,7 @@ function updateStatusBanner() {
 }
 
 function renderStats() {
-    // Find the stat row container — it's injected dynamically before the sidebar cards
-    let statRow = document.getElementById('stat-row');
-    if (!statRow) {
-        const sidebar = document.querySelector('.sidebar');
-        if (sidebar) {
-            statRow = document.createElement('div');
-            statRow.id = 'stat-row';
-            statRow.className = 'stat-row';
-            sidebar.insertBefore(statRow, sidebar.firstChild);
-        }
-    }
+    const statRow = document.getElementById('metrics-row') || document.getElementById('stat-row');
     if (!statRow) return;
 
     const isOpen = activeElection && activeElection.status === 'open';
@@ -460,7 +450,7 @@ async function renderResults() {
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                         <span style="font-size:14px;font-weight:700;color:var(--text-1);display:flex;align-items:center;gap:6px">
                             ${c.candidate_name}
-                            ${isWinner ? '<span style="font-size:10px;font-weight:800;background:rgba(245,158,11,0.15);color:#d97706;border:1px solid rgba(245,158,11,0.2);padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:0.06em">Winner 👑</span>' : ''}
+                            ${isWinner ? '<span style="font-size:10px;font-weight:700;background:var(--gold-dim);color:#7a6228;border:1px solid rgba(184,148,63,0.25);padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.06em">Winner</span>' : ''}
                         </span>
                         <span style="font-size:13px;font-weight:700;color:var(--text-2)">${c.vote_count} <span style="font-size:11px;color:var(--text-3)">(${pct}%)</span></span>
                     </div>

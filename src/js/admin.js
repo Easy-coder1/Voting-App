@@ -97,15 +97,15 @@ function setupTabs() {
                 
                 if (targetTab === tabId) {
                     if (isMobile) {
-                        b.className = 'tab-btn flex flex-col items-center p-2 text-church-600 transition duration-300';
+                        b.className = 'tab-btn flex flex-col items-center p-2 text-church-800 transition duration-300';
                     } else {
-                        b.className = 'tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl bg-church-600 text-white font-semibold transition-all duration-300';
+                        b.className = 'tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/10 text-white font-semibold text-sm border border-white/10 transition-all';
                     }
                 } else {
                     if (isMobile) {
-                        b.className = 'tab-btn flex flex-col items-center p-2 text-slate-400 hover:text-church-600 transition duration-300';
+                        b.className = 'tab-btn flex flex-col items-center p-2 text-ink-subtle hover:text-church-800 transition duration-300';
                     } else {
-                        b.className = 'tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-900 font-semibold transition-all duration-300';
+                        b.className = 'tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-church-400 hover:text-white hover:bg-white/5 font-medium text-sm transition-all';
                     }
                 }
             });
@@ -200,7 +200,7 @@ function renderChart(approved, others) {
             labels: ['Approved Voters', 'Others (Pending/Suspended)'],
             datasets: [{
                 data: [approved, others],
-                backgroundColor: ['#4f46e5', '#e2e8f0'],
+                backgroundColor: ['#9b2335', '#f5c6cb'],
                 borderWidth: 0,
                 hoverOffset: 4
             }]
@@ -254,9 +254,9 @@ async function loadMembers() {
 
         div.innerHTML = `
             <div class="flex items-center space-x-4">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-church-600 to-indigo-500 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm">${initials}</div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm">${initials}</div>
                 <div>
-                    <h4 class="font-extrabold text-slate-900 leading-tight">${m.full_name}</h4>
+                    <h4 class="font-extrabold text-church-900 leading-tight">${m.full_name}</h4>
                     <p class="text-xs text-slate-400 font-semibold mt-0.5">${m.email}</p>
                 </div>
             </div>
@@ -459,7 +459,7 @@ async function loadElections() {
 
     elections.forEach(el => {
         const div = document.createElement('div');
-        div.className = 'bg-slate-50 border border-slate-100 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-white hover:border-slate-200 hover:shadow-premium transition-all duration-300';
+        div.className = 'card-premium p-5 flex flex-col md:flex-row justify-between items-start md:items-center hover:shadow-card-hover transition-all';
         
         const statusColors = {
             'upcoming': 'bg-blue-50 text-blue-700 border-blue-100',
@@ -476,7 +476,7 @@ async function loadElections() {
                 </p>
                 <div class="mt-3 text-xs font-bold flex items-center space-x-2 flex-wrap gap-2">
                     <span class="px-2.5 py-1 rounded-full border uppercase ${statusColors[el.status] || ''}">${el.status}</span>
-                    <span class="px-2.5 py-1 ${el.results_published ? 'bg-indigo-50 text-indigo-700 border-indigo-150' : 'bg-slate-100 text-slate-500 border-slate-200'} rounded-full border uppercase text-[10px]">Results: ${el.results_published ? 'Published ✓' : 'Hidden'}</span>
+                    <span class="px-2.5 py-1 ${el.results_published ? 'bg-church-50 text-church-700 border-church-200' : 'bg-church-50/50 text-church-400 border-church-100'} rounded-full border uppercase text-[10px]">Results: ${el.results_published ? 'Published ✓' : 'Hidden'}</span>
                 </div>
             </div>
             <div class="space-x-2 mt-6 md:mt-0 flex items-center w-full md:w-auto flex-wrap gap-2">
@@ -488,7 +488,7 @@ async function loadElections() {
                 <button onclick="window.viewElectionResults('${el.id}')" class="text-xs bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full font-bold transition-all duration-300 active:scale-95">
                     View Results
                 </button>
-                <button onclick="window.toggleResults('${el.id}', ${!el.results_published})" class="text-xs bg-slate-100 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-full font-bold hover:bg-slate-200 hover:text-slate-900 transition-all duration-300 active:scale-95">
+                <button onclick="window.toggleResults('${el.id}', ${!el.results_published})" class="text-xs bg-church-50 border border-church-200 text-church-700 px-4 py-2.5 rounded-full font-bold hover:bg-church-100 hover:text-church-900 transition-all duration-300 active:scale-95">
                     Toggle Publish
                 </button>
             </div>
@@ -530,15 +530,15 @@ window.viewElectionResults = (electionId) => {
         const isMobile = b.closest('nav') !== null;
         if (b.getAttribute('data-tab') === 'results') {
             if (isMobile) {
-                b.className = 'tab-btn flex flex-col items-center p-2 text-church-600 transition duration-300';
+                b.className = 'tab-btn flex flex-col items-center p-2 text-church-800 transition duration-300';
             } else {
-                b.className = 'tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl bg-church-600 text-white font-semibold transition-all duration-300';
+                b.className = 'tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/10 text-white font-semibold text-sm border border-white/10 transition-all';
             }
         } else {
             if (isMobile) {
-                b.className = 'tab-btn flex flex-col items-center p-2 text-slate-400 hover:text-church-600 transition duration-300';
+                b.className = 'tab-btn flex flex-col items-center p-2 text-ink-subtle hover:text-church-800 transition duration-300';
             } else {
-                b.className = 'tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-900 font-semibold transition-all duration-300';
+                b.className = 'tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-church-400 hover:text-white hover:bg-white/5 font-medium text-sm transition-all';
             }
         }
     });
@@ -576,7 +576,7 @@ async function loadCandidates() {
 
     candidates.forEach(c => {
         const div = document.createElement('div');
-        div.className = 'bg-slate-50 border border-slate-100 rounded-3xl p-6 flex flex-col items-center hover:bg-white hover:border-slate-200 hover:shadow-premium transition-all duration-300 transform hover:-translate-y-1';
+        div.className = 'card-premium p-5 flex flex-col items-center hover:shadow-card-hover transition-all hover:-translate-y-0.5';
         
         const hasPhoto = c.photo_url && c.photo_url.trim() !== '' && !c.photo_url.includes('placeholder');
         const initials = c.full_name.split(' ').map(n => n[0]).join('').substring(0, 2);
@@ -585,7 +585,7 @@ async function loadCandidates() {
         if (hasPhoto) {
             photoElement = `<img src="${c.photo_url}" class="w-20 h-20 rounded-full object-cover mb-4 border-4 border-white shadow-sm">`;
         } else {
-            photoElement = `<div class="w-20 h-20 rounded-full bg-gradient-to-tr from-church-600 via-indigo-500 to-violet-500 text-white font-black text-xl flex items-center justify-center shadow-sm uppercase border-4 border-white mb-4">${initials}</div>`;
+            photoElement = `<div class="w-20 h-20 rounded-full bg-gradient-to-tr from-church-800 via-church-600 to-church-500 text-white font-black text-xl flex items-center justify-center shadow-sm uppercase border-4 border-white mb-4">${initials}</div>`;
         }
 
         div.innerHTML = `
@@ -755,7 +755,7 @@ async function renderResults(election) {
             `;
         } else {
             publishArea.innerHTML = `
-                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 mr-2">Published ✓</span>
+                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-church-50 text-church-700 border border-church-200 mr-2">Published ✓</span>
                 <button onclick="window.showPublishModal('${election.id}', 'unpublish')" class="bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 px-5 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
                     Unpublish
                 </button>
@@ -815,7 +815,7 @@ async function renderResults(election) {
             html += `
                 <div class="mb-10 last:mb-0 border-b border-slate-100 pb-8 last:border-b-0 last:pb-0">
                     <div class="flex items-center justify-between mb-5">
-                        <h4 class="text-xl font-bold text-slate-900 tracking-tight">${posName}</h4>
+                        <h4 class="text-xl font-bold text-church-900 tracking-tight">${posName}</h4>
                         <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">${totalInPos} vote${totalInPos !== 1 ? 's' : ''} cast</span>
                     </div>
                     <div class="space-y-4">`;
@@ -828,16 +828,16 @@ async function renderResults(election) {
                     <div class="bg-slate-50 border border-slate-100 hover:shadow-soft rounded-2xl p-5 transition duration-300 relative overflow-hidden ${isWinner ? 'ring-2 ring-gold-500/50 bg-gold-50/20' : ''}">
                         <div class="flex justify-between items-center mb-3 relative z-10">
                             <div class="flex items-center space-x-2">
-                                <span class="font-extrabold text-base ${isWinner ? 'text-slate-900' : 'text-slate-700'}">${c.candidate_name}</span>
+                                <span class="font-extrabold text-base ${isWinner ? 'text-church-900' : 'text-church-700'}">${c.candidate_name}</span>
                                 ${isWinner ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gold-100 text-gold-800 uppercase tracking-wider">Winner 👑</span>' : ''}
                             </div>
                             <div class="text-right">
-                                <span class="font-black text-slate-900">${c.vote_count} votes</span>
+                                <span class="font-black text-church-900">${c.vote_count} votes</span>
                                 <span class="text-xs text-slate-400 font-semibold ml-1.5">(${pct}%)</span>
                             </div>
                         </div>
                         <div class="w-full h-2.5 bg-slate-200/60 rounded-full relative overflow-hidden">
-                            <div class="h-full rounded-full transition-all duration-1000 ${isWinner ? 'bg-gradient-to-r from-gold-500 to-amber-500' : 'bg-gradient-to-r from-church-600 to-indigo-500'}" style="width: ${pct}%"></div>
+                            <div class="h-full rounded-full transition-all duration-1000 ${isWinner ? 'bg-gradient-to-r from-gold-500 to-gold-400' : 'bg-gradient-to-r from-church-700 to-church-500'}" style="width: ${pct}%"></div>
                         </div>
                     </div>`;
             });
@@ -862,9 +862,9 @@ async function renderResults(election) {
             ` + html;
         } else if (election.status === 'closed' && election.results_published) {
             html = `
-                <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-6 flex items-center space-x-3">
-                    <svg class="w-5 h-5 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span class="text-sm font-bold text-indigo-800">Results are published. Members can view them.</span>
+                <div class="bg-church-50 border border-church-200 rounded-2xl p-4 mb-6 flex items-center space-x-3">
+                    <svg class="w-5 h-5 text-church-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="text-sm font-bold text-church-800">Results are published. Members can view them.</span>
                 </div>
             ` + html;
         }
@@ -892,19 +892,19 @@ function renderTurnoutCards(container, turnout, election) {
     container.innerHTML = data ? `
         <div class="bg-white border border-slate-100 rounded-2xl p-4">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Total Members</span>
-            <span class="text-xl font-black text-slate-900">${data.total_members}</span>
+            <span class="text-xl font-black text-church-900">${data.total_members}</span>
         </div>
         <div class="bg-white border border-slate-100 rounded-2xl p-4">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Eligible Voters</span>
-            <span class="text-xl font-black text-slate-900">${data.approved_voters}</span>
+            <span class="text-xl font-black text-church-900">${data.approved_voters}</span>
         </div>
         <div class="bg-white border border-slate-100 rounded-2xl p-4">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Votes Cast</span>
-            <span class="text-xl font-black text-slate-900">${data.votes_cast}</span>
+            <span class="text-xl font-black text-church-900">${data.votes_cast}</span>
         </div>
         <div class="bg-white border border-slate-100 rounded-2xl p-4">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Turnout</span>
-            <span class="text-xl font-black text-slate-900">${data.turnout_percentage}%</span>
+            <span class="text-xl font-black text-church-900">${data.turnout_percentage}%</span>
         </div>
     ` : `
         <div class="col-span-4 text-center py-4 text-slate-400 text-sm font-semibold">Turnout data not available</div>

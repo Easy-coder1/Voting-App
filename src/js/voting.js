@@ -290,7 +290,7 @@ function renderBallot() {
             if (hasPhoto) {
                 photoHtml = `<img src="${c.photo_url}" alt="${c.full_name}" class="cand-photo">`;
             } else {
-                photoHtml = `<div class="cand-avatar" style="background:linear-gradient(135deg,var(--brand),#a78bfa)">${initials}</div>`;
+                photoHtml = `<div class="cand-avatar" style="background:linear-gradient(135deg,var(--brand),var(--brand-2))">${initials}</div>`;
             }
 
             // Card classes
