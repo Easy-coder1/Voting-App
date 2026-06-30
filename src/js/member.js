@@ -181,7 +181,7 @@ async function loadPage() {
 async function loadElectionBallot() {
     const [{ data: posData }, { data: canData }] = await Promise.all([
         supabase.from('positions').select('*'),
-        supabase.from('candidates').select('*').eq('election_id', activeElection.id),
+        supabase.from('candidates').select('*'),
     ]);
 
     candidates = canData || [];
@@ -552,7 +552,7 @@ async function renderResults() {
 
     const [{ data: results, error }, photoById] = await Promise.all([
         supabase.rpc('get_election_results', { election_id: activeElection.id }),
-        fetchCandidatePhotos(supabase, activeElection.id),
+        fetchCandidatePhotos(supabase),
     ]);
 
     if (error) {

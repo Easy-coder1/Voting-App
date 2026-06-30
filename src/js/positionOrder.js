@@ -35,11 +35,10 @@ export function candidatePhotoHtml(photoUrl, name, { imgClass, fallbackClass } =
     return `<span class="${fallbackClass}">${initials}</span>`;
 }
 
-export async function fetchCandidatePhotos(supabase, electionId) {
+export async function fetchCandidatePhotos(supabase) {
     const { data } = await supabase
         .from('candidates')
-        .select('id, photo_url')
-        .eq('election_id', electionId);
+        .select('id, photo_url');
 
     return Object.fromEntries((data || []).map(c => [c.id, c.photo_url]));
 }

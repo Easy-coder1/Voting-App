@@ -115,7 +115,7 @@ async function loadBoothData() {
 
         const [{ data: posData }, { data: canData }] = await Promise.all([
             supabase.from('positions').select('*'),
-            supabase.from('candidates').select('*').eq('election_id', activeElection.id)
+            supabase.from('candidates').select('*')
         ]);
 
         candidates = canData || [];

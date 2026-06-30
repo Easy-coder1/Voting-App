@@ -116,7 +116,7 @@
 .member-row-avatar--rejected { @apply bg-gradient-to-tr from-red-500 to-red-400; }
 
 .member-row-text { @apply min-w-0; }
-.member-row-text h4 { @apply font-extrabold text-church-900 leading-tight text-sm; }
+.member-row-text h4 { @apply font-extrabold text-church-900 leading-tight text-base; }
 .member-row-text p { @apply text-[11px] text-slate-400 font-semibold mt-0.5 truncate; }
 
 .member-row-actions {

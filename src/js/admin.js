@@ -126,7 +126,7 @@ function setupTabs() {
                 },
                 candidates: {
                     title: 'Candidate Management',
-                    subtitle: 'Add and manage candidates for elections'
+                    subtitle: 'Manage the shared candidate roster used by all elections'
                 },
                 results: {
                     title: 'Election Results',
@@ -490,16 +490,6 @@ function setupForms() {
             return;
         }
 
-        // Attach draft candidates and copy roster from the previous election if needed.
-        const newElectionId = created[0].id;
-        const attachResult = await attachCandidatesToElection(newElectionId);
-
-        if (attachResult.error) {
-            alert('Election created, but candidates could not be attached: ' + attachResult.error);
-        } else if (attachResult.count === 0) {
-            alert('Election created, but no candidates were linked. Add candidates on the Candidates tab, then edit this election or create a new one.');
-        }
-
         e.target.reset();
         loadElections();
         loadCandidates();
@@ -511,21 +501,17 @@ function setupForms() {
         const pos = document.getElementById('can-position').value;
         const photo = document.getElementById('can-photo').value;
 
-        const row = { full_name: name, position_id: pos, photo_url: photo || null };
+        const { error } = await supabase.from('candidates').insert([{
+            full_name: name,
+            position_id: pos,
+            photo_url: photo || null,
+        }]);
 
-        // Link new candidates to the current upcoming or open election when one exists.
-        const { data: activeElections } = await supabase
-            .from('elections')
-            .select('id')
-            .in('status', ['upcoming', 'open'])
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-        if (activeElections?.[0]) {
-            row.election_id = activeElections[0].id;
+        if (error) {
+            alert('Error adding candidate: ' + error.message);
+            return;
         }
 
-        await supabase.from('candidates').insert([row]);
         e.target.reset();
         resetImageUpload();
         loadCandidates();
@@ -706,15 +692,6 @@ window.updateElectionStatus = async (id, status) => {
             return;
         }
 
-        if (status === 'open' || status === 'upcoming') {
-            const { error: attachError, count } = await attachCandidatesToElection(id);
-            if (attachError) {
-                alert('Election updated, but candidates could not be linked: ' + attachError.message);
-            } else if (count === 0) {
-                alert('Election updated, but it has no candidates yet. Add candidates on the Candidates tab.');
-            }
-        }
-
         loadElections();
         loadAnalytics();
     } catch (err) {
@@ -791,77 +768,6 @@ window.switchToResultsTab = (electionId) => {
 // ----------------------
 // CANDIDATE MANAGEMENT
 // ----------------------
-async function attachCandidatesToElection(electionId) {
-    const { error: draftError } = await supabase
-        .from('candidates')
-        .update({ election_id: electionId })
-        .is('election_id', null);
-
-    if (draftError) {
-        return { error: draftError.message, count: 0 };
-    }
-
-    const { data: current, error: currentError } = await supabase
-        .from('candidates')
-        .select('full_name, position_id')
-        .eq('election_id', electionId);
-
-    if (currentError) {
-        return { error: currentError.message, count: 0 };
-    }
-
-    const existing = new Set((current || []).map(c => `${c.position_id}:${c.full_name}`));
-
-    const { data: prevElections, error: prevError } = await supabase
-        .from('elections')
-        .select('id')
-        .neq('id', electionId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-    if (prevError) {
-        return { error: prevError.message, count: existing.size };
-    }
-
-    if (prevElections?.[0]) {
-        const { data: templates, error: templateError } = await supabase
-            .from('candidates')
-            .select('full_name, position_id, photo_url')
-            .eq('election_id', prevElections[0].id);
-
-        if (templateError) {
-            return { error: templateError.message, count: existing.size };
-        }
-
-        const toInsert = (templates || [])
-            .filter(t => !existing.has(`${t.position_id}:${t.full_name}`))
-            .map(t => ({
-                full_name: t.full_name,
-                position_id: t.position_id,
-                photo_url: t.photo_url,
-                election_id: electionId,
-            }));
-
-        if (toInsert.length) {
-            const { error: insertError } = await supabase.from('candidates').insert(toInsert);
-            if (insertError) {
-                return { error: insertError.message, count: existing.size };
-            }
-        }
-    }
-
-    const { count, error: countError } = await supabase
-        .from('candidates')
-        .select('*', { count: 'exact', head: true })
-        .eq('election_id', electionId);
-
-    if (countError) {
-        return { error: countError.message, count: existing.size };
-    }
-
-    return { error: null, count: count || 0 };
-}
-
 async function loadPositions() {
     const { data: pos } = await supabase.from('positions').select('*');
     const select = document.getElementById('can-position');
@@ -875,7 +781,7 @@ async function loadPositions() {
 async function loadCandidates() {
     const { data: candidates } = await supabase
         .from('candidates')
-        .select('*, positions(position_name), elections(title, status)')
+        .select('*, positions(position_name)')
         .order('created_at', { ascending: false });
     const list = document.getElementById('candidates-list');
     list.innerHTML = '';
@@ -890,7 +796,7 @@ async function loadCandidates() {
                 </div>
                 <div>
                     <p class="text-sm font-bold text-slate-600">No candidates yet</p>
-                    <p class="text-xs font-semibold text-slate-400 mt-1">Add candidates here, then create an election to use them for voting.</p>
+                    <p class="text-xs font-semibold text-slate-400 mt-1">Add candidates once — every election uses this shared roster.</p>
                 </div>
             </div>
         `;
@@ -901,10 +807,6 @@ async function loadCandidates() {
         const div = document.createElement('div');
         div.className = 'card-premium p-5 flex flex-col items-center hover:shadow-card-hover transition-all hover:-translate-y-0.5';
 
-        const electionLabel = c.elections?.title
-            ? c.elections.title
-            : 'Draft — next election';
-        
         const hasPhoto = c.photo_url && c.photo_url.trim() !== '' && !c.photo_url.includes('placeholder');
         const initials = c.full_name.split(' ').map(n => n[0]).join('').substring(0, 2);
         
@@ -917,9 +819,8 @@ async function loadCandidates() {
 
         div.innerHTML = `
             ${photoElement}
-            <h4 class="font-extrabold text-slate-800 text-base text-center tracking-tight mb-1 leading-tight">${c.full_name}</h4>
-            <p class="text-[10px] text-church-700 font-extrabold mb-2 bg-church-50 border border-church-100 px-3 py-1 rounded-full uppercase tracking-wider">${c.positions?.position_name || 'Staff'}</p>
-            <p class="text-[10px] text-slate-500 font-semibold mb-6 text-center leading-snug">${electionLabel}</p>
+            <h4 class="font-extrabold text-slate-800 text-base text-center tracking-tight mb-2 leading-tight">${c.full_name}</h4>
+            <p class="text-[10px] text-church-700 font-extrabold mb-6 bg-church-50 border border-church-100 px-3 py-1 rounded-full uppercase tracking-wider">${c.positions?.position_name || 'Staff'}</p>
             <button onclick="window.deleteCandidate('${c.id}')" class="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2.5 rounded-full transition-all active:scale-95 w-full">Delete</button>
         `;
         list.appendChild(div);
@@ -1108,7 +1009,7 @@ async function renderResults(election) {
         // Fetch summary results and candidate photos
         const [{ data: results, error }, photoById] = await Promise.all([
             supabase.rpc('get_admin_election_summary', { election_id: election.id }),
-            fetchCandidatePhotos(supabase, election.id),
+            fetchCandidatePhotos(supabase),
         ]);
 
         if (error) {
