@@ -268,15 +268,6 @@ function matchesMemberSearch(member, query) {
         || (member.email || '').toLowerCase().includes(needle);
 }
 
-function formatMemberDate(iso) {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-}
-
 function setupMemberSearch() {
     const input = document.getElementById('member-search');
     if (!input || input.dataset.bound) return;
@@ -293,16 +284,21 @@ function renderPendingMemberRow(m) {
     div.className = 'flex flex-row flex-wrap justify-between items-center p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition duration-150 gap-4 bg-white';
 
     div.innerHTML = `
-        <div class="flex items-center space-x-4">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm">${initials}</div>
-            <div>
+        <div class="flex items-center space-x-4 min-w-0">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm shrink-0">${initials}</div>
+            <div class="min-w-0">
                 <h4 class="font-extrabold text-church-900 leading-tight">${m.full_name}</h4>
-                <p class="text-xs text-slate-400 font-semibold mt-0.5">${m.email}</p>
+                <p class="text-xs text-slate-400 font-semibold mt-0.5 truncate">${m.email}</p>
             </div>
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+            <button type="button" onclick="window.rejectMember('${m.id}')"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white border border-red-200 text-red-600 hover:bg-red-50 text-sm font-bold shadow-sm transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                Reject
+            </button>
             <button type="button" onclick="window.updateMemberStatus('${m.id}', 'approved')"
-                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm transition">
+                class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
                 Approve
             </button>
@@ -313,47 +309,44 @@ function renderPendingMemberRow(m) {
 
 function renderApprovedMemberRow(m) {
     const initials = getMemberInitials(m.full_name);
-    const tr = document.createElement('tr');
-    tr.className = 'hover:bg-slate-50/60 transition';
+    const div = document.createElement('div');
+    div.className = 'flex flex-row flex-wrap justify-between items-center p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition duration-150 gap-4 bg-white';
 
-    tr.innerHTML = `
-        <td class="px-6 py-4">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">${initials}</div>
-                <span class="font-bold text-church-900 text-sm">${m.full_name}</span>
+    div.innerHTML = `
+        <div class="flex items-center space-x-4 min-w-0">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm shrink-0">${initials}</div>
+            <div class="min-w-0">
+                <h4 class="font-extrabold text-church-900 leading-tight">${m.full_name}</h4>
+                <p class="text-xs text-slate-400 font-semibold mt-0.5 truncate">${m.email}</p>
             </div>
-        </td>
-        <td class="px-6 py-4 text-sm text-slate-500 font-medium">${m.email}</td>
-        <td class="px-6 py-4">
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
                 Enabled ✓
             </span>
-        </td>
-        <td class="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">${formatMemberDate(m.created_at)}</td>
-        <td class="px-6 py-4 text-right">
             <select onchange="window.updateMemberStatus('${m.id}', this.value)"
                 class="text-xs rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-1.5 font-bold cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-church-500 shadow-sm outline-none">
                 <option value="approved" selected>Approved</option>
                 <option value="pending">Move to pending</option>
             </select>
-        </td>
+        </div>
     `;
-    return tr;
+    return div;
 }
 
 function renderMembersUI() {
     const pendingList = document.getElementById('members-list');
-    const approvedBody = document.getElementById('approved-members-body');
+    const approvedList = document.getElementById('approved-members-list');
     const approvedEmpty = document.getElementById('approved-empty');
     const pendingCount = document.getElementById('pending-count');
     const approvedCount = document.getElementById('approved-count');
-    if (!pendingList || !approvedBody) return;
+    if (!pendingList || !approvedList) return;
 
     const pending = allMembers.filter(m => m.account_status === 'pending' && matchesMemberSearch(m, memberSearchQuery));
     const approved = allMembers.filter(m => m.account_status === 'approved' && matchesMemberSearch(m, memberSearchQuery));
 
     pendingList.innerHTML = '';
-    approvedBody.innerHTML = '';
+    approvedList.innerHTML = '';
 
     if (pendingCount) pendingCount.textContent = String(pending.length);
     if (approvedCount) approvedCount.textContent = String(approved.length);
@@ -370,9 +363,11 @@ function renderMembersUI() {
 
     if (approved.length === 0) {
         approvedEmpty?.classList.remove('hidden');
+        approvedList.classList.add('hidden');
     } else {
         approvedEmpty?.classList.add('hidden');
-        approved.forEach(m => approvedBody.appendChild(renderApprovedMemberRow(m)));
+        approvedList.classList.remove('hidden');
+        approved.forEach(m => approvedList.appendChild(renderApprovedMemberRow(m)));
     }
 }
 
@@ -392,6 +387,13 @@ async function loadMembers() {
     setupMemberSearch();
     renderMembersUI();
 }
+
+window.rejectMember = async (id) => {
+    const member = allMembers.find(m => m.id === id);
+    const name = member?.full_name || 'this member';
+    if (!confirm(`Reject registration for ${name}? They will not be able to vote.`)) return;
+    await window.updateMemberStatus(id, 'rejected');
+};
 
 window.updateMemberStatus = async (id, status) => {
     try {

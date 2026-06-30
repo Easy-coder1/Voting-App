@@ -258,14 +258,17 @@ function renderEligibility() {
 
     if (!isEligible()) {
         const pending = currentProfile.account_status === 'pending';
+        const rejected = currentProfile.account_status === 'rejected';
         card.className = `eligibility-card visible ${pending ? 'wait' : 'no'}`;
         card.innerHTML = `
             <div class="eligibility-icon">${pending ? '⏳' : '✕'}</div>
             <div class="eligibility-text">
-                <strong>${pending ? 'Waiting for approval' : 'Voting not available'}</strong>
+                <strong>${pending ? 'Waiting for approval' : rejected ? 'Registration not approved' : 'Voting not available'}</strong>
                 ${pending
                     ? 'An admin still needs to approve your account. You will be able to vote once that is done.'
-                    : 'Please speak to the election committee if you think this is a mistake.'}
+                    : rejected
+                        ? 'Your registration was not approved. Please contact the election committee if you have questions.'
+                        : 'Please speak to the election committee if you think this is a mistake.'}
             </div>
         `;
         return;

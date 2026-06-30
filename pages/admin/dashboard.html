@@ -182,11 +182,11 @@
                     <p class="text-xs text-slate-500 font-medium mt-2.5">Type a name or email to quickly find someone waiting for approval.</p>
                 </div>
 
-                <!-- Pending approvals -->
+                <!-- Pending status -->
                 <div class="card-premium overflow-hidden border border-church-100">
                     <div class="px-6 py-5 border-b border-church-100 flex flex-wrap justify-between items-center gap-3 bg-amber-50/60">
                         <div>
-                            <h3 class="text-lg font-bold text-church-900 tracking-tight">Pending approval</h3>
+                            <h3 class="text-lg font-bold text-church-900 tracking-tight">Pending status</h3>
                             <p class="text-xs text-slate-500 font-medium mt-0.5">Review and approve new registrations</p>
                         </div>
                         <span id="pending-count" class="inline-flex items-center justify-center min-w-[2rem] h-8 px-2.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold border border-amber-200">0</span>
@@ -205,21 +205,8 @@
                         </div>
                         <span id="approved-count" class="inline-flex items-center justify-center min-w-[2rem] h-8 px-2.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-extrabold border border-emerald-200">0</span>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50/80 border-b border-church-100">
-                                    <th class="px-6 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Member</th>
-                                    <th class="px-6 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Email</th>
-                                    <th class="px-6 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Voting</th>
-                                    <th class="px-6 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Joined</th>
-                                    <th class="px-6 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 text-right">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="approved-members-body" class="divide-y divide-church-100">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                    <div id="approved-members-list" class="divide-y divide-church-100">
+                        <!-- Populated by JS -->
                     </div>
                     <div id="approved-empty" class="hidden px-6 py-12 text-center">
                         <p class="text-sm font-semibold text-slate-500">No approved members match your search.</p>
