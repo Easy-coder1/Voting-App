@@ -336,15 +336,14 @@ function setupForms() {
             return;
         }
 
-        // Attach draft candidates (not yet tied to any election) to this new election.
+        // Attach draft candidates and copy roster from the previous election if needed.
         const newElectionId = created[0].id;
-        const { error: attachError } = await supabase
-            .from('candidates')
-            .update({ election_id: newElectionId })
-            .is('election_id', null);
+        const attachResult = await attachCandidatesToElection(newElectionId);
 
-        if (attachError) {
-            alert('Election created, but candidates could not be attached: ' + attachError.message);
+        if (attachResult.error) {
+            alert('Election created, but candidates could not be attached: ' + attachResult.error);
+        } else if (attachResult.count === 0) {
+            alert('Election created, but no candidates were linked. Add candidates on the Candidates tab, then edit this election or create a new one.');
         }
 
         e.target.reset();
@@ -358,7 +357,21 @@ function setupForms() {
         const pos = document.getElementById('can-position').value;
         const photo = document.getElementById('can-photo').value;
 
-        await supabase.from('candidates').insert([{ full_name: name, position_id: pos, photo_url: photo }]);
+        const row = { full_name: name, position_id: pos, photo_url: photo || null };
+
+        // Link new candidates to the current upcoming or open election when one exists.
+        const { data: activeElections } = await supabase
+            .from('elections')
+            .select('id')
+            .in('status', ['upcoming', 'open'])
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (activeElections?.[0]) {
+            row.election_id = activeElections[0].id;
+        }
+
+        await supabase.from('candidates').insert([row]);
         e.target.reset();
         resetImageUpload();
         loadCandidates();
@@ -523,10 +536,20 @@ window.updateElectionStatus = async (id, status) => {
         const { error } = await supabase.from('elections').update({ status }).eq('id', id);
         if (error) {
             alert('Error updating election status: ' + error.message);
-        } else {
-            loadElections();
-            loadAnalytics();
+            return;
         }
+
+        if (status === 'open' || status === 'upcoming') {
+            const { error: attachError, count } = await attachCandidatesToElection(id);
+            if (attachError) {
+                alert('Election updated, but candidates could not be linked: ' + attachError);
+            } else if (count === 0) {
+                alert('Election updated, but it has no candidates yet. Add candidates on the Candidates tab.');
+            }
+        }
+
+        loadElections();
+        loadAnalytics();
     } catch (err) {
         alert('Exception updating election status: ' + err.message);
     }
@@ -601,6 +624,77 @@ window.switchToResultsTab = (electionId) => {
 // ----------------------
 // CANDIDATE MANAGEMENT
 // ----------------------
+async function attachCandidatesToElection(electionId) {
+    const { error: draftError } = await supabase
+        .from('candidates')
+        .update({ election_id: electionId })
+        .is('election_id', null);
+
+    if (draftError) {
+        return { error: draftError.message, count: 0 };
+    }
+
+    const { data: current, error: currentError } = await supabase
+        .from('candidates')
+        .select('full_name, position_id')
+        .eq('election_id', electionId);
+
+    if (currentError) {
+        return { error: currentError.message, count: 0 };
+    }
+
+    const existing = new Set((current || []).map(c => `${c.position_id}:${c.full_name}`));
+
+    const { data: prevElections, error: prevError } = await supabase
+        .from('elections')
+        .select('id')
+        .neq('id', electionId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+    if (prevError) {
+        return { error: prevError.message, count: existing.size };
+    }
+
+    if (prevElections?.[0]) {
+        const { data: templates, error: templateError } = await supabase
+            .from('candidates')
+            .select('full_name, position_id, photo_url')
+            .eq('election_id', prevElections[0].id);
+
+        if (templateError) {
+            return { error: templateError.message, count: existing.size };
+        }
+
+        const toInsert = (templates || [])
+            .filter(t => !existing.has(`${t.position_id}:${t.full_name}`))
+            .map(t => ({
+                full_name: t.full_name,
+                position_id: t.position_id,
+                photo_url: t.photo_url,
+                election_id: electionId,
+            }));
+
+        if (toInsert.length) {
+            const { error: insertError } = await supabase.from('candidates').insert(toInsert);
+            if (insertError) {
+                return { error: insertError.message, count: existing.size };
+            }
+        }
+    }
+
+    const { count, error: countError } = await supabase
+        .from('candidates')
+        .select('*', { count: 'exact', head: true })
+        .eq('election_id', electionId);
+
+    if (countError) {
+        return { error: countError.message, count: existing.size };
+    }
+
+    return { error: null, count: count || 0 };
+}
+
 async function loadPositions() {
     const { data: pos } = await supabase.from('positions').select('*');
     const select = document.getElementById('can-position');
@@ -649,9 +743,9 @@ async function loadCandidates() {
         
         let photoElement = '';
         if (hasPhoto) {
-            photoElement = `<img src="${c.photo_url}" class="w-20 h-20 rounded-full object-cover mb-4 border-4 border-white shadow-sm">`;
+            photoElement = `<img src="${c.photo_url}" class="w-20 h-20 rounded-none object-cover object-[center_20%] mb-4 border-2 border-slate-200 shadow-sm">`;
         } else {
-            photoElement = `<div class="w-20 h-20 rounded-full bg-gradient-to-tr from-church-800 via-church-600 to-church-500 text-white font-black text-xl flex items-center justify-center shadow-sm uppercase border-4 border-white mb-4">${initials}</div>`;
+            photoElement = `<div class="w-20 h-20 rounded-none bg-gradient-to-tr from-church-800 via-church-600 to-church-500 text-white font-black text-xl flex items-center justify-center shadow-sm uppercase border-2 border-slate-200 mb-4">${initials}</div>`;
         }
 
         div.innerHTML = `
@@ -908,8 +1002,8 @@ async function renderResults(election) {
                     : `<span class="w-8 h-8 flex-shrink-0 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-sm font-black">${index + 1}</span>`;
 
                 const avatar = candidatePhotoHtml(photoById[c.candidate_id], c.candidate_name, {
-                    imgClass: 'w-10 h-10 flex-shrink-0 rounded-full object-cover border-2 border-white shadow-sm',
-                    fallbackClass: 'w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm',
+                    imgClass: 'w-12 h-12 flex-shrink-0 rounded-none object-cover object-[center_20%] border-2 border-white shadow-sm',
+                    fallbackClass: 'w-12 h-12 flex-shrink-0 rounded-none bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm',
                 });
 
                 html += `

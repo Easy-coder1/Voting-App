@@ -18,6 +18,10 @@ export function comparePositionNames(a, b) {
     return ia - ib;
 }
 
+export function sortPositions(positions) {
+    return [...positions].sort((a, b) => comparePositionNames(a.position_name, b.position_name));
+}
+
 export function sortPositionEntries(grouped) {
     return Object.entries(grouped).sort(([a], [b]) => comparePositionNames(a, b));
 }
