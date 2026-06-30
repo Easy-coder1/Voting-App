@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        document.getElementById('user-name').textContent = profile.full_name;
+        setupUserMenu(profile);
 
         document.getElementById('logout-btn')?.addEventListener('click', async () => {
             if (!(await confirmSignOut())) return;
@@ -58,6 +58,48 @@ function isEligible() {
 
 function getFirstName() {
     return (currentProfile?.full_name || '').trim().split(' ')[0] || 'there';
+}
+
+function setupUserMenu(profile) {
+    const initials = (profile.full_name || '')
+        .split(' ')
+        .filter(Boolean)
+        .map(n => n[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase() || '?';
+
+    const avatarEl = document.getElementById('user-avatar-initials');
+    const nameEl = document.getElementById('user-menu-name');
+    const emailEl = document.getElementById('user-menu-email');
+    const btn = document.getElementById('user-menu-btn');
+    const popover = document.getElementById('user-menu-popover');
+
+    if (avatarEl) avatarEl.textContent = initials;
+    if (nameEl) nameEl.textContent = profile.full_name || 'Member';
+    if (emailEl) emailEl.textContent = profile.email || currentUser?.email || '';
+
+    if (!btn || !popover) return;
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = popover.classList.toggle('open');
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!popover.classList.contains('open')) return;
+        if (e.target.closest('.user-menu')) return;
+        popover.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && popover.classList.contains('open')) {
+            popover.classList.remove('open');
+            btn.setAttribute('aria-expanded', 'false');
+        }
+    });
 }
 
 function renderStatusPage({ icon, title, message, tone = 'info' }) {

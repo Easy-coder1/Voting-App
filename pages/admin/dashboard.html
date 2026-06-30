@@ -163,13 +163,66 @@
             </div>
 
             <!-- Members Tab -->
-            <div id="tab-members" class="tab-content hidden space-y-8 animate-fade-in">
+            <div id="tab-members" class="tab-content hidden space-y-6 animate-fade-in">
+                <!-- Search -->
+                <div class="card-premium p-5 sm:p-6 border border-church-100">
+                    <label for="member-search" class="block text-sm font-bold text-church-900 mb-3">Find a member</label>
+                    <div class="relative">
+                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <input
+                            type="search"
+                            id="member-search"
+                            class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50/80 text-sm font-medium text-church-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-church-500/30 focus:border-church-400 focus:bg-white transition shadow-sm"
+                            placeholder="Search by name or email…"
+                            autocomplete="off"
+                        >
+                    </div>
+                    <p class="text-xs text-slate-500 font-medium mt-2.5">Type a name or email to quickly find someone waiting for approval.</p>
+                </div>
+
+                <!-- Pending approvals -->
                 <div class="card-premium overflow-hidden border border-church-100">
-                    <div class="px-6 py-5 border-b border-church-100 flex justify-between items-center bg-church-50/50">
-                        <h3 class="text-lg font-bold text-church-900 tracking-tight">Member Management</h3>
+                    <div class="px-6 py-5 border-b border-church-100 flex flex-wrap justify-between items-center gap-3 bg-amber-50/60">
+                        <div>
+                            <h3 class="text-lg font-bold text-church-900 tracking-tight">Pending approval</h3>
+                            <p class="text-xs text-slate-500 font-medium mt-0.5">Review and approve new registrations</p>
+                        </div>
+                        <span id="pending-count" class="inline-flex items-center justify-center min-w-[2rem] h-8 px-2.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold border border-amber-200">0</span>
                     </div>
                     <div id="members-list" class="divide-y divide-church-100">
                         <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Approved members -->
+                <div class="card-premium overflow-hidden border border-church-100">
+                    <div class="px-6 py-5 border-b border-church-100 flex flex-wrap justify-between items-center gap-3 bg-emerald-50/50">
+                        <div>
+                            <h3 class="text-lg font-bold text-church-900 tracking-tight">Approved members</h3>
+                            <p class="text-xs text-slate-500 font-medium mt-0.5">Members who can vote in elections</p>
+                        </div>
+                        <span id="approved-count" class="inline-flex items-center justify-center min-w-[2rem] h-8 px-2.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-extrabold border border-emerald-200">0</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50/80 border-b border-church-100">
+                                    <th class="px-6 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Member</th>
+                                    <th class="px-6 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Email</th>
+                                    <th class="px-6 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Voting</th>
+                                    <th class="px-6 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Joined</th>
+                                    <th class="px-6 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approved-members-body" class="divide-y divide-church-100">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="approved-empty" class="hidden px-6 py-12 text-center">
+                        <p class="text-sm font-semibold text-slate-500">No approved members match your search.</p>
                     </div>
                 </div>
             </div>
