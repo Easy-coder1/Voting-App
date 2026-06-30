@@ -1,4 +1,4 @@
-import { supabase, isMisconfigured, getCurrentUser, signOut } from './supabase.js';
+import { supabase, isMisconfigured, getCurrentUser, signOut, ensureProfile, profileErrorMessage } from './supabase.js';
 
 // ── PASSWORD TOGGLE ──────────────────────────────────────────────────────
 function initPasswordToggles() {
@@ -199,50 +199,7 @@ function validateRegisterForm(firstName, lastName, email, password, verifyPasswo
     return isValid;
 }
 
-// ── PROFILE ────────────────────────────────────────────────────────────
-async function ensureProfile(user) {
-    // Try to fetch the existing profile
-    const { data: profile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    if (fetchError) {
-        console.error('Profile fetch error:', fetchError);
-    }
-
-    if (profile) return profile;
-
-    // No profile found — create one from user metadata
-    console.log('No profile found for user, creating one...');
-    const fullName = user.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
-    const phone = user.user_metadata?.phone || null;
-
-    const { error: insertError } = await supabase
-        .from('profiles')
-        .insert([{
-            id: user.id,
-            full_name: fullName,
-            email: user.email || '',
-            phone: phone,
-        }]);
-
-    if (insertError) {
-        console.error('Profile insert error:', insertError.message);
-        return null;
-    }
-
-    // Fetch the newly created profile
-    const { data: newProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    return newProfile || null;
-}
-
+// ── LOGIN ──────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     // Init password toggles
     initPasswordToggles();
@@ -328,7 +285,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Supabase persists the session automatically in localStorage.
+                if (data.session) {
+                    await supabase.auth.setSession(data.session);
+                }
+
                 setLoading(btn, true, 'Loading profile...');
 
                 const sessionUser = data.user;
@@ -338,12 +298,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Ensure profile exists (also created by DB trigger on signup)
-                const profile = await ensureProfile(sessionUser);
+                const { profile, error: profileError } = await ensureProfile(sessionUser);
 
                 if (!profile) {
-                    console.error('Could not load or create profile for user:', sessionUser.id);
-                    showAlert('error', 'Could not load your profile. Please try registering again or contact support.');
+                    console.error('Could not load or create profile for user:', sessionUser.id, profileError);
+                    showAlert('error', profileErrorMessage(profileError));
                     setLoading(btn, false, 'Sign in');
                     return;
                 }
@@ -404,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (data.session) {
-                    // Email confirmation is OFF — user is logged in immediately
+                    await supabase.auth.setSession(data.session);
                     await ensureProfile(data.user);
 
                     showAlert('success', 'Registration successful! Please sign in to continue.');

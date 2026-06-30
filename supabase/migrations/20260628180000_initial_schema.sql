@@ -70,7 +70,8 @@ INSERT INTO public.positions (position_name) VALUES
   ('Financial Secretary'),
   ('Male Organizer'),
   ('Female Organizer'),
-  ('Welfare Secretary');
+  ('Welfare Secretary'),
+  ('Woman Commission');
 
 -- ── AUTO-CREATE PROFILE ON SIGNUP ──────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -335,3 +336,10 @@ CREATE POLICY "System can insert audit logs."
 -- ── REALTIME ───────────────────────────────────────────────────────────────────
 ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.votes;
+
+-- ── GRANTS (required for anon/authenticated API access) ───────────────────────
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated;
