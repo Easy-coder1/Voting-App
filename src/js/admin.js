@@ -1,4 +1,5 @@
-import { supabase, getCurrentUser, signOut, subscribeToTableChanges } from './supabase.js';
+import { supabase, getCurrentUser, subscribeToTableChanges, confirmSignOut } from './supabase.js';
+import { sortPositionEntries, candidatePhotoHtml, fetchCandidatePhotos } from './positionOrder.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -35,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (avatarEl) avatarEl.textContent = initials;
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            await signOut();
+            if (!(await confirmSignOut())) return;
             window.location.href = '/';
         });
 
@@ -843,8 +844,11 @@ async function renderResults(election) {
     `;
 
     try {
-        // Fetch summary results
-        const { data: results, error } = await supabase.rpc('get_admin_election_summary', { election_id: election.id });
+        // Fetch summary results and candidate photos
+        const [{ data: results, error }, photoById] = await Promise.all([
+            supabase.rpc('get_admin_election_summary', { election_id: election.id }),
+            fetchCandidatePhotos(supabase, election.id),
+        ]);
 
         if (error) {
             throw error;
@@ -878,11 +882,9 @@ async function renderResults(election) {
             grouped[r.position_name].push(r);
         });
 
-        const initialsOf = (name) => (name || '?').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-
         // Render tallies
         let html = '<div class="space-y-6">';
-        for (const [posName, cans] of Object.entries(grouped)) {
+        for (const [posName, cans] of sortPositionEntries(grouped)) {
             const totalInPos = cans[0]?.total_votes_in_position || 0;
             const leaderVotes = cans[0]?.vote_count || 0;
             const isTie = leaderVotes > 0 && (cans[1]?.vote_count || 0) === leaderVotes;
@@ -905,11 +907,16 @@ async function renderResults(election) {
                     ? '<span class="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-white flex items-center justify-center text-sm shadow-soft">👑</span>'
                     : `<span class="w-8 h-8 flex-shrink-0 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-sm font-black">${index + 1}</span>`;
 
+                const avatar = candidatePhotoHtml(photoById[c.candidate_id], c.candidate_name, {
+                    imgClass: 'w-10 h-10 flex-shrink-0 rounded-full object-cover border-2 border-white shadow-sm',
+                    fallbackClass: 'w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm',
+                });
+
                 html += `
                     <div class="relative overflow-hidden rounded-2xl border p-4 transition duration-300 hover:shadow-card-hover ${isWinner ? 'border-gold-300 bg-gold-50/50' : 'border-slate-100 bg-slate-50/60'}">
                         <div class="flex items-center gap-3 sm:gap-4">
                             ${rankBadge}
-                            <span class="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">${initialsOf(c.candidate_name)}</span>
+                            ${avatar}
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <span class="font-extrabold text-sm sm:text-base ${isWinner ? 'text-church-900' : 'text-slate-700'} truncate">${c.candidate_name}</span>

@@ -1,4 +1,5 @@
-import { supabase, getCurrentUser, signOut, ensureProfile } from './supabase.js';
+import { supabase, getCurrentUser, ensureProfile, confirmSignOut } from './supabase.js';
+import { sortPositionEntries, candidatePhotoHtml, fetchCandidatePhotos } from './positionOrder.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Logout buttons
         async function doLogout() {
-            await signOut();
+            if (!(await confirmSignOut())) return;
             window.location.href = '/';
         }
         document.getElementById('logout-btn')?.addEventListener('click', doLogout);
@@ -365,7 +366,10 @@ async function renderResults() {
         </div>
     `;
 
-    const { data: results, error } = await supabase.rpc('get_election_results', { election_id: activeElection.id });
+    const [{ data: results, error }, photoById] = await Promise.all([
+        supabase.rpc('get_election_results', { election_id: activeElection.id }),
+        fetchCandidatePhotos(supabase, activeElection.id),
+    ]);
 
     if (error) {
         content.innerHTML = `
@@ -389,7 +393,7 @@ async function renderResults() {
         grouped[r.position_name].push(r);
     });
 
-    for (const [posName, cans] of Object.entries(grouped)) {
+    for (const [posName, cans] of sortPositionEntries(grouped)) {
         cans.sort((a, b) => b.vote_count - a.vote_count);
         const totalVotesInPos = cans.reduce((sum, c) => sum + c.vote_count, 0);
 
@@ -407,15 +411,22 @@ async function renderResults() {
         cans.forEach((c, i) => {
             const isWinner = i === 0 && c.vote_count > 0;
             const pct = totalVotesInPos > 0 ? Math.round((c.vote_count / totalVotesInPos) * 100) : 0;
+            const avatar = candidatePhotoHtml(photoById[c.candidate_id], c.candidate_name, {
+                imgClass: 'result-cand-photo',
+                fallbackClass: 'result-cand-photo result-cand-initials',
+            });
 
             html += `
                 <div class="result-card${isWinner ? ' winner' : ''}">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                        <span style="font-size:14px;font-weight:700;color:var(--text-1);display:flex;align-items:center;gap:6px">
-                            ${c.candidate_name}
-                            ${isWinner ? '<span style="font-size:10px;font-weight:700;background:var(--gold-dim);color:#7a6228;border:1px solid rgba(184,148,63,0.25);padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.06em">Winner</span>' : ''}
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:12px">
+                        <span style="font-size:14px;font-weight:700;color:var(--text-1);display:flex;align-items:center;gap:10px;min-width:0">
+                            ${avatar}
+                            <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0">
+                                ${c.candidate_name}
+                                ${isWinner ? '<span style="font-size:10px;font-weight:700;background:var(--gold-dim);color:#7a6228;border:1px solid rgba(184,148,63,0.25);padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.06em">Winner</span>' : ''}
+                            </span>
                         </span>
-                        <span style="font-size:13px;font-weight:700;color:var(--text-2)">${c.vote_count} <span style="font-size:11px;color:var(--text-3)">(${pct}%)</span></span>
+                        <span style="font-size:13px;font-weight:700;color:var(--text-2);flex-shrink:0">${c.vote_count} <span style="font-size:11px;color:var(--text-3)">(${pct}%)</span></span>
                     </div>
                     <div class="result-bar-track">
                         <div class="result-bar-fill ${isWinner ? 'gold' : 'brand'}" style="width:${pct}%"></div>

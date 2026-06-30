@@ -36,6 +36,16 @@ export async function signOut() {
   return { error }
 }
 
+export async function confirmSignOut(message = 'Are you sure you want to sign out?') {
+  if (!window.confirm(message)) return false
+  const { error } = await signOut()
+  if (error) {
+    window.alert('Could not sign out. Please try again.')
+    return false
+  }
+  return true
+}
+
 /** Subscribe to postgres_changes on one or more public tables. */
 export function subscribeToTableChanges(tables, callback) {
   let channel = supabase.channel(`changes-${tables.join('-')}`)
