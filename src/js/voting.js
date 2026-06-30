@@ -1,4 +1,4 @@
-import { supabase, getCurrentUser } from './supabase.js';
+import { supabase, getCurrentUser, ensureProfile } from './supabase.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -14,35 +14,6 @@ let ballotSelections = {};
 // Once submitted, this flag locks the booth permanently for the session
 let hasSubmitted = false;
 
-async function ensureProfile(user) {
-    const { data: profile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    if (fetchError) console.error('Profile fetch error:', fetchError);
-    if (profile) return profile;
-
-    const fullName = user.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
-    const phone = user.user_metadata?.phone || null;
-
-    await supabase.from('profiles').insert([{
-        id: user.id,
-        full_name: fullName,
-        email: user.email || '',
-        phone: phone,
-    }]);
-
-    const { data: newProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    return newProfile || null;
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // 1. Auth Check
@@ -54,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentUser = currentUserData.user;
 
         // 2. Profile Check
-        const profile = await ensureProfile(currentUser);
+        const { profile } = await ensureProfile(currentUser);
         if (!profile) {
             window.location.href = '/pages/login.html';
             return;

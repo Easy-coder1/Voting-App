@@ -1,4 +1,4 @@
-import { supabase, getCurrentUser, signOut } from './supabase.js';
+import { supabase, getCurrentUser, signOut, ensureProfile } from './supabase.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -7,47 +7,6 @@ let positions = [];
 let candidates = [];
 let userVotes = [];
 let countdownInterval = null;
-
-async function ensureProfile(user) {
-    const { data: profile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    if (fetchError) {
-        console.error('Profile fetch error:', fetchError);
-    }
-
-    if (profile) return profile;
-
-    // No profile found — create one from user metadata
-    console.log('No profile found for user, creating one...');
-    const fullName = user.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
-    const phone = user.user_metadata?.phone || null;
-
-    const { error: insertError } = await supabase
-        .from('profiles')
-        .insert([{
-            id: user.id,
-            full_name: fullName,
-            email: user.email || '',
-            phone: phone,
-        }]);
-
-    if (insertError) {
-        console.error('Profile insert error:', insertError.message);
-        return null;
-    }
-
-    const { data: newProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    return newProfile || null;
-}
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -60,10 +19,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentUser = currentUserData.user;
 
         // 2. Load or create Profile
-        const profile = await ensureProfile(currentUser);
+        const { profile, error: profileError } = await ensureProfile(currentUser);
 
         if (!profile) {
-            console.error('Could not load or create profile');
+            console.error('Could not load or create profile', profileError);
             window.location.href = '/pages/login.html';
             return;
         }

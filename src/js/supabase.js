@@ -49,3 +49,60 @@ export function subscribeToTableChanges(tables, callback) {
   channel.subscribe()
   return channel
 }
+
+/** Load or create the profiles row for the signed-in auth user. */
+export async function ensureProfile(user) {
+  if (!user?.id) {
+    return { profile: null, error: { message: 'Signed in, but no user id was returned.' } }
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (existing) return { profile: existing, error: null }
+
+  if (fetchError) {
+    return { profile: null, error: fetchError }
+  }
+
+  const fullName =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.email?.split('@')[0] ||
+    'Member'
+
+  const { data: created, error: upsertError } = await supabase
+    .from('profiles')
+    .upsert(
+      {
+        id: user.id,
+        full_name: fullName,
+        email: user.email || '',
+        phone: user.user_metadata?.phone || null,
+      },
+      { onConflict: 'id' }
+    )
+    .select()
+    .single()
+
+  if (upsertError) return { profile: null, error: upsertError }
+  return { profile: created, error: null }
+}
+
+function profileErrorMessage(error) {
+  const msg = (error?.message || '').toLowerCase()
+  const code = error?.code || ''
+
+  if (msg.includes('does not exist') || code === 'PGRST205' || code === '42P01') {
+    return 'The profiles table is missing. Run supabase/migrations/20260628180000_initial_schema.sql in the Supabase SQL Editor, then try again.'
+  }
+  if (msg.includes('row-level security') || code === '42501') {
+    return 'Could not create your profile due to database permissions. Contact the administrator.'
+  }
+  return error?.message || 'Could not load your profile.'
+}
+
+export { profileErrorMessage }
