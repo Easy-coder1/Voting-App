@@ -114,7 +114,7 @@ function setupTabs() {
             const tabMeta = {
                 analytics: {
                     title: 'Analytics',
-                    subtitle: 'Member stats, turnout, and live election status'
+                    subtitle: 'Member stats, pending, approved, rejected, and live election status'
                 },
                 members: {
                     title: 'Member Management',
@@ -126,7 +126,7 @@ function setupTabs() {
                 },
                 candidates: {
                     title: 'Candidate Management',
-                    subtitle: 'Add and manage candidates for elections'
+                    subtitle: 'Manage the shared candidate roster used by all elections'
                 },
                 results: {
                     title: 'Election Results',
@@ -158,11 +158,13 @@ async function loadAnalytics() {
         { count: totalMembers },
         { count: pending },
         { count: approved },
+        { count: rejected },
         { data: voteRows },
     ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').eq('role', 'member'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'rejected').eq('role', 'member'),
         supabase.from('votes').select('voter_id'),
     ]);
 
@@ -171,9 +173,10 @@ async function loadAnalytics() {
     document.getElementById('stat-total-members').textContent = totalMembers || 0;
     document.getElementById('stat-pending').textContent = pending || 0;
     document.getElementById('stat-approved').textContent = approved || 0;
+    document.getElementById('stat-rejected').textContent = rejected || 0;
     document.getElementById('stat-votes').textContent = votersWhoVoted;
 
-    renderChart(approved || 0, totalMembers ? totalMembers - approved : 0);
+    renderMemberStatusChart(pending || 0, approved || 0, rejected || 0);
     
     // Check active election
     const { data: elections } = await supabase.from('elections').select('*').eq('status', 'open').limit(1);
@@ -206,12 +209,18 @@ async function loadAnalytics() {
     }
 }
 
-function renderChart(approved, others) {
+function renderMemberStatusChart(pending, approved, rejected) {
     const ctx = document.getElementById('turnoutChart');
     if (!ctx) return;
-    
+
+    const labels = ['Pending', 'Approved', 'Rejected'];
+    const data = [pending, approved, rejected];
+    const colors = ['#f59e0b', '#059669', '#dc2626'];
+
     if (turnoutChartInstance) {
-        turnoutChartInstance.data.datasets[0].data = [approved, others];
+        turnoutChartInstance.data.labels = labels;
+        turnoutChartInstance.data.datasets[0].data = data;
+        turnoutChartInstance.data.datasets[0].backgroundColor = colors;
         turnoutChartInstance.update();
         return;
     }
@@ -219,13 +228,13 @@ function renderChart(approved, others) {
     turnoutChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Approved Voters', 'Others (Pending/Suspended)'],
+            labels,
             datasets: [{
-                data: [approved, others],
-                backgroundColor: ['#9e1b2e', '#f6c2c8'],
+                data,
+                backgroundColor: colors,
                 borderWidth: 0,
-                hoverOffset: 4
-            }]
+                hoverOffset: 4,
+            }],
         },
         options: {
             responsive: true,
@@ -239,12 +248,12 @@ function renderChart(approved, others) {
                         padding: 20,
                         font: {
                             weight: 'bold',
-                            family: 'Plus Jakarta Sans'
-                        }
-                    }
-                }
-            }
-        }
+                            family: 'Plus Jakarta Sans',
+                        },
+                    },
+                },
+            },
+        },
     });
 }
 
@@ -268,15 +277,6 @@ function matchesMemberSearch(member, query) {
         || (member.email || '').toLowerCase().includes(needle);
 }
 
-function formatMemberDate(iso) {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-}
-
 function setupMemberSearch() {
     const input = document.getElementById('member-search');
     if (!input || input.dataset.bound) return;
@@ -290,20 +290,23 @@ function setupMemberSearch() {
 function renderPendingMemberRow(m) {
     const initials = getMemberInitials(m.full_name);
     const div = document.createElement('div');
-    div.className = 'flex flex-row flex-wrap justify-between items-center p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition duration-150 gap-4 bg-white';
+    div.className = 'member-row';
 
     div.innerHTML = `
-        <div class="flex items-center space-x-4">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm">${initials}</div>
-            <div>
-                <h4 class="font-extrabold text-church-900 leading-tight">${m.full_name}</h4>
-                <p class="text-xs text-slate-400 font-semibold mt-0.5">${m.email}</p>
+        <div class="member-row-info">
+            <div class="member-row-avatar member-row-avatar--pending">${initials}</div>
+            <div class="member-row-text">
+                <h4>${m.full_name}</h4>
+                <p>${m.email}</p>
             </div>
         </div>
-        <div class="flex items-center gap-4">
-            <button type="button" onclick="window.updateMemberStatus('${m.id}', 'approved')"
-                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+        <div class="member-row-actions">
+            <button type="button" onclick="window.rejectMember('${m.id}')" class="member-btn member-btn--reject">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                Reject
+            </button>
+            <button type="button" onclick="window.updateMemberStatus('${m.id}', 'approved')" class="member-btn member-btn--approve">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
                 Approve
             </button>
         </div>
@@ -313,67 +316,111 @@ function renderPendingMemberRow(m) {
 
 function renderApprovedMemberRow(m) {
     const initials = getMemberInitials(m.full_name);
-    const tr = document.createElement('tr');
-    tr.className = 'hover:bg-slate-50/60 transition';
+    const div = document.createElement('div');
+    div.className = 'member-row';
 
-    tr.innerHTML = `
-        <td class="px-6 py-4">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">${initials}</div>
-                <span class="font-bold text-church-900 text-sm">${m.full_name}</span>
+    div.innerHTML = `
+        <div class="member-row-info">
+            <div class="member-row-avatar member-row-avatar--approved">${initials}</div>
+            <div class="member-row-text">
+                <h4>${m.full_name}</h4>
+                <p>${m.email}</p>
             </div>
-        </td>
-        <td class="px-6 py-4 text-sm text-slate-500 font-medium">${m.email}</td>
-        <td class="px-6 py-4">
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Enabled ✓
-            </span>
-        </td>
-        <td class="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">${formatMemberDate(m.created_at)}</td>
-        <td class="px-6 py-4 text-right">
-            <select onchange="window.updateMemberStatus('${m.id}', this.value)"
-                class="text-xs rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-1.5 font-bold cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-church-500 shadow-sm outline-none">
-                <option value="approved" selected>Approved</option>
-                <option value="pending">Move to pending</option>
-            </select>
-        </td>
+        </div>
+        <div class="member-row-actions">
+            <span class="member-badge member-badge--ok">Enabled ✓</span>
+            <button type="button" onclick="window.updateMemberStatus('${m.id}', 'pending')" class="member-btn member-btn--ghost">
+                To pending
+            </button>
+        </div>
     `;
-    return tr;
+    return div;
+}
+
+function renderRejectedMemberRow(m) {
+    const initials = getMemberInitials(m.full_name);
+    const div = document.createElement('div');
+    div.className = 'member-row';
+
+    div.innerHTML = `
+        <div class="member-row-info">
+            <div class="member-row-avatar member-row-avatar--rejected">${initials}</div>
+            <div class="member-row-text">
+                <h4>${m.full_name}</h4>
+                <p>${m.email}</p>
+            </div>
+        </div>
+        <div class="member-row-actions">
+            <span class="member-badge member-badge--no">Rejected</span>
+            <button type="button" onclick="window.updateMemberStatus('${m.id}', 'pending')" class="member-btn member-btn--restore">
+                Restore to pending
+            </button>
+        </div>
+    `;
+    return div;
+}
+
+function renderMemberSection(listEl, emptyEl, members, emptyMessage) {
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    if (members.length === 0) {
+        emptyEl?.classList.remove('hidden');
+        listEl.classList.add('hidden');
+        if (emptyEl) {
+            const msg = emptyEl.querySelector('p');
+            if (msg) msg.textContent = emptyMessage;
+        }
+        return;
+    }
+
+    emptyEl?.classList.add('hidden');
+    listEl.classList.remove('hidden');
+    members.forEach(m => listEl.appendChild(m));
 }
 
 function renderMembersUI() {
     const pendingList = document.getElementById('members-list');
-    const approvedBody = document.getElementById('approved-members-body');
+    const approvedList = document.getElementById('approved-members-list');
+    const rejectedList = document.getElementById('rejected-members-list');
     const approvedEmpty = document.getElementById('approved-empty');
+    const rejectedEmpty = document.getElementById('rejected-empty');
     const pendingCount = document.getElementById('pending-count');
     const approvedCount = document.getElementById('approved-count');
-    if (!pendingList || !approvedBody) return;
+    const rejectedCount = document.getElementById('rejected-count');
 
     const pending = allMembers.filter(m => m.account_status === 'pending' && matchesMemberSearch(m, memberSearchQuery));
     const approved = allMembers.filter(m => m.account_status === 'approved' && matchesMemberSearch(m, memberSearchQuery));
-
-    pendingList.innerHTML = '';
-    approvedBody.innerHTML = '';
+    const rejected = allMembers.filter(m => m.account_status === 'rejected' && matchesMemberSearch(m, memberSearchQuery));
 
     if (pendingCount) pendingCount.textContent = String(pending.length);
     if (approvedCount) approvedCount.textContent = String(approved.length);
+    if (rejectedCount) rejectedCount.textContent = String(rejected.length);
 
     if (pending.length === 0) {
         pendingList.innerHTML = `
-            <div class="px-6 py-10 text-center">
-                <p class="text-sm font-semibold text-slate-500">${memberSearchQuery ? 'No pending members match your search.' : 'No members waiting for approval. Great job!'}</p>
+            <div class="member-empty">
+                <p>${memberSearchQuery ? 'No pending members match your search.' : 'No members waiting for approval. Great job!'}</p>
             </div>
         `;
     } else {
+        pendingList.innerHTML = '';
         pending.forEach(m => pendingList.appendChild(renderPendingMemberRow(m)));
     }
 
-    if (approved.length === 0) {
-        approvedEmpty?.classList.remove('hidden');
-    } else {
-        approvedEmpty?.classList.add('hidden');
-        approved.forEach(m => approvedBody.appendChild(renderApprovedMemberRow(m)));
-    }
+    renderMemberSection(
+        approvedList,
+        approvedEmpty,
+        approved.map(m => renderApprovedMemberRow(m)),
+        memberSearchQuery ? 'No approved members match your search.' : 'No approved members yet.'
+    );
+
+    renderMemberSection(
+        rejectedList,
+        rejectedEmpty,
+        rejected.map(m => renderRejectedMemberRow(m)),
+        memberSearchQuery ? 'No rejected members match your search.' : 'No rejected members.'
+    );
 }
 
 async function loadMembers() {
@@ -392,6 +439,13 @@ async function loadMembers() {
     setupMemberSearch();
     renderMembersUI();
 }
+
+window.rejectMember = async (id) => {
+    const member = allMembers.find(m => m.id === id);
+    const name = member?.full_name || 'this member';
+    if (!confirm(`Reject registration for ${name}? They will not be able to vote.`)) return;
+    await window.updateMemberStatus(id, 'rejected');
+};
 
 window.updateMemberStatus = async (id, status) => {
     try {
@@ -436,16 +490,6 @@ function setupForms() {
             return;
         }
 
-        // Attach draft candidates and copy roster from the previous election if needed.
-        const newElectionId = created[0].id;
-        const attachResult = await attachCandidatesToElection(newElectionId);
-
-        if (attachResult.error) {
-            alert('Election created, but candidates could not be attached: ' + attachResult.error);
-        } else if (attachResult.count === 0) {
-            alert('Election created, but no candidates were linked. Add candidates on the Candidates tab, then edit this election or create a new one.');
-        }
-
         e.target.reset();
         loadElections();
         loadCandidates();
@@ -457,21 +501,17 @@ function setupForms() {
         const pos = document.getElementById('can-position').value;
         const photo = document.getElementById('can-photo').value;
 
-        const row = { full_name: name, position_id: pos, photo_url: photo || null };
+        const { error } = await supabase.from('candidates').insert([{
+            full_name: name,
+            position_id: pos,
+            photo_url: photo || null,
+        }]);
 
-        // Link new candidates to the current upcoming or open election when one exists.
-        const { data: activeElections } = await supabase
-            .from('elections')
-            .select('id')
-            .in('status', ['upcoming', 'open'])
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-        if (activeElections?.[0]) {
-            row.election_id = activeElections[0].id;
+        if (error) {
+            alert('Error adding candidate: ' + error.message);
+            return;
         }
 
-        await supabase.from('candidates').insert([row]);
         e.target.reset();
         resetImageUpload();
         loadCandidates();
@@ -652,15 +692,6 @@ window.updateElectionStatus = async (id, status) => {
             return;
         }
 
-        if (status === 'open' || status === 'upcoming') {
-            const { error: attachError, count } = await attachCandidatesToElection(id);
-            if (attachError) {
-                alert('Election updated, but candidates could not be linked: ' + attachError.message);
-            } else if (count === 0) {
-                alert('Election updated, but it has no candidates yet. Add candidates on the Candidates tab.');
-            }
-        }
-
         loadElections();
         loadAnalytics();
     } catch (err) {
@@ -737,77 +768,6 @@ window.switchToResultsTab = (electionId) => {
 // ----------------------
 // CANDIDATE MANAGEMENT
 // ----------------------
-async function attachCandidatesToElection(electionId) {
-    const { error: draftError } = await supabase
-        .from('candidates')
-        .update({ election_id: electionId })
-        .is('election_id', null);
-
-    if (draftError) {
-        return { error: draftError.message, count: 0 };
-    }
-
-    const { data: current, error: currentError } = await supabase
-        .from('candidates')
-        .select('full_name, position_id')
-        .eq('election_id', electionId);
-
-    if (currentError) {
-        return { error: currentError.message, count: 0 };
-    }
-
-    const existing = new Set((current || []).map(c => `${c.position_id}:${c.full_name}`));
-
-    const { data: prevElections, error: prevError } = await supabase
-        .from('elections')
-        .select('id')
-        .neq('id', electionId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-    if (prevError) {
-        return { error: prevError.message, count: existing.size };
-    }
-
-    if (prevElections?.[0]) {
-        const { data: templates, error: templateError } = await supabase
-            .from('candidates')
-            .select('full_name, position_id, photo_url')
-            .eq('election_id', prevElections[0].id);
-
-        if (templateError) {
-            return { error: templateError.message, count: existing.size };
-        }
-
-        const toInsert = (templates || [])
-            .filter(t => !existing.has(`${t.position_id}:${t.full_name}`))
-            .map(t => ({
-                full_name: t.full_name,
-                position_id: t.position_id,
-                photo_url: t.photo_url,
-                election_id: electionId,
-            }));
-
-        if (toInsert.length) {
-            const { error: insertError } = await supabase.from('candidates').insert(toInsert);
-            if (insertError) {
-                return { error: insertError.message, count: existing.size };
-            }
-        }
-    }
-
-    const { count, error: countError } = await supabase
-        .from('candidates')
-        .select('*', { count: 'exact', head: true })
-        .eq('election_id', electionId);
-
-    if (countError) {
-        return { error: countError.message, count: existing.size };
-    }
-
-    return { error: null, count: count || 0 };
-}
-
 async function loadPositions() {
     const { data: pos } = await supabase.from('positions').select('*');
     const select = document.getElementById('can-position');
@@ -821,7 +781,7 @@ async function loadPositions() {
 async function loadCandidates() {
     const { data: candidates } = await supabase
         .from('candidates')
-        .select('*, positions(position_name), elections(title, status)')
+        .select('*, positions(position_name)')
         .order('created_at', { ascending: false });
     const list = document.getElementById('candidates-list');
     list.innerHTML = '';
@@ -836,7 +796,7 @@ async function loadCandidates() {
                 </div>
                 <div>
                     <p class="text-sm font-bold text-slate-600">No candidates yet</p>
-                    <p class="text-xs font-semibold text-slate-400 mt-1">Add candidates here, then create an election to use them for voting.</p>
+                    <p class="text-xs font-semibold text-slate-400 mt-1">Add candidates once — every election uses this shared roster.</p>
                 </div>
             </div>
         `;
@@ -847,10 +807,6 @@ async function loadCandidates() {
         const div = document.createElement('div');
         div.className = 'card-premium p-5 flex flex-col items-center hover:shadow-card-hover transition-all hover:-translate-y-0.5';
 
-        const electionLabel = c.elections?.title
-            ? c.elections.title
-            : 'Draft — next election';
-        
         const hasPhoto = c.photo_url && c.photo_url.trim() !== '' && !c.photo_url.includes('placeholder');
         const initials = c.full_name.split(' ').map(n => n[0]).join('').substring(0, 2);
         
@@ -863,9 +819,8 @@ async function loadCandidates() {
 
         div.innerHTML = `
             ${photoElement}
-            <h4 class="font-extrabold text-slate-800 text-base text-center tracking-tight mb-1 leading-tight">${c.full_name}</h4>
-            <p class="text-[10px] text-church-700 font-extrabold mb-2 bg-church-50 border border-church-100 px-3 py-1 rounded-full uppercase tracking-wider">${c.positions?.position_name || 'Staff'}</p>
-            <p class="text-[10px] text-slate-500 font-semibold mb-6 text-center leading-snug">${electionLabel}</p>
+            <h4 class="font-extrabold text-slate-800 text-base text-center tracking-tight mb-2 leading-tight">${c.full_name}</h4>
+            <p class="text-[10px] text-church-700 font-extrabold mb-6 bg-church-50 border border-church-100 px-3 py-1 rounded-full uppercase tracking-wider">${c.positions?.position_name || 'Staff'}</p>
             <button onclick="window.deleteCandidate('${c.id}')" class="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2.5 rounded-full transition-all active:scale-95 w-full">Delete</button>
         `;
         list.appendChild(div);
@@ -1054,7 +1009,7 @@ async function renderResults(election) {
         // Fetch summary results and candidate photos
         const [{ data: results, error }, photoById] = await Promise.all([
             supabase.rpc('get_admin_election_summary', { election_id: election.id }),
-            fetchCandidatePhotos(supabase, election.id),
+            fetchCandidatePhotos(supabase),
         ]);
 
         if (error) {
@@ -1192,13 +1147,15 @@ function renderTurnoutCards(container, turnout, election) {
 
     if (!data) {
         container.innerHTML = `
-            <div class="col-span-2 sm:col-span-4 flex items-center justify-center py-6 text-slate-400 text-sm font-semibold bg-slate-50/60 border border-dashed border-slate-200 rounded-2xl">
+            <div class="col-span-2 sm:col-span-3 lg:col-span-6 flex items-center justify-center py-6 text-slate-400 text-sm font-semibold bg-slate-50/60 border border-dashed border-slate-200 rounded-2xl">
                 Turnout data not available yet
             </div>`;
         return;
     }
 
     const turnoutPct = Math.max(0, Math.min(100, Number(data.turnout_percentage) || 0));
+    const pendingMembers = data.pending_members ?? 0;
+    const rejectedMembers = data.rejected_members ?? 0;
 
     const stat = (label, value, sub, ring, iconPath) => `
         <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-soft hover:shadow-card-hover transition-all duration-300">
@@ -1214,11 +1171,15 @@ function renderTurnoutCards(container, turnout, election) {
 
     const peopleIcon = 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a3 3 0 10-2.83-5';
     const checkIcon = 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
+    const clockIcon = 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z';
+    const rejectIcon = 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z';
     const ballotIcon = 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
 
     container.innerHTML = `
         ${stat('Total Members', data.total_members, 'On the register', 'bg-church-50 text-church-700', peopleIcon)}
-        ${stat('Eligible Voters', data.approved_voters, 'Approved to vote', 'bg-emerald-50 text-emerald-600', checkIcon)}
+        ${stat('Pending', pendingMembers, 'Awaiting approval', 'bg-amber-50 text-amber-600', clockIcon)}
+        ${stat('Approved', data.approved_voters, 'Eligible to vote', 'bg-emerald-50 text-emerald-600', checkIcon)}
+        ${stat('Rejected', rejectedMembers, 'Not approved', 'bg-red-50 text-red-600', rejectIcon)}
         ${stat('Members Voted', data.votes_cast, election.status === 'open' ? 'Counting live' : 'Unique voters', 'bg-ember-50 text-ember-600', ballotIcon)}
         <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl p-4 shadow-premium flex items-center gap-4">
             <div class="relative w-14 h-14 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
