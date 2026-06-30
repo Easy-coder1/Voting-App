@@ -281,25 +281,23 @@ function setupMemberSearch() {
 function renderPendingMemberRow(m) {
     const initials = getMemberInitials(m.full_name);
     const div = document.createElement('div');
-    div.className = 'flex flex-row flex-wrap justify-between items-center p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition duration-150 gap-4 bg-white';
+    div.className = 'member-row';
 
     div.innerHTML = `
-        <div class="flex items-center space-x-4 min-w-0">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm shrink-0">${initials}</div>
-            <div class="min-w-0">
-                <h4 class="font-extrabold text-church-900 leading-tight">${m.full_name}</h4>
-                <p class="text-xs text-slate-400 font-semibold mt-0.5 truncate">${m.email}</p>
+        <div class="member-row-info">
+            <div class="member-row-avatar member-row-avatar--pending">${initials}</div>
+            <div class="member-row-text">
+                <h4>${m.full_name}</h4>
+                <p>${m.email}</p>
             </div>
         </div>
-        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-            <button type="button" onclick="window.rejectMember('${m.id}')"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white border border-red-200 text-red-600 hover:bg-red-50 text-sm font-bold shadow-sm transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+        <div class="member-row-actions">
+            <button type="button" onclick="window.rejectMember('${m.id}')" class="member-btn member-btn--reject">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                 Reject
             </button>
-            <button type="button" onclick="window.updateMemberStatus('${m.id}', 'approved')"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+            <button type="button" onclick="window.updateMemberStatus('${m.id}', 'approved')" class="member-btn member-btn--approve">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
                 Approve
             </button>
         </div>
@@ -310,65 +308,110 @@ function renderPendingMemberRow(m) {
 function renderApprovedMemberRow(m) {
     const initials = getMemberInitials(m.full_name);
     const div = document.createElement('div');
-    div.className = 'flex flex-row flex-wrap justify-between items-center p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition duration-150 gap-4 bg-white';
+    div.className = 'member-row';
 
     div.innerHTML = `
-        <div class="flex items-center space-x-4 min-w-0">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm shrink-0">${initials}</div>
-            <div class="min-w-0">
-                <h4 class="font-extrabold text-church-900 leading-tight">${m.full_name}</h4>
-                <p class="text-xs text-slate-400 font-semibold mt-0.5 truncate">${m.email}</p>
+        <div class="member-row-info">
+            <div class="member-row-avatar member-row-avatar--approved">${initials}</div>
+            <div class="member-row-text">
+                <h4>${m.full_name}</h4>
+                <p>${m.email}</p>
             </div>
         </div>
-        <div class="flex items-center gap-3 shrink-0">
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Enabled ✓
-            </span>
-            <select onchange="window.updateMemberStatus('${m.id}', this.value)"
-                class="text-xs rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-1.5 font-bold cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-church-500 shadow-sm outline-none">
-                <option value="approved" selected>Approved</option>
-                <option value="pending">Move to pending</option>
-            </select>
+        <div class="member-row-actions">
+            <span class="member-badge member-badge--ok">Enabled ✓</span>
+            <button type="button" onclick="window.updateMemberStatus('${m.id}', 'pending')" class="member-btn member-btn--ghost">
+                To pending
+            </button>
         </div>
     `;
     return div;
 }
 
+function renderRejectedMemberRow(m) {
+    const initials = getMemberInitials(m.full_name);
+    const div = document.createElement('div');
+    div.className = 'member-row';
+
+    div.innerHTML = `
+        <div class="member-row-info">
+            <div class="member-row-avatar member-row-avatar--rejected">${initials}</div>
+            <div class="member-row-text">
+                <h4>${m.full_name}</h4>
+                <p>${m.email}</p>
+            </div>
+        </div>
+        <div class="member-row-actions">
+            <span class="member-badge member-badge--no">Rejected</span>
+            <button type="button" onclick="window.updateMemberStatus('${m.id}', 'pending')" class="member-btn member-btn--restore">
+                Restore to pending
+            </button>
+        </div>
+    `;
+    return div;
+}
+
+function renderMemberSection(listEl, emptyEl, members, emptyMessage) {
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    if (members.length === 0) {
+        emptyEl?.classList.remove('hidden');
+        listEl.classList.add('hidden');
+        if (emptyEl) {
+            const msg = emptyEl.querySelector('p');
+            if (msg) msg.textContent = emptyMessage;
+        }
+        return;
+    }
+
+    emptyEl?.classList.add('hidden');
+    listEl.classList.remove('hidden');
+    members.forEach(m => listEl.appendChild(m));
+}
+
 function renderMembersUI() {
     const pendingList = document.getElementById('members-list');
     const approvedList = document.getElementById('approved-members-list');
+    const rejectedList = document.getElementById('rejected-members-list');
     const approvedEmpty = document.getElementById('approved-empty');
+    const rejectedEmpty = document.getElementById('rejected-empty');
     const pendingCount = document.getElementById('pending-count');
     const approvedCount = document.getElementById('approved-count');
-    if (!pendingList || !approvedList) return;
+    const rejectedCount = document.getElementById('rejected-count');
 
     const pending = allMembers.filter(m => m.account_status === 'pending' && matchesMemberSearch(m, memberSearchQuery));
     const approved = allMembers.filter(m => m.account_status === 'approved' && matchesMemberSearch(m, memberSearchQuery));
-
-    pendingList.innerHTML = '';
-    approvedList.innerHTML = '';
+    const rejected = allMembers.filter(m => m.account_status === 'rejected' && matchesMemberSearch(m, memberSearchQuery));
 
     if (pendingCount) pendingCount.textContent = String(pending.length);
     if (approvedCount) approvedCount.textContent = String(approved.length);
+    if (rejectedCount) rejectedCount.textContent = String(rejected.length);
 
     if (pending.length === 0) {
         pendingList.innerHTML = `
-            <div class="px-6 py-10 text-center">
-                <p class="text-sm font-semibold text-slate-500">${memberSearchQuery ? 'No pending members match your search.' : 'No members waiting for approval. Great job!'}</p>
+            <div class="member-empty">
+                <p>${memberSearchQuery ? 'No pending members match your search.' : 'No members waiting for approval. Great job!'}</p>
             </div>
         `;
     } else {
+        pendingList.innerHTML = '';
         pending.forEach(m => pendingList.appendChild(renderPendingMemberRow(m)));
     }
 
-    if (approved.length === 0) {
-        approvedEmpty?.classList.remove('hidden');
-        approvedList.classList.add('hidden');
-    } else {
-        approvedEmpty?.classList.add('hidden');
-        approvedList.classList.remove('hidden');
-        approved.forEach(m => approvedList.appendChild(renderApprovedMemberRow(m)));
-    }
+    renderMemberSection(
+        approvedList,
+        approvedEmpty,
+        approved.map(m => renderApprovedMemberRow(m)),
+        memberSearchQuery ? 'No approved members match your search.' : 'No approved members yet.'
+    );
+
+    renderMemberSection(
+        rejectedList,
+        rejectedEmpty,
+        rejected.map(m => renderRejectedMemberRow(m)),
+        memberSearchQuery ? 'No rejected members match your search.' : 'No rejected members.'
+    );
 }
 
 async function loadMembers() {

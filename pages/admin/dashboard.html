@@ -212,6 +212,23 @@
                         <p class="text-sm font-semibold text-slate-500">No approved members match your search.</p>
                     </div>
                 </div>
+
+                <!-- Rejected members -->
+                <div class="card-premium overflow-hidden border border-church-100">
+                    <div class="px-6 py-5 border-b border-church-100 flex flex-wrap justify-between items-center gap-3 bg-red-50/50">
+                        <div>
+                            <h3 class="text-lg font-bold text-church-900 tracking-tight">Rejected members</h3>
+                            <p class="text-xs text-slate-500 font-medium mt-0.5">Registrations that were not approved</p>
+                        </div>
+                        <span id="rejected-count" class="inline-flex items-center justify-center min-w-[2rem] h-8 px-2.5 rounded-full bg-red-100 text-red-800 text-xs font-extrabold border border-red-200">0</span>
+                    </div>
+                    <div id="rejected-members-list" class="divide-y divide-church-100">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div id="rejected-empty" class="hidden px-6 py-12 text-center">
+                        <p class="text-sm font-semibold text-slate-500">No rejected members match your search.</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Elections Tab -->
