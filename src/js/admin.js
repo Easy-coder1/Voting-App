@@ -5,6 +5,8 @@ let currentUser = null;
 let currentProfile = null;
 let turnoutChartInstance = null;
 let selectedResultsElection = null;
+let allMembers = [];
+let memberSearchQuery = '';
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -116,7 +118,7 @@ function setupTabs() {
                 },
                 members: {
                     title: 'Member Management',
-                    subtitle: 'Approve accounts and manage voting rights'
+                    subtitle: 'Search members, approve registrations, and view approved voters'
                 },
                 elections: {
                     title: 'Election Management',
@@ -249,55 +251,146 @@ function renderChart(approved, others) {
 // ----------------------
 // MEMBER MANAGEMENT
 // ----------------------
+function getMemberInitials(name) {
+    return (name || '')
+        .split(' ')
+        .filter(Boolean)
+        .map(n => n[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
+}
+
+function matchesMemberSearch(member, query) {
+    if (!query) return true;
+    const needle = query.toLowerCase();
+    return (member.full_name || '').toLowerCase().includes(needle)
+        || (member.email || '').toLowerCase().includes(needle);
+}
+
+function formatMemberDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
+}
+
+function setupMemberSearch() {
+    const input = document.getElementById('member-search');
+    if (!input || input.dataset.bound) return;
+    input.dataset.bound = 'true';
+    input.addEventListener('input', () => {
+        memberSearchQuery = input.value.trim();
+        renderMembersUI();
+    });
+}
+
+function renderPendingMemberRow(m) {
+    const initials = getMemberInitials(m.full_name);
+    const div = document.createElement('div');
+    div.className = 'flex flex-row flex-wrap justify-between items-center p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition duration-150 gap-4 bg-white';
+
+    div.innerHTML = `
+        <div class="flex items-center space-x-4">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm">${initials}</div>
+            <div>
+                <h4 class="font-extrabold text-church-900 leading-tight">${m.full_name}</h4>
+                <p class="text-xs text-slate-400 font-semibold mt-0.5">${m.email}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <button type="button" onclick="window.updateMemberStatus('${m.id}', 'approved')"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                Approve
+            </button>
+        </div>
+    `;
+    return div;
+}
+
+function renderApprovedMemberRow(m) {
+    const initials = getMemberInitials(m.full_name);
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50/60 transition';
+
+    tr.innerHTML = `
+        <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">${initials}</div>
+                <span class="font-bold text-church-900 text-sm">${m.full_name}</span>
+            </div>
+        </td>
+        <td class="px-6 py-4 text-sm text-slate-500 font-medium">${m.email}</td>
+        <td class="px-6 py-4">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Enabled ✓
+            </span>
+        </td>
+        <td class="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">${formatMemberDate(m.created_at)}</td>
+        <td class="px-6 py-4 text-right">
+            <select onchange="window.updateMemberStatus('${m.id}', this.value)"
+                class="text-xs rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-1.5 font-bold cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-church-500 shadow-sm outline-none">
+                <option value="approved" selected>Approved</option>
+                <option value="pending">Move to pending</option>
+            </select>
+        </td>
+    `;
+    return tr;
+}
+
+function renderMembersUI() {
+    const pendingList = document.getElementById('members-list');
+    const approvedBody = document.getElementById('approved-members-body');
+    const approvedEmpty = document.getElementById('approved-empty');
+    const pendingCount = document.getElementById('pending-count');
+    const approvedCount = document.getElementById('approved-count');
+    if (!pendingList || !approvedBody) return;
+
+    const pending = allMembers.filter(m => m.account_status === 'pending' && matchesMemberSearch(m, memberSearchQuery));
+    const approved = allMembers.filter(m => m.account_status === 'approved' && matchesMemberSearch(m, memberSearchQuery));
+
+    pendingList.innerHTML = '';
+    approvedBody.innerHTML = '';
+
+    if (pendingCount) pendingCount.textContent = String(pending.length);
+    if (approvedCount) approvedCount.textContent = String(approved.length);
+
+    if (pending.length === 0) {
+        pendingList.innerHTML = `
+            <div class="px-6 py-10 text-center">
+                <p class="text-sm font-semibold text-slate-500">${memberSearchQuery ? 'No pending members match your search.' : 'No members waiting for approval. Great job!'}</p>
+            </div>
+        `;
+    } else {
+        pending.forEach(m => pendingList.appendChild(renderPendingMemberRow(m)));
+    }
+
+    if (approved.length === 0) {
+        approvedEmpty?.classList.remove('hidden');
+    } else {
+        approvedEmpty?.classList.add('hidden');
+        approved.forEach(m => approvedBody.appendChild(renderApprovedMemberRow(m)));
+    }
+}
+
 async function loadMembers() {
-    const { data: members, error } = await supabase.from('profiles').select('*').eq('role', 'member').order('created_at', { ascending: false });
-    const list = document.getElementById('members-list');
-    list.innerHTML = '';
-    
+    const { data: members, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'member')
+        .order('created_at', { ascending: false });
+
     if (error) {
         alert('Error fetching members: ' + error.message);
         return;
     }
-    if (!members) return;
 
-    members.forEach(m => {
-        const div = document.createElement('div');
-        div.className = 'flex flex-row flex-wrap justify-between items-center p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition duration-150 gap-4 bg-white';
-        
-        const initials = m.full_name.split(' ').map(n => n[0]).join('').substring(0, 2);
-        const statusColors = {
-            'pending': 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
-            'approved': 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
-        };
-
-        const votingEnabled = m.account_status === 'approved';
-        div.innerHTML = `
-            <div class="flex items-center space-x-4">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm">${initials}</div>
-                <div>
-                    <h4 class="font-extrabold text-church-900 leading-tight">${m.full_name}</h4>
-                    <p class="text-xs text-slate-400 font-semibold mt-0.5">${m.email}</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-4">
-                <div class="flex flex-col space-y-1 min-w-[120px]">
-                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Account Status</span>
-                    <select onchange="window.updateMemberStatus('${m.id}', this.value)" class="text-xs rounded-full border px-3 py-1.5 font-bold cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-church-500 shadow-sm outline-none ${statusColors[m.account_status] || ''}">
-                        <option value="pending" ${m.account_status === 'pending' ? 'selected' : ''}>Pending</option>
-                        <option value="approved" ${m.account_status === 'approved' ? 'selected' : ''}>Approved</option>
-                    </select>
-                </div>
-                <div class="flex flex-col space-y-1">
-                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Voting Rights</span>
-                    <span title="Voting rights are controlled by the account status"
-                        class="text-xs px-3.5 py-1.5 rounded-full font-bold shadow-sm border text-center cursor-not-allowed ${votingEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}">
-                        ${votingEnabled ? 'ENABLED ✓' : 'DISABLED'}
-                    </span>
-                </div>
-            </div>
-        `;
-        list.appendChild(div);
-    });
+    allMembers = members || [];
+    setupMemberSearch();
+    renderMembersUI();
 }
 
 window.updateMemberStatus = async (id, status) => {
