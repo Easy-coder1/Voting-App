@@ -56,12 +56,24 @@ function isEligible() {
 }
 
 async function loadPage() {
-    const { data: elections } = await supabase
+    const { data: openElections } = await supabase
         .from('elections')
         .select('*')
-        .in('status', ['open', 'closed'])
+        .eq('status', 'open')
         .order('created_at', { ascending: false })
         .limit(1);
+
+    let elections = openElections;
+
+    if (!elections?.length) {
+        const { data: closedElections } = await supabase
+            .from('elections')
+            .select('*')
+            .eq('status', 'closed')
+            .order('created_at', { ascending: false })
+            .limit(1);
+        elections = closedElections;
+    }
 
     if (!elections?.length) {
         activeElection = null;
@@ -69,7 +81,7 @@ async function loadPage() {
         renderMain(`
             <div class="simple-message">
                 <div class="big">📋</div>
-                <p>There is no election right now.<br>Please check back later.</p>
+                <p>There is no election open for voting right now.<br>Please check back later.</p>
             </div>
         `);
         return;
@@ -103,6 +115,15 @@ async function loadPage() {
                 <div class="simple-message">
                     <div class="big">✓</div>
                     <p><strong>Thank you!</strong><br>Your votes have been submitted.<br>You can sign out now.</p>
+                </div>
+            `);
+            return;
+        }
+        if (positions.length === 0) {
+            renderMain(`
+                <div class="simple-message">
+                    <div class="big">📋</div>
+                    <p>No candidates have been set up for this election yet.<br>Please contact the election committee.</p>
                 </div>
             `);
             return;

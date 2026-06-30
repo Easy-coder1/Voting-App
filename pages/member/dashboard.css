@@ -102,13 +102,14 @@
 .pick-item:disabled { cursor: default; opacity: 0.85; }
 
 .pick-photo {
-  width: 56px; height: 56px; border-radius: 4px;
+  width: 56px; height: 56px; border-radius: 0;
   object-fit: cover; object-position: center 20%;
   flex-shrink: 0; border: 1px solid var(--border);
+  display: block;
 }
 
 .pick-initials {
-  width: 56px; height: 56px; border-radius: 4px; flex-shrink: 0;
+  width: 56px; height: 56px; border-radius: 0; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
   color: #fff; font-size: 14px; font-weight: 800;
