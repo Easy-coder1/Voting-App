@@ -43,11 +43,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadPage();
     } catch (err) {
         console.error('Member page error:', err);
-        renderMain(`
-            <div class="simple-message">
-                <p>Something went wrong. Please refresh the page or sign in again.</p>
-            </div>
-        `);
+        renderStatusPage({
+            icon: '⚠',
+            title: 'Something went wrong',
+            message: 'Please refresh the page or sign in again. If this keeps happening, contact the election committee.',
+            tone: 'info',
+        });
     }
 });
 
@@ -55,7 +56,32 @@ function isEligible() {
     return currentProfile.account_status === 'approved' && currentProfile.voting_rights;
 }
 
+function getFirstName() {
+    return (currentProfile?.full_name || '').trim().split(' ')[0] || 'there';
+}
+
+function renderStatusPage({ icon, title, message, tone = 'info' }) {
+    renderMain(`
+        <div class="status-card ${tone}">
+            <div class="status-icon">${icon}</div>
+            <h2>${title}</h2>
+            <p>${message}</p>
+        </div>
+    `);
+}
+
+function countSelections() {
+    return positions.filter(p => ballotSelections[p.id]).length;
+}
+
 async function loadPage() {
+    hasSubmitted = false;
+    ballotSelections = {};
+    userVotes = [];
+    activeElection = null;
+    positions = [];
+    candidates = [];
+
     const { data: openElections } = await supabase
         .from('elections')
         .select('*')
@@ -63,32 +89,54 @@ async function loadPage() {
         .order('created_at', { ascending: false })
         .limit(1);
 
-    let elections = openElections;
-
-    if (!elections?.length) {
-        const { data: closedElections } = await supabase
-            .from('elections')
-            .select('*')
-            .eq('status', 'closed')
-            .order('created_at', { ascending: false })
-            .limit(1);
-        elections = closedElections;
-    }
-
-    if (!elections?.length) {
-        activeElection = null;
-        renderEligibility();
-        renderMain(`
-            <div class="simple-message">
-                <div class="big">📋</div>
-                <p>There is no election open for voting right now.<br>Please check back later.</p>
-            </div>
-        `);
+    if (openElections?.length) {
+        activeElection = openElections[0];
+        await loadElectionBallot();
         return;
     }
 
-    activeElection = elections[0];
+    const { data: upcomingElections } = await supabase
+        .from('elections')
+        .select('*')
+        .eq('status', 'upcoming')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
+    if (upcomingElections?.length) {
+        activeElection = upcomingElections[0];
+        renderEligibility();
+        renderStatusPage({
+            icon: '⏳',
+            title: 'Voting has not started',
+            message: `<strong>${activeElection.title}</strong> will open soon. Come back when the admin opens voting.`,
+            tone: 'waiting',
+        });
+        return;
+    }
+
+    const { data: closedElections } = await supabase
+        .from('elections')
+        .select('*')
+        .eq('status', 'closed')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+    if (!closedElections?.length) {
+        renderEligibility();
+        renderStatusPage({
+            icon: '📋',
+            title: 'No election right now',
+            message: 'There is nothing to vote on at the moment. Please check again later.',
+            tone: 'info',
+        });
+        return;
+    }
+
+    activeElection = closedElections[0];
+    await loadElectionBallot();
+}
+
+async function loadElectionBallot() {
     const [{ data: posData }, { data: canData }] = await Promise.all([
         supabase.from('positions').select('*'),
         supabase.from('candidates').select('*').eq('election_id', activeElection.id),
@@ -103,29 +151,30 @@ async function loadPage() {
 
     if (activeElection.status === 'open') {
         if (!isEligible()) {
-            renderMain(`
-                <div class="simple-message">
-                    <p>When your account is approved, your ballot will appear here.</p>
-                </div>
-            `);
+            renderStatusPage({
+                icon: '👋',
+                title: 'Almost ready',
+                message: 'Once an admin approves your account, your ballot will show up here automatically.',
+                tone: 'waiting',
+            });
             return;
         }
         if (hasSubmitted) {
-            renderMain(`
-                <div class="simple-message">
-                    <div class="big">✓</div>
-                    <p><strong>Thank you!</strong><br>Your votes have been submitted.<br>You can sign out now.</p>
-                </div>
-            `);
+            renderStatusPage({
+                icon: '✓',
+                title: 'You\'re all done!',
+                message: `Thank you for voting in <strong>${activeElection.title}</strong>. You can safely sign out now.`,
+                tone: 'success',
+            });
             return;
         }
         if (positions.length === 0) {
-            renderMain(`
-                <div class="simple-message">
-                    <div class="big">📋</div>
-                    <p>No candidates have been set up for this election yet.<br>Please contact the election committee.</p>
-                </div>
-            `);
+            renderStatusPage({
+                icon: '📋',
+                title: 'Ballot not ready',
+                message: 'Candidates have not been added to this election yet. Please contact the election committee.',
+                tone: 'info',
+            });
             return;
         }
         renderBallot();
@@ -137,12 +186,12 @@ async function loadPage() {
         return;
     }
 
-    renderMain(`
-        <div class="simple-message">
-            <div class="big">⏳</div>
-            <p>Voting has ended.<br>Results will appear here when they are published.</p>
-        </div>
-    `);
+    renderStatusPage({
+        icon: '⏳',
+        title: 'Election ended',
+        message: `<strong>${activeElection.title}</strong> is closed. Results will appear here when they are published.`,
+        tone: 'waiting',
+    });
 }
 
 async function loadUserVotes() {
@@ -171,22 +220,22 @@ function renderEligibility() {
         card.innerHTML = `
             <div class="eligibility-icon">${pending ? '⏳' : '✕'}</div>
             <div class="eligibility-text">
-                <strong>${pending ? 'Not approved yet' : 'You cannot vote'}</strong>
+                <strong>${pending ? 'Waiting for approval' : 'Voting not available'}</strong>
                 ${pending
-                    ? 'Your account is waiting for approval. You will be able to vote once an admin approves you.'
-                    : 'Your account does not have voting access. Please contact the election committee.'}
+                    ? 'An admin still needs to approve your account. You will be able to vote once that is done.'
+                    : 'Please speak to the election committee if you think this is a mistake.'}
             </div>
         `;
         return;
     }
 
-    if (hasSubmitted) {
+    if (hasSubmitted && activeElection) {
         card.className = 'eligibility-card visible done';
         card.innerHTML = `
             <div class="eligibility-icon">✓</div>
             <div class="eligibility-text">
-                <strong>You have voted</strong>
-                Thank you for taking part in this election.
+                <strong>Vote recorded</strong>
+                You finished voting in ${activeElection.title}. Thank you for taking part!
             </div>
         `;
         return;
@@ -195,10 +244,10 @@ function renderEligibility() {
     if (activeElection?.status === 'open') {
         card.className = 'eligibility-card visible ok';
         card.innerHTML = `
-            <div class="eligibility-icon">✓</div>
+            <div class="eligibility-icon">🗳️</div>
             <div class="eligibility-text">
-                <strong>You can vote</strong>
-                Pick one person for each position below, then tap Submit.
+                <strong>You're ready to vote!</strong>
+                Choose one person for each position below, then press the big blue button at the bottom.
             </div>
         `;
         return;
@@ -219,9 +268,18 @@ function renderMain(html) {
 }
 
 function renderBallot() {
-    const positionBlocks = positions.map(pos => {
+    const chosen = countSelections();
+    const total = positions.length;
+    const pct = total > 0 ? Math.round((chosen / total) * 100) : 0;
+    const allSelected = total > 0 && chosen >= total;
+    const remaining = total - chosen;
+    const firstName = getFirstName();
+
+    const positionBlocks = positions.map((pos, index) => {
         const posCandidates = candidates.filter(c => c.position_id === pos.id);
         const selectedId = ballotSelections[pos.id] || null;
+        const selectedCand = selectedId ? candidates.find(c => c.id === selectedId) : null;
+        const isDone = !!selectedId;
 
         const picks = posCandidates.map(c => {
             const isSelected = selectedId === c.id;
@@ -235,29 +293,68 @@ function renderBallot() {
                 <button type="button" class="pick-item${isSelected ? ' selected' : ''}"
                     data-candidate="${c.id}" data-position="${pos.id}">
                     ${photo}
-                    <span>${c.full_name}</span>
+                    <span class="pick-name">
+                        ${c.full_name}
+                        <span class="pick-tag">${isSelected ? 'Your choice ✓' : 'Tap to select'}</span>
+                    </span>
                     <span class="pick-check">${isSelected ? '✓' : ''}</span>
                 </button>
             `;
         }).join('');
 
         return `
-            <div class="position-block">
-                <h3>${pos.position_name}</h3>
+            <section class="position-card${isDone ? ' is-done' : ''}">
+                <div class="position-card-head">
+                    <span class="position-num">${index + 1}</span>
+                    <div class="position-head-text">
+                        <h3>${pos.position_name}</h3>
+                        <p>${isDone ? `You chose: ${selectedCand?.full_name}` : 'Pick one candidate below'}</p>
+                    </div>
+                    ${isDone ? '<span class="position-done-badge">Done</span>' : ''}
+                </div>
                 <div class="pick-list">${picks}</div>
-            </div>
+            </section>
         `;
     }).join('');
 
+    const submitHint = allSelected
+        ? 'All positions chosen — tap the button below to finish!'
+        : remaining === 1
+            ? 'Just 1 more position to go, then you can submit.'
+            : `${remaining} positions left to choose before you can submit.`;
+
     renderMain(`
-        <div class="vote-block">
-            <p class="election-title">${activeElection.title}</p>
-            <h2>Cast your vote</h2>
-            <p class="hint">Tap a name under each position. When you are done, press Submit.</p>
+        <div class="vote-shell">
+            <div class="vote-hero">
+                <span class="live-badge">Voting is open</span>
+                <h1 class="vote-hero-title">${activeElection.title}</h1>
+                <p class="vote-hero-greet">Hello ${firstName}! Take your time and choose one person for each role.</p>
+            </div>
+
+            <div class="steps-row" aria-hidden="true">
+                <div class="step-pill active">① Choose</div>
+                <div class="step-pill">② Review</div>
+                <div class="step-pill">③ Submit</div>
+            </div>
+
+            <div class="progress-card">
+                <div class="progress-top">
+                    <span class="progress-label">Your progress</span>
+                    <span class="progress-count">${chosen} of ${total}</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" style="width:${pct}%"></div>
+                </div>
+            </div>
+
             ${positionBlocks}
-            <button type="button" id="submit-votes-btn" class="btn-submit-votes" disabled>
-                Submit my votes
-            </button>
+
+            <div class="submit-panel">
+                <p class="submit-panel-hint${allSelected ? ' ready' : ''}">${submitHint}</p>
+                <button type="button" id="submit-votes-btn" class="btn-submit-votes" disabled>
+                    ${allSelected ? 'Review & submit my votes' : `Choose ${remaining} more to continue`}
+                </button>
+            </div>
         </div>
     `);
 
@@ -270,7 +367,6 @@ function renderBallot() {
         });
     });
 
-    const allSelected = positions.every(p => ballotSelections[p.id]);
     const submitBtn = document.getElementById('submit-votes-btn');
     submitBtn.disabled = !allSelected;
     submitBtn.addEventListener('click', () => openConfirmModal());
@@ -370,19 +466,33 @@ async function performSubmit() {
         hasSubmitted = true;
         await loadUserVotes();
         renderEligibility();
-        renderMain(`
-            <div class="simple-message">
-                <div class="big">✓</div>
-                <p><strong>Thank you!</strong><br>Your votes have been submitted.<br>You can sign out now.</p>
-            </div>
-        `);
+        renderStatusPage({
+            icon: '✓',
+            title: 'Thank you!',
+            message: `Your votes for <strong>${activeElection.title}</strong> are in. You can safely sign out now.`,
+            tone: 'success',
+        });
     } catch (err) {
-        window.alert('Could not submit votes: ' + err.message);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit votes';
-        if (pageSubmitBtn) {
-            pageSubmitBtn.disabled = false;
-            pageSubmitBtn.textContent = 'Submit my votes';
+        const msg = (err.message || '').toLowerCase();
+        if (msg.includes('duplicate') || msg.includes('unique')) {
+            window.alert('You have already submitted your votes for this election.');
+            hasSubmitted = true;
+            await loadUserVotes();
+            renderEligibility();
+            renderStatusPage({
+                icon: '✓',
+                title: 'Already voted',
+                message: `You have already voted in <strong>${activeElection.title}</strong>. Thank you for taking part!`,
+                tone: 'success',
+            });
+        } else {
+            window.alert('Could not submit votes: ' + err.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit votes';
+            if (pageSubmitBtn) {
+                pageSubmitBtn.disabled = false;
+                pageSubmitBtn.textContent = 'Submit my votes';
+            }
         }
     }
 }
@@ -401,11 +511,12 @@ async function renderResults() {
     ]);
 
     if (error) {
-        renderMain(`
-            <div class="simple-message">
-                <p>Results could not be loaded. Please try again later.</p>
-            </div>
-        `);
+        renderStatusPage({
+            icon: '⚠',
+            title: 'Results unavailable',
+            message: 'We could not load the results right now. Please try again in a few minutes.',
+            tone: 'info',
+        });
         return;
     }
 
@@ -415,31 +526,40 @@ async function renderResults() {
         grouped[r.position_name].push(r);
     });
 
-    let html = `
-        <div class="result-block">
-            <p class="election-title">${activeElection.title}</p>
-            <h2>Election results</h2>
-    `;
-
-    for (const [posName, cans] of sortPositionEntries(grouped)) {
+    const groups = sortPositionEntries(grouped).map(([posName, cans]) => {
         cans.sort((a, b) => b.vote_count - a.vote_count);
         const winner = cans[0];
-        if (!winner) continue;
+        if (!winner) return '';
 
         const avatar = candidatePhotoHtml(photoById[winner.candidate_id], winner.candidate_name, {
             imgClass: 'pick-photo',
             fallbackClass: 'pick-initials',
         });
 
-        html += `
-            <div class="result-pos">${posName}</div>
-            <div class="result-row">
-                ${avatar}
-                <span>${winner.candidate_name}</span>
+        const voteLabel = winner.vote_count === 1 ? '1 vote' : `${winner.vote_count} votes`;
+
+        return `
+            <div class="result-group">
+                <div class="result-pos-label">${posName}</div>
+                <div class="result-row">
+                    ${avatar}
+                    <div>
+                        <div class="result-winner-name">${winner.candidate_name}</div>
+                        <span class="result-vote-count">${voteLabel}</span>
+                    </div>
+                </div>
             </div>
         `;
-    }
+    }).join('');
 
-    html += '</div>';
-    renderMain(html);
+    renderMain(`
+        <div class="result-shell">
+            <div class="result-shell-head">
+                <div class="election-label">${activeElection.title}</div>
+                <h2>Election results</h2>
+                <p class="result-shell-sub">Winners for each position are shown below.</p>
+            </div>
+            ${groups || '<p class="result-empty">No results to show yet.</p>'}
+        </div>
+    `);
 }
