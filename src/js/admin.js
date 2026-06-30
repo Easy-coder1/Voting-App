@@ -152,17 +152,24 @@ function setupTabs() {
 // ANALYTICS
 // ----------------------
 async function loadAnalytics() {
-    const [ {count: totalMembers}, {count: pending}, {count: approved}, {count: totalVotes} ] = await Promise.all([
+    const [
+        { count: totalMembers },
+        { count: pending },
+        { count: approved },
+        { data: voteRows },
+    ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').eq('role', 'member'),
-        supabase.from('votes').select('*', { count: 'exact', head: true })
+        supabase.from('votes').select('voter_id'),
     ]);
+
+    const votersWhoVoted = new Set((voteRows || []).map(r => r.voter_id).filter(Boolean)).size;
 
     document.getElementById('stat-total-members').textContent = totalMembers || 0;
     document.getElementById('stat-pending').textContent = pending || 0;
     document.getElementById('stat-approved').textContent = approved || 0;
-    document.getElementById('stat-votes').textContent = totalVotes || 0;
+    document.getElementById('stat-votes').textContent = votersWhoVoted;
 
     renderChart(approved || 0, totalMembers ? totalMembers - approved : 0);
     
@@ -533,6 +540,19 @@ async function loadElections() {
 
 window.updateElectionStatus = async (id, status) => {
     try {
+        if (status === 'open') {
+            const { error: closeError } = await supabase
+                .from('elections')
+                .update({ status: 'closed' })
+                .eq('status', 'open')
+                .neq('id', id);
+
+            if (closeError) {
+                alert('Error closing the previous election: ' + closeError.message);
+                return;
+            }
+        }
+
         const { error } = await supabase.from('elections').update({ status }).eq('id', id);
         if (error) {
             alert('Error updating election status: ' + error.message);
@@ -542,7 +562,7 @@ window.updateElectionStatus = async (id, status) => {
         if (status === 'open' || status === 'upcoming') {
             const { error: attachError, count } = await attachCandidatesToElection(id);
             if (attachError) {
-                alert('Election updated, but candidates could not be linked: ' + attachError);
+                alert('Election updated, but candidates could not be linked: ' + attachError.message);
             } else if (count === 0) {
                 alert('Election updated, but it has no candidates yet. Add candidates on the Candidates tab.');
             }
@@ -743,9 +763,9 @@ async function loadCandidates() {
         
         let photoElement = '';
         if (hasPhoto) {
-            photoElement = `<img src="${c.photo_url}" class="w-20 h-20 rounded-none object-cover object-[center_20%] mb-4 border-2 border-slate-200 shadow-sm">`;
+            photoElement = `<img src="${c.photo_url}" class="w-28 h-28 rounded-none object-cover object-[center_20%] mb-4 border-2 border-slate-200 shadow-sm">`;
         } else {
-            photoElement = `<div class="w-20 h-20 rounded-none bg-gradient-to-tr from-church-800 via-church-600 to-church-500 text-white font-black text-xl flex items-center justify-center shadow-sm uppercase border-2 border-slate-200 mb-4">${initials}</div>`;
+            photoElement = `<div class="w-28 h-28 rounded-none bg-gradient-to-tr from-church-800 via-church-600 to-church-500 text-white font-black text-2xl flex items-center justify-center shadow-sm uppercase border-2 border-slate-200 mb-4">${initials}</div>`;
         }
 
         div.innerHTML = `
@@ -1002,8 +1022,8 @@ async function renderResults(election) {
                     : `<span class="w-8 h-8 flex-shrink-0 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-sm font-black">${index + 1}</span>`;
 
                 const avatar = candidatePhotoHtml(photoById[c.candidate_id], c.candidate_name, {
-                    imgClass: 'w-12 h-12 flex-shrink-0 rounded-none object-cover object-[center_20%] border-2 border-white shadow-sm',
-                    fallbackClass: 'w-12 h-12 flex-shrink-0 rounded-none bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm',
+                    imgClass: 'w-20 h-20 flex-shrink-0 rounded-none object-cover object-[center_20%] border-2 border-white shadow-sm',
+                    fallbackClass: 'w-20 h-20 flex-shrink-0 rounded-none bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm',
                 });
 
                 html += `
@@ -1106,7 +1126,7 @@ function renderTurnoutCards(container, turnout, election) {
     container.innerHTML = `
         ${stat('Total Members', data.total_members, 'On the register', 'bg-church-50 text-church-700', peopleIcon)}
         ${stat('Eligible Voters', data.approved_voters, 'Approved to vote', 'bg-emerald-50 text-emerald-600', checkIcon)}
-        ${stat('Votes Cast', data.votes_cast, election.status === 'open' ? 'Counting live' : 'Total ballots', 'bg-ember-50 text-ember-600', ballotIcon)}
+        ${stat('Members Voted', data.votes_cast, election.status === 'open' ? 'Counting live' : 'Unique voters', 'bg-ember-50 text-ember-600', ballotIcon)}
         <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl p-4 shadow-premium flex items-center gap-4">
             <div class="relative w-14 h-14 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
                 <div class="absolute inset-[5px] rounded-full bg-church-900 flex items-center justify-center">

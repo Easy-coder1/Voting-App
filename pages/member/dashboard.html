@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Vote — NUTFS UCC Chapter E‑Voting</title>
     <link rel="icon" type="image/png" href="/images/NUTFS.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10,15 +10,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./dashboard.css">
 </head>
-<body class="app">
+<body class="app vote-app">
 
-    <header class="app-header">
+    <header class="app-header vote-header">
         <div class="app-header-inner">
             <a href="/" class="app-brand">
                 <img src="/images/NUTFS.png" alt="NUTFS UCC Chapter">
                 <div>
                     <span class="app-brand-name">NUTFS UCC Chapter</span>
-                    <span class="app-brand-tag">NUC · Voting</span>
+                    <span class="app-brand-tag">NUC · Secure Voting</span>
                 </div>
             </a>
             <div class="app-header-actions">
@@ -33,19 +33,22 @@
         <div id="main-content" class="main-content">
             <div class="loading-block">
                 <div class="spinner"></div>
-                <span>Loading…</span>
+                <span>Getting your ballot ready…</span>
             </div>
         </div>
     </main>
 
     <div id="confirm-modal" class="confirm-overlay" aria-hidden="true">
         <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-            <h2 id="confirm-title">Review your votes</h2>
-            <p class="confirm-sub">Please check your choices below. You cannot change them after submitting.</p>
+            <div class="confirm-dialog-head">
+                <span class="confirm-step-badge">Step 2 of 3</span>
+                <h2 id="confirm-title">Check your choices</h2>
+                <p class="confirm-sub">Make sure everything looks right. After you submit, you cannot change your votes.</p>
+            </div>
             <div id="confirm-list" class="confirm-list"></div>
             <div class="confirm-actions">
-                <button type="button" id="confirm-cancel" class="btn-modal-secondary">Go back</button>
-                <button type="button" id="confirm-submit" class="btn-modal-primary">Submit votes</button>
+                <button type="button" id="confirm-cancel" class="btn-modal-secondary">Go back & edit</button>
+                <button type="button" id="confirm-submit" class="btn-modal-primary">Yes, submit my votes</button>
             </div>
         </div>
     </div>
