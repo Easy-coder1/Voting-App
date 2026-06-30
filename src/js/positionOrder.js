@@ -22,6 +22,10 @@ export function sortPositions(positions) {
     return [...positions].sort((a, b) => comparePositionNames(a.position_name, b.position_name));
 }
 
+export function sortPositionEntries(grouped) {
+    return Object.entries(grouped).sort(([a], [b]) => comparePositionNames(a, b));
+}
+
 export function candidatePhotoHtml(photoUrl, name, { imgClass, fallbackClass } = {}) {
     const hasPhoto = photoUrl && photoUrl.trim() !== '' && !photoUrl.includes('placeholder');
     if (hasPhoto) {
