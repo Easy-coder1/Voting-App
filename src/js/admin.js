@@ -123,7 +123,7 @@ function setupTabs() {
                 },
                 candidates: {
                     title: 'Candidate Management',
-                    subtitle: 'Add candidates for the next election'
+                    subtitle: 'Add and manage candidates for elections'
                 },
                 results: {
                     title: 'Election Results',
@@ -335,8 +335,7 @@ function setupForms() {
             return;
         }
 
-        // Attach the current draft candidates (not yet tied to any election) to
-        // this new election, then clear the Candidates page for the next set.
+        // Attach draft candidates (not yet tied to any election) to this new election.
         const newElectionId = created[0].id;
         const { error: attachError } = await supabase
             .from('candidates')
@@ -612,13 +611,10 @@ async function loadPositions() {
 }
 
 async function loadCandidates() {
-    // Only show "draft" candidates that haven't been attached to an election yet.
-    // Once an election is created, its candidates move into that election and
-    // disappear from this page so a fresh set can be added for the next vote.
     const { data: candidates } = await supabase
         .from('candidates')
-        .select('*, positions(position_name)')
-        .is('election_id', null);
+        .select('*, positions(position_name), elections(title, status)')
+        .order('created_at', { ascending: false });
     const list = document.getElementById('candidates-list');
     list.innerHTML = '';
     
@@ -632,7 +628,7 @@ async function loadCandidates() {
                 </div>
                 <div>
                     <p class="text-sm font-bold text-slate-600">No candidates yet</p>
-                    <p class="text-xs font-semibold text-slate-400 mt-1">Add candidates here, then create an election to lock them in for voting.</p>
+                    <p class="text-xs font-semibold text-slate-400 mt-1">Add candidates here, then create an election to use them for voting.</p>
                 </div>
             </div>
         `;
@@ -642,6 +638,10 @@ async function loadCandidates() {
     candidates.forEach(c => {
         const div = document.createElement('div');
         div.className = 'card-premium p-5 flex flex-col items-center hover:shadow-card-hover transition-all hover:-translate-y-0.5';
+
+        const electionLabel = c.elections?.title
+            ? c.elections.title
+            : 'Draft — next election';
         
         const hasPhoto = c.photo_url && c.photo_url.trim() !== '' && !c.photo_url.includes('placeholder');
         const initials = c.full_name.split(' ').map(n => n[0]).join('').substring(0, 2);
@@ -656,7 +656,8 @@ async function loadCandidates() {
         div.innerHTML = `
             ${photoElement}
             <h4 class="font-extrabold text-slate-800 text-base text-center tracking-tight mb-1 leading-tight">${c.full_name}</h4>
-            <p class="text-[10px] text-church-700 font-extrabold mb-6 bg-church-50 border border-church-100 px-3 py-1 rounded-full uppercase tracking-wider">${c.positions?.position_name || 'Staff'}</p>
+            <p class="text-[10px] text-church-700 font-extrabold mb-2 bg-church-50 border border-church-100 px-3 py-1 rounded-full uppercase tracking-wider">${c.positions?.position_name || 'Staff'}</p>
+            <p class="text-[10px] text-slate-500 font-semibold mb-6 text-center leading-snug">${electionLabel}</p>
             <button onclick="window.deleteCandidate('${c.id}')" class="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2.5 rounded-full transition-all active:scale-95 w-full">Delete</button>
         `;
         list.appendChild(div);
