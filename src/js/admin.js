@@ -114,7 +114,7 @@ function setupTabs() {
             const tabMeta = {
                 analytics: {
                     title: 'Analytics',
-                    subtitle: 'Member stats, turnout, and live election status'
+                    subtitle: 'Member stats, pending, approved, rejected, and live election status'
                 },
                 members: {
                     title: 'Member Management',
@@ -158,11 +158,13 @@ async function loadAnalytics() {
         { count: totalMembers },
         { count: pending },
         { count: approved },
+        { count: rejected },
         { data: voteRows },
     ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').eq('role', 'member'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'rejected').eq('role', 'member'),
         supabase.from('votes').select('voter_id'),
     ]);
 
@@ -171,9 +173,10 @@ async function loadAnalytics() {
     document.getElementById('stat-total-members').textContent = totalMembers || 0;
     document.getElementById('stat-pending').textContent = pending || 0;
     document.getElementById('stat-approved').textContent = approved || 0;
+    document.getElementById('stat-rejected').textContent = rejected || 0;
     document.getElementById('stat-votes').textContent = votersWhoVoted;
 
-    renderChart(approved || 0, totalMembers ? totalMembers - approved : 0);
+    renderMemberStatusChart(pending || 0, approved || 0, rejected || 0);
     
     // Check active election
     const { data: elections } = await supabase.from('elections').select('*').eq('status', 'open').limit(1);
@@ -206,12 +209,18 @@ async function loadAnalytics() {
     }
 }
 
-function renderChart(approved, others) {
+function renderMemberStatusChart(pending, approved, rejected) {
     const ctx = document.getElementById('turnoutChart');
     if (!ctx) return;
-    
+
+    const labels = ['Pending', 'Approved', 'Rejected'];
+    const data = [pending, approved, rejected];
+    const colors = ['#f59e0b', '#059669', '#dc2626'];
+
     if (turnoutChartInstance) {
-        turnoutChartInstance.data.datasets[0].data = [approved, others];
+        turnoutChartInstance.data.labels = labels;
+        turnoutChartInstance.data.datasets[0].data = data;
+        turnoutChartInstance.data.datasets[0].backgroundColor = colors;
         turnoutChartInstance.update();
         return;
     }
@@ -219,13 +228,13 @@ function renderChart(approved, others) {
     turnoutChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Approved Voters', 'Others (Pending/Suspended)'],
+            labels,
             datasets: [{
-                data: [approved, others],
-                backgroundColor: ['#9e1b2e', '#f6c2c8'],
+                data,
+                backgroundColor: colors,
                 borderWidth: 0,
-                hoverOffset: 4
-            }]
+                hoverOffset: 4,
+            }],
         },
         options: {
             responsive: true,
@@ -239,12 +248,12 @@ function renderChart(approved, others) {
                         padding: 20,
                         font: {
                             weight: 'bold',
-                            family: 'Plus Jakarta Sans'
-                        }
-                    }
-                }
-            }
-        }
+                            family: 'Plus Jakarta Sans',
+                        },
+                    },
+                },
+            },
+        },
     });
 }
 
@@ -1237,13 +1246,15 @@ function renderTurnoutCards(container, turnout, election) {
 
     if (!data) {
         container.innerHTML = `
-            <div class="col-span-2 sm:col-span-4 flex items-center justify-center py-6 text-slate-400 text-sm font-semibold bg-slate-50/60 border border-dashed border-slate-200 rounded-2xl">
+            <div class="col-span-2 sm:col-span-3 lg:col-span-6 flex items-center justify-center py-6 text-slate-400 text-sm font-semibold bg-slate-50/60 border border-dashed border-slate-200 rounded-2xl">
                 Turnout data not available yet
             </div>`;
         return;
     }
 
     const turnoutPct = Math.max(0, Math.min(100, Number(data.turnout_percentage) || 0));
+    const pendingMembers = data.pending_members ?? 0;
+    const rejectedMembers = data.rejected_members ?? 0;
 
     const stat = (label, value, sub, ring, iconPath) => `
         <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-soft hover:shadow-card-hover transition-all duration-300">
@@ -1259,11 +1270,15 @@ function renderTurnoutCards(container, turnout, election) {
 
     const peopleIcon = 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a3 3 0 10-2.83-5';
     const checkIcon = 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
+    const clockIcon = 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z';
+    const rejectIcon = 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z';
     const ballotIcon = 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
 
     container.innerHTML = `
         ${stat('Total Members', data.total_members, 'On the register', 'bg-church-50 text-church-700', peopleIcon)}
-        ${stat('Eligible Voters', data.approved_voters, 'Approved to vote', 'bg-emerald-50 text-emerald-600', checkIcon)}
+        ${stat('Pending', pendingMembers, 'Awaiting approval', 'bg-amber-50 text-amber-600', clockIcon)}
+        ${stat('Approved', data.approved_voters, 'Eligible to vote', 'bg-emerald-50 text-emerald-600', checkIcon)}
+        ${stat('Rejected', rejectedMembers, 'Not approved', 'bg-red-50 text-red-600', rejectIcon)}
         ${stat('Members Voted', data.votes_cast, election.status === 'open' ? 'Counting live' : 'Unique voters', 'bg-ember-50 text-ember-600', ballotIcon)}
         <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl p-4 shadow-premium flex items-center gap-4">
             <div class="relative w-14 h-14 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
