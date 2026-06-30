@@ -1,0 +1,8 @@
+# For Supabase CLI (optional — local dev / migrations)
+project_id = "your-project-ref"
+
+[api]
+enabled = true
+
+[db]
+major_version = 15

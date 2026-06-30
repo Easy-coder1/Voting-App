@@ -43,13 +43,12 @@ npm install
 ### 3. Supabase Backend Setup
 1. Create a new project on [Supabase](https://supabase.com).
 2. Go to the **SQL Editor** in your Supabase dashboard.
-3. Execute the SQL queries found in the `supabase/migrations/` folder in this exact order:
-   - Run `00_init.sql` (Creates tables, triggers, and RLS policies)
-   - Run `01_results_rpc.sql` (Creates the RPC function to fetch election results securely)
-   - Run `02_admin_results_view.sql` (Creates admin-only RPC functions for election summaries and turnout analytics)
+3. Run `supabase/migrations/20260628180000_initial_schema.sql` (tables, RLS, RPC functions, seed positions, and Realtime).
+
+   Or with the [Supabase CLI](https://supabase.com/docs/guides/cli): `supabase link --project-ref <ref>` then `supabase db push`.
 
 ### 4. Environment Variables
-Rename the `.env.example` file to `.env` and fill in your Supabase project credentials:
+Copy `.env.example` to `.env.local` and fill in your Supabase project credentials:
 ```env
 VITE_SUPABASE_URL=your-supabase-project-url
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key

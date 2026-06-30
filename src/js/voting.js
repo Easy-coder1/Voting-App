@@ -1,4 +1,4 @@
-import { insforge } from './insforge.js';
+import { supabase, getCurrentUser } from './supabase.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -15,7 +15,7 @@ let ballotSelections = {};
 let hasSubmitted = false;
 
 async function ensureProfile(user) {
-    const { data: profile, error: fetchError } = await insforge.database
+    const { data: profile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -27,14 +27,14 @@ async function ensureProfile(user) {
     const fullName = user.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
     const phone = user.user_metadata?.phone || null;
 
-    await insforge.database.from('profiles').insert([{
+    await supabase.from('profiles').insert([{
         id: user.id,
         full_name: fullName,
         email: user.email || '',
         phone: phone,
     }]);
 
-    const { data: newProfile } = await insforge.database
+    const { data: newProfile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -46,7 +46,7 @@ async function ensureProfile(user) {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // 1. Auth Check
-        const { data: currentUserData, error: sessionError } = await insforge.auth.getCurrentUser();
+        const { data: currentUserData, error: sessionError } = await getCurrentUser();
         if (sessionError || !currentUserData?.user) {
             window.location.href = '/pages/login.html';
             return;
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     election_id: activeElection.id
                 }));
 
-                const { error } = await insforge.database.from('votes').insert(votesToInsert);
+                const { error } = await supabase.from('votes').insert(votesToInsert);
                 if (error) throw error;
 
                 hasSubmitted = true;
@@ -132,7 +132,7 @@ async function loadBoothData() {
         return;
     }
 
-    const { data: elections } = await insforge.database.from('elections')
+    const { data: elections } = await supabase.from('elections')
         .select('*')
         .eq('status', 'open')
         .order('created_at', { ascending: false })
@@ -143,8 +143,8 @@ async function loadBoothData() {
         document.getElementById('election-title-sub').textContent = activeElection.title;
 
         const [{ data: posData }, { data: canData }] = await Promise.all([
-            insforge.database.from('positions').select('*'),
-            insforge.database.from('candidates').select('*').eq('election_id', activeElection.id)
+            supabase.from('positions').select('*'),
+            supabase.from('candidates').select('*').eq('election_id', activeElection.id)
         ]);
 
         candidates = canData || [];
@@ -172,7 +172,7 @@ async function loadBoothData() {
 
 async function loadUserVotes() {
     if (!activeElection) return;
-    const { data } = await insforge.database
+    const { data } = await supabase
         .from('votes')
         .select('position_id, candidate_id')
         .eq('voter_id', currentUser.id)

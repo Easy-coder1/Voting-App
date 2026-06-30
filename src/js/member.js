@@ -1,4 +1,4 @@
-import { insforge, clearLocalSession } from './insforge.js';
+import { supabase, getCurrentUser, signOut } from './supabase.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -9,7 +9,7 @@ let userVotes = [];
 let countdownInterval = null;
 
 async function ensureProfile(user) {
-    const { data: profile, error: fetchError } = await insforge.database
+    const { data: profile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -26,7 +26,7 @@ async function ensureProfile(user) {
     const fullName = user.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
     const phone = user.user_metadata?.phone || null;
 
-    const { error: insertError } = await insforge.database
+    const { error: insertError } = await supabase
         .from('profiles')
         .insert([{
             id: user.id,
@@ -40,7 +40,7 @@ async function ensureProfile(user) {
         return null;
     }
 
-    const { data: newProfile } = await insforge.database
+    const { data: newProfile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -52,7 +52,7 @@ async function ensureProfile(user) {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // 1. Auth Check
-        const { data: currentUserData, error: sessionError } = await insforge.auth.getCurrentUser();
+        const { data: currentUserData, error: sessionError } = await getCurrentUser();
         if (sessionError || !currentUserData?.user) {
             window.location.href = '/pages/login.html';
             return;
@@ -85,8 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Logout buttons
         async function doLogout() {
-            await insforge.auth.signOut();
-            clearLocalSession();
+            await signOut();
             window.location.href = '/';
         }
         document.getElementById('logout-btn')?.addEventListener('click', doLogout);
@@ -108,7 +107,7 @@ async function loadDashboardData() {
     updateStatusBanner();
 
     // Fetch active or closed election
-    const { data: elections } = await insforge.database.from('elections')
+    const { data: elections } = await supabase.from('elections')
         .select('*')
         .in('status', ['open', 'closed'])
         .order('created_at', { ascending: false })
@@ -120,8 +119,8 @@ async function loadDashboardData() {
 
         // Load positions and candidates
         const [{ data: posData }, { data: canData }] = await Promise.all([
-            insforge.database.from('positions').select('*'),
-            insforge.database.from('candidates').select('*').eq('election_id', activeElection.id)
+            supabase.from('positions').select('*'),
+            supabase.from('candidates').select('*').eq('election_id', activeElection.id)
         ]);
 
         candidates = canData || [];
@@ -151,7 +150,7 @@ async function loadDashboardData() {
 
 async function loadUserVotes() {
     if (!activeElection) return;
-    const { data } = await insforge.database
+    const { data } = await supabase
         .from('votes')
         .select('position_id')
         .eq('voter_id', currentUser.id)
@@ -407,7 +406,7 @@ async function renderResults() {
         </div>
     `;
 
-    const { data: results, error } = await insforge.database.rpc('get_election_results', { election_id: activeElection.id });
+    const { data: results, error } = await supabase.rpc('get_election_results', { election_id: activeElection.id });
 
     if (error) {
         content.innerHTML = `

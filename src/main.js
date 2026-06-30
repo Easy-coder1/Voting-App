@@ -1,5 +1,5 @@
 import './style.css'
-import { insforge } from './js/insforge.js'
+import { supabase, getCurrentUser } from './js/supabase.js'
 
 // Simple auth state listener to redirect appropriately
 document.addEventListener('DOMContentLoaded', async () => {
@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // (localStorage writes can lag behind page navigation on slow devices)
     let currentUserData = null
     for (let i = 0; i < 10; i++) {
-        const result = await insforge.auth.getCurrentUser()
+        const result = await getCurrentUser()
         currentUserData = result.data
         if (currentUserData?.user) break
         await new Promise(r => setTimeout(r, 200))
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (currentUserData?.user && isPreAuth) {
         const user = currentUserData.user
         // Fetch role from profile using maybeSingle (doesn't throw on no rows)
-        const { data: profile } = await insforge.database
+        const { data: profile } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', user.id)

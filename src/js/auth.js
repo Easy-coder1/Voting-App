@@ -1,4 +1,4 @@
-import { insforge, isMisconfigured, saveLocalSession } from './insforge.js';
+import { supabase, isMisconfigured, getCurrentUser, signOut } from './supabase.js';
 
 // ── PASSWORD TOGGLE ──────────────────────────────────────────────────────
 function initPasswordToggles() {
@@ -202,7 +202,7 @@ function validateRegisterForm(firstName, lastName, email, password, verifyPasswo
 // ── PROFILE ────────────────────────────────────────────────────────────
 async function ensureProfile(user) {
     // Try to fetch the existing profile
-    const { data: profile, error: fetchError } = await insforge.database
+    const { data: profile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -219,7 +219,7 @@ async function ensureProfile(user) {
     const fullName = user.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Member';
     const phone = user.user_metadata?.phone || null;
 
-    const { error: insertError } = await insforge.database
+    const { error: insertError } = await supabase
         .from('profiles')
         .insert([{
             id: user.id,
@@ -234,7 +234,7 @@ async function ensureProfile(user) {
     }
 
     // Fetch the newly created profile
-    const { data: newProfile } = await insforge.database
+    const { data: newProfile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
             container.classList.remove('hidden');
             container.classList.add('bg-red-50', 'border-red-200', 'text-red-800');
             iconContainer.innerHTML = '<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
-            msgEl.textContent = 'App is not configured: InsForge environment variables are missing. Contact the administrator.';
+            msgEl.textContent = 'App is not configured: Supabase environment variables are missing. Contact the administrator.';
         }
 
         const btn = document.getElementById('submit-btn');
@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setLoading(btn, true, 'Signing in...');
 
             try {
-                const { data, error } = await insforge.auth.signInWithPassword({ email, password });
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
                 if (error) {
                     const msg = (error.message || '').toLowerCase();
@@ -303,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ) {
                         showAlert('warning',
                             'Your email address has not been confirmed yet. ' +
-                            'Please check your inbox (and spam folder) for a confirmation link from InsForge, ' +
+                            'Please check your inbox (and spam folder) for a confirmation link from Supabase, ' +
                             'then try logging in again.');
                     } else if (
                         msg.includes('invalid login credentials') ||
@@ -328,17 +328,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Persist the full session (access token + refresh token + user) so it
-                // survives page navigation even when mobile Tracking Prevention blocks
-                // the cross-origin refresh-token cookie set by InsForge.
-                if (data?.accessToken && data?.user) {
-                    saveLocalSession(data.accessToken, data.refreshToken ?? null, data.user);
-                }
-
+                // Supabase persists the session automatically in localStorage.
                 setLoading(btn, true, 'Loading profile...');
 
-                // signInWithPassword already saved the session to tokenManager internally,
-                // so data.user is reliable — no polling loop needed.
                 const sessionUser = data.user;
                 if (!sessionUser) {
                     showAlert('error', 'Signed in, but the session could not be established. Please try again.');
@@ -346,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Ensure profile exists in the InsForge database
+                // Ensure profile exists (also created by DB trigger on signup)
                 const profile = await ensureProfile(sessionUser);
 
                 if (!profile) {
@@ -392,10 +384,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = `${firstName} ${lastName}`.trim();
 
             try {
-                const { data, error } = await insforge.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
-                    name: name,
+                    options: {
+                        data: { full_name: name },
+                    },
                 });
 
                 if (error) {
@@ -409,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     await ensureProfile(data.user);
 
                     showAlert('success', 'Registration successful! Please sign in to continue.');
-                    await insforge.auth.signOut();
+                    await signOut();
                     setLoading(btn, false, 'Complete Registration');
                     setTimeout(() => {
                         window.location.href = '/pages/login.html';
