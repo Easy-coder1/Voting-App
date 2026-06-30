@@ -241,8 +241,8 @@ body { font-family: var(--font-sans); background: var(--surface-2); color: var(-
 
 .result-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; }
 .result-card.winner { background: linear-gradient(135deg, #fffbeb, #fef3c7); border-color: rgba(245,158,11,0.25); }
-.result-cand-photo { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0; }
-.result-cand-initials { display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--brand), var(--brand-light)); color: #fff; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.result-cand-photo { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; object-position: center 20%; border: 2px solid var(--border); flex-shrink: 0; }
+.result-cand-initials { width: 48px; height: 48px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--brand), var(--brand-light)); color: #fff; font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .result-bar-track { height: 3px; border-radius: 99px; background: var(--surface-3); overflow: hidden; margin-top: 8px; }
 .result-bar-fill { height: 100%; border-radius: 99px; transition: width 0.8s ease; }
 .result-bar-fill.gold { background: var(--gold); }

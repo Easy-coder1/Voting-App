@@ -38,6 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.href = '/';
         });
 
+        setupConfirmModal();
+
         await loadPage();
     } catch (err) {
         console.error('Member page error:', err);
@@ -250,34 +252,86 @@ function renderBallot() {
     const allSelected = positions.every(p => ballotSelections[p.id]);
     const submitBtn = document.getElementById('submit-votes-btn');
     submitBtn.disabled = !allSelected;
-    submitBtn.addEventListener('click', submitVotes);
+    submitBtn.addEventListener('click', () => openConfirmModal());
 }
 
-async function submitVotes() {
-    const selections = positions
-        .map(p => ({ positionId: p.id, candidateId: ballotSelections[p.id], positionName: p.position_name }))
+function getSelections() {
+    return positions
+        .map(p => ({
+            positionId: p.id,
+            candidateId: ballotSelections[p.id],
+            positionName: p.position_name,
+        }))
         .filter(s => s.candidateId);
+}
+
+function setupConfirmModal() {
+    document.getElementById('confirm-cancel')?.addEventListener('click', hideConfirmModal);
+    document.getElementById('confirm-submit')?.addEventListener('click', performSubmit);
+
+    document.getElementById('confirm-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'confirm-modal') hideConfirmModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') hideConfirmModal();
+    });
+}
+
+function openConfirmModal() {
+    const selections = getSelections();
 
     if (selections.length < positions.length) {
         window.alert('Please pick one person for every position before submitting.');
         return;
     }
 
-    const summary = selections
-        .map(s => {
-            const cand = candidates.find(c => c.id === s.candidateId);
-            return `${s.positionName}: ${cand?.full_name || 'Unknown'}`;
-        })
-        .join('\n');
+    const listEl = document.getElementById('confirm-list');
+    listEl.innerHTML = selections.map(s => {
+        const cand = candidates.find(c => c.id === s.candidateId);
+        const avatar = candidatePhotoHtml(cand?.photo_url, cand?.full_name, {
+            imgClass: 'pick-photo',
+            fallbackClass: 'pick-initials',
+        });
 
-    if (!window.confirm(`Submit your votes?\n\n${summary}\n\nYou cannot change them after this.`)) {
-        return;
-    }
+        return `
+            <div class="confirm-row">
+                ${avatar}
+                <div class="confirm-row-text">
+                    <span class="confirm-row-pos">${s.positionName}</span>
+                    <span class="confirm-row-name">${cand?.full_name || 'Unknown'}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
 
-    const submitBtn = document.getElementById('submit-votes-btn');
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting…';
+    const submitBtn = document.getElementById('confirm-submit');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit votes';
+
+    const modal = document.getElementById('confirm-modal');
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function hideConfirmModal() {
+    const modal = document.getElementById('confirm-modal');
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+async function performSubmit() {
+    const selections = getSelections();
+    if (selections.length < positions.length) return;
+
+    const submitBtn = document.getElementById('confirm-submit');
+    const pageSubmitBtn = document.getElementById('submit-votes-btn');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+    if (pageSubmitBtn) {
+        pageSubmitBtn.disabled = true;
+        pageSubmitBtn.textContent = 'Submitting…';
     }
 
     try {
@@ -291,6 +345,7 @@ async function submitVotes() {
         const { error } = await supabase.from('votes').insert(votesToInsert);
         if (error) throw error;
 
+        hideConfirmModal();
         hasSubmitted = true;
         await loadUserVotes();
         renderEligibility();
@@ -302,9 +357,11 @@ async function submitVotes() {
         `);
     } catch (err) {
         window.alert('Could not submit votes: ' + err.message);
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Submit my votes';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit votes';
+        if (pageSubmitBtn) {
+            pageSubmitBtn.disabled = false;
+            pageSubmitBtn.textContent = 'Submit my votes';
         }
     }
 }

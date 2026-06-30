@@ -38,6 +38,18 @@
         </div>
     </main>
 
+    <div id="confirm-modal" class="confirm-overlay" aria-hidden="true">
+        <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+            <h2 id="confirm-title">Review your votes</h2>
+            <p class="confirm-sub">Please check your choices below. You cannot change them after submitting.</p>
+            <div id="confirm-list" class="confirm-list"></div>
+            <div class="confirm-actions">
+                <button type="button" id="confirm-cancel" class="btn-modal-secondary">Go back</button>
+                <button type="button" id="confirm-submit" class="btn-modal-primary">Submit votes</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="/src/js/member.js"></script>
     <script type="module" src="/src/main.js"></script>
 </body>
