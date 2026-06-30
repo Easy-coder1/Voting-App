@@ -393,7 +393,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (error) {
-                    showAlert('error', error.message);
+                    const msg = (error.message || '').toLowerCase();
+                    if (msg.includes('failed to fetch') || msg.includes('network')) {
+                        showAlert('error', 'Could not reach Supabase. Check that VITE_SUPABASE_URL in .env.local matches your project (https://<ref>.supabase.co) and restart the dev server.');
+                    } else {
+                        showAlert('error', error.message);
+                    }
                     setLoading(btn, false, 'Complete Registration');
                     return;
                 }
