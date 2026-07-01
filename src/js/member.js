@@ -1,5 +1,6 @@
 import { supabase, getCurrentUser, ensureProfile, confirmSignOut } from './supabase.js';
 import { sortPositions, sortPositionEntries, candidatePhotoHtml, fetchCandidatePhotos } from './positionOrder.js';
+import { escapeHtml, showToast, trapFocus } from './ui.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -9,6 +10,8 @@ let candidates = [];
 let userVotes = [];
 let ballotSelections = {};
 let hasSubmitted = false;
+
+let confirmFocusCleanup = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -124,12 +127,22 @@ async function loadPage() {
     positions = [];
     candidates = [];
 
-    const { data: openElections } = await supabase
+    const { data: openElections, error: openErr } = await supabase
         .from('elections')
         .select('*')
         .eq('status', 'open')
         .order('created_at', { ascending: false })
         .limit(1);
+
+    if (openErr) {
+        renderStatusPage({
+            icon: '⚠',
+            title: 'Could not load election',
+            message: 'Please check your connection and refresh. If this keeps happening, contact the election committee.',
+            tone: 'info',
+        });
+        return;
+    }
 
     if (openElections?.length) {
         activeElection = openElections[0];
@@ -179,10 +192,20 @@ async function loadPage() {
 }
 
 async function loadElectionBallot() {
-    const [{ data: posData }, { data: canData }] = await Promise.all([
+    const [{ data: posData, error: posErr }, { data: canData, error: canErr }] = await Promise.all([
         supabase.from('positions').select('*'),
         supabase.from('candidates').select('*'),
     ]);
+
+    if (posErr || canErr) {
+        renderStatusPage({
+            icon: '⚠',
+            title: 'Could not load ballot',
+            message: 'Please refresh the page. If this keeps happening, contact the election committee.',
+            tone: 'info',
+        });
+        return;
+    }
 
     candidates = canData || [];
     const activePositionIds = new Set(candidates.map(c => c.position_id));
@@ -336,10 +359,11 @@ function renderBallot() {
 
             return `
                 <button type="button" class="pick-item${isSelected ? ' selected' : ''}"
-                    data-candidate="${c.id}" data-position="${pos.id}">
+                    data-candidate="${c.id}" data-position="${pos.id}"
+                    aria-pressed="${isSelected ? 'true' : 'false'}">
                     ${photo}
                     <span class="pick-name">
-                        ${c.full_name}
+                        ${escapeHtml(c.full_name)}
                         <span class="pick-tag">${isSelected ? 'Your choice ✓' : 'Tap to select'}</span>
                     </span>
                     <span class="pick-check">${isSelected ? '✓' : ''}</span>
@@ -352,8 +376,8 @@ function renderBallot() {
                 <div class="position-card-head">
                     <span class="position-num">${index + 1}</span>
                     <div class="position-head-text">
-                        <h3>${pos.position_name}</h3>
-                        <p>${isDone ? `You chose: ${selectedCand?.full_name}` : 'Pick one candidate below'}</p>
+                        <h3>${escapeHtml(pos.position_name)}</h3>
+                        <p>${isDone ? `You chose: ${escapeHtml(selectedCand?.full_name)}` : 'Pick one candidate below'}</p>
                     </div>
                     ${isDone ? '<span class="position-done-badge">Done</span>' : ''}
                 </div>
@@ -372,7 +396,7 @@ function renderBallot() {
         <div class="vote-shell">
             <div class="vote-hero">
                 <span class="live-badge">Voting is open</span>
-                <h1 class="vote-hero-title">${activeElection.title}</h1>
+                <h1 class="vote-hero-title">${escapeHtml(activeElection.title)}</h1>
                 <p class="vote-hero-greet">Hello ${firstName}! Take your time and choose one person for each role.</p>
             </div>
 
@@ -436,6 +460,8 @@ function setupConfirmModal() {
     });
 
     document.addEventListener('keydown', (e) => {
+        const modal = document.getElementById('confirm-modal');
+        if (!modal?.classList.contains('open')) return;
         if (e.key === 'Escape') hideConfirmModal();
     });
 }
@@ -444,7 +470,7 @@ function openConfirmModal() {
     const selections = getSelections();
 
     if (selections.length < positions.length) {
-        window.alert('Please pick one person for every position before submitting.');
+        showToast('warning', 'Please pick one person for every position before submitting.');
         return;
     }
 
@@ -460,8 +486,8 @@ function openConfirmModal() {
             <div class="confirm-row">
                 ${avatar}
                 <div class="confirm-row-text">
-                    <span class="confirm-row-pos">${s.positionName}</span>
-                    <span class="confirm-row-name">${cand?.full_name || 'Unknown'}</span>
+                    <span class="confirm-row-pos">${escapeHtml(s.positionName)}</span>
+                    <span class="confirm-row-name">${escapeHtml(cand?.full_name || 'Unknown')}</span>
                 </div>
             </div>
         `;
@@ -474,12 +500,20 @@ function openConfirmModal() {
     const modal = document.getElementById('confirm-modal');
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
+    if (confirmFocusCleanup) confirmFocusCleanup();
+    confirmFocusCleanup = trapFocus(modal.querySelector('.confirm-dialog'));
+    document.getElementById('confirm-cancel')?.focus();
 }
 
 function hideConfirmModal() {
     const modal = document.getElementById('confirm-modal');
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
+    if (confirmFocusCleanup) {
+        confirmFocusCleanup();
+        confirmFocusCleanup = null;
+    }
+    document.getElementById('submit-votes-btn')?.focus();
 }
 
 async function performSubmit() {
@@ -520,7 +554,7 @@ async function performSubmit() {
     } catch (err) {
         const msg = (err.message || '').toLowerCase();
         if (msg.includes('duplicate') || msg.includes('unique')) {
-            window.alert('You have already submitted your votes for this election.');
+            showToast('warning', 'You have already submitted your votes for this election.');
             hasSubmitted = true;
             await loadUserVotes();
             renderEligibility();
@@ -531,7 +565,7 @@ async function performSubmit() {
                 tone: 'success',
             });
         } else {
-            window.alert('Could not submit votes: ' + err.message);
+            showToast('error', 'Could not submit votes. Please try again or contact the election committee.');
             submitBtn.disabled = false;
             submitBtn.textContent = 'Submit votes';
             if (pageSubmitBtn) {

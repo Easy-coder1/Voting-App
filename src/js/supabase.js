@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { showConfirm, showToast } from './ui.js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -25,7 +26,7 @@ function normalizeUser(user) {
   }
 }
 
-/** Drop-in replacement for the old InsForge getCurrentUser() shape. */
+/** Returns the current authenticated user in `{ data: { user } }` shape. */
 export async function getCurrentUser() {
   const { data: { user }, error } = await supabase.auth.getUser()
   return { data: user ? { user: normalizeUser(user) } : null, error }
@@ -37,10 +38,14 @@ export async function signOut() {
 }
 
 export async function confirmSignOut(message = 'Are you sure you want to sign out?') {
-  if (!window.confirm(message)) return false
+  if (!(await showConfirm(message, {
+    title: 'Sign out',
+    confirmLabel: 'Sign out',
+    cancelLabel: 'Stay signed in',
+  }))) return false
   const { error } = await signOut()
   if (error) {
-    window.alert('Could not sign out. Please try again.')
+    showToast('error', 'Could not sign out. Please try again.')
     return false
   }
   return true

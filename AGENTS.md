@@ -21,7 +21,7 @@ All secrets live in `.env.local` (never committed). Vercel gets them from Projec
 ## Database setup
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run the SQL in `supabase/migrations/20260628180000_initial_schema.sql` via the SQL Editor, or use the Supabase CLI: `supabase link` then `supabase db push`.
+2. Run the SQL in `supabase/migrations/` via the SQL Editor (all files in timestamp order), or use the Supabase CLI: `supabase link` then `supabase db push`.
 3. Promote your first admin (after registering):
 
 ```sql

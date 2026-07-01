@@ -302,6 +302,20 @@
   border-color: var(--brand); background: var(--brand); color: #fff;
 }
 
+.pick-item:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.pick-item.selected:focus-visible {
+  outline-color: var(--brand-light);
+}
+
+.btn-submit-votes:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
+
 /* ── Submit panel ─────────────────────────────────────────────── */
 .submit-panel {
   background: var(--surface);
