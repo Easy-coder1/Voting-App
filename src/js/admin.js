@@ -159,16 +159,25 @@ async function loadAnalytics() {
         { count: pending },
         { count: approved },
         { count: rejected },
-        { data: voteRows },
+        { data: openElections },
     ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'rejected').eq('role', 'member'),
-        supabase.from('votes').select('voter_id'),
+        supabase.from('elections').select('id, title, end_date').eq('status', 'open').limit(1),
     ]);
 
-    const votersWhoVoted = new Set((voteRows || []).map(r => r.voter_id).filter(Boolean)).size;
+    let votersWhoVoted = 0;
+    const activeElection = openElections?.[0] || null;
+
+    if (activeElection) {
+        const { data: voteRows } = await supabase
+            .from('votes')
+            .select('voter_id')
+            .eq('election_id', activeElection.id);
+        votersWhoVoted = new Set((voteRows || []).map(r => r.voter_id).filter(Boolean)).size;
+    }
 
     document.getElementById('stat-total-members').textContent = totalMembers || 0;
     document.getElementById('stat-pending').textContent = pending || 0;
@@ -177,23 +186,21 @@ async function loadAnalytics() {
     document.getElementById('stat-votes').textContent = votersWhoVoted;
 
     renderMemberStatusChart(pending || 0, approved || 0, rejected || 0);
-    
-    // Check active election
-    const { data: elections } = await supabase.from('elections').select('*').eq('status', 'open').limit(1);
+
     const statusContainer = document.getElementById('live-election-status');
     if (statusContainer) {
-        if(elections && elections.length > 0) {
+        if (activeElection) {
             statusContainer.innerHTML = `
                 <div class="space-y-4">
                     <div class="flex items-center space-x-2.5">
                         <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span class="font-extrabold text-base text-slate-800">Active: ${elections[0].title}</span>
+                        <span class="font-extrabold text-base text-slate-800">Active: ${activeElection.title}</span>
                     </div>
                     <div class="flex justify-between border-t border-slate-200/50 pt-4 text-xs font-semibold text-slate-400">
                         <span>Closing Date</span>
-                        <span class="text-slate-700 font-bold">${new Date(elections[0].end_date).toLocaleString(undefined, {dateStyle: 'medium', timeStyle: 'short'})}</span>
+                        <span class="text-slate-700 font-bold">${new Date(activeElection.end_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                     </div>
-                    <button onclick="window.switchToResultsTab('${elections[0].id}')" class="mt-3 w-full bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
+                    <button onclick="window.switchToResultsTab('${activeElection.id}')" class="mt-3 w-full bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
                         View Live Results →
                     </button>
                 </div>

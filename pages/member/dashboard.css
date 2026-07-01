@@ -309,9 +309,6 @@
   border-radius: var(--radius-xl);
   padding: 18px 18px 16px;
   box-shadow: var(--shadow-lg);
-  position: sticky;
-  bottom: 12px;
-  z-index: 5;
 }
 
 .submit-panel-hint {
