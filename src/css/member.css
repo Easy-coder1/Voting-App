@@ -123,13 +123,13 @@ body { font-family: var(--font-sans); background: var(--surface-2); color: var(-
   margin: 0; word-break: break-all; line-height: 1.4;
 }
 
-.btn-sign-out {
+.btn-ghost.btn-sign-out {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 8px 14px;
   color: var(--red, #dc2626);
   border-color: var(--red, #dc2626);
 }
-.btn-sign-out:hover {
+.btn-ghost.btn-sign-out:hover {
   background: rgba(220, 38, 38, 0.08);
   color: var(--red, #dc2626);
   border-color: var(--red, #dc2626);

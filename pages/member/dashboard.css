@@ -305,17 +305,21 @@
 /* ── Submit panel ─────────────────────────────────────────────── */
 .submit-panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: 18px 18px 16px;
-  box-shadow: var(--shadow-lg);
+  border-top: 1px solid var(--border);
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 30px -12px rgba(15, 23, 42, 0.18);
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  width: calc(100% - 32px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  z-index: 60;
+}
+
+.submit-panel > * {
   max-width: 648px;
-  z-index: 20;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .submit-panel-hint {
