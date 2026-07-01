@@ -124,7 +124,7 @@
 }
 
 .member-btn {
-  @apply inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition shadow-sm whitespace-nowrap;
+  @apply inline-flex items-center gap-1 px-3 py-2.5 rounded-lg text-xs font-bold transition shadow-sm whitespace-nowrap min-h-[44px];
 }
 
 .member-btn--reject {
@@ -162,3 +162,106 @@
 .member-empty p {
   @apply text-sm font-semibold text-slate-500;
 }
+
+/* ── App toast & confirm (shared) ─────────────────────────────── */
+.app-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%) translateY(120%);
+  z-index: 200;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-toast--visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.app-toast--success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.app-toast--error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.app-toast--warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+
+.app-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+.app-confirm-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.app-confirm-dialog {
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+}
+
+.app-confirm-title {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px;
+}
+
+.app-confirm-message {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.55;
+  margin: 0 0 20px;
+}
+
+.app-confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.app-confirm-cancel,
+.app-confirm-ok {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+.app-confirm-cancel {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.app-confirm-ok {
+  background: linear-gradient(135deg, #1e40af, #2563eb);
+  color: #fff;
+}
+
+.app-confirm-ok--destructive {
+  background: linear-gradient(135deg, #b91c1c, #dc2626);
+}
+

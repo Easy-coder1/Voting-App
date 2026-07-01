@@ -184,7 +184,7 @@
                 const idx = Array.from(document.querySelectorAll('#register-form input')).indexOf(input);
                 const step = idx < 2 ? 1 : idx < 3 ? 2 : 3;
                 document.querySelectorAll('.step-bar').forEach(bar => {
-                    bar.style.background = parseInt(bar.dataset.step) <= step ? '#9e1b2e' : '#f6c2c8';
+                    bar.style.background = parseInt(bar.dataset.step) <= step ? '#1d4ed8' : '#dbeafe';
                 });
             });
         });

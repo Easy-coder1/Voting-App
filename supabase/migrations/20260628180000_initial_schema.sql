@@ -1,4 +1,4 @@
--- NUTFS E-Voting — initial Supabase schema (migrated from InsForge)
+-- NUTFS E-Voting — initial Supabase schema
 
 -- ── ENUMS ────────────────────────────────────────────────────────────────────
 CREATE TYPE public.account_status_type AS ENUM (

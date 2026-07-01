@@ -58,8 +58,8 @@
                 Back
             </a>
 
-            <h2 class="font-display text-[2rem] font-semibold text-ink tracking-tight leading-none">Welcome back</h2>
-            <p class="mt-2.5 text-sm text-ink-muted">
+            <h2 id="login-heading" class="font-display text-[2rem] font-semibold text-ink tracking-tight leading-none">Welcome back</h2>
+            <p id="login-subheading" class="mt-2.5 text-sm text-ink-muted">
                 No account? <a href="/pages/register.html" class="font-semibold text-church-700 hover:text-church-800">Register here</a>
             </p>
 
@@ -84,7 +84,7 @@
                         </button>
                     </div>
                     <div class="flex justify-end mt-2">
-                        <a href="#" class="text-xs font-medium text-ink-subtle hover:text-church-700">Forgot password?</a>
+                        <button type="button" id="forgot-password-toggle" class="text-xs font-medium text-ink-subtle hover:text-church-700">Forgot password?</button>
                     </div>
                 </div>
                 <button type="submit" id="submit-btn" class="w-full btn-wine py-3.5 text-base mt-2">
@@ -94,6 +94,21 @@
                     </svg>
                 </button>
             </form>
+
+            <div id="forgot-password-panel" class="hidden mt-8 pt-8 border-t border-ink/10 space-y-5">
+                <h3 class="font-display text-xl font-semibold text-ink">Reset your password</h3>
+                <p class="text-sm text-ink-muted">Enter your email and we will send you a link to choose a new password.</p>
+                <div class="relative m-field" id="field-reset-email">
+                    <input id="reset-email" name="reset-email" type="email" autocomplete="email" required placeholder=" " class="peer">
+                    <label for="reset-email">Email address</label>
+                </div>
+                <button type="button" id="forgot-password-submit" class="w-full btn-wine py-3.5 text-base">
+                    Send reset link
+                </button>
+                <button type="button" id="forgot-password-back" class="w-full text-sm font-semibold text-ink-subtle hover:text-church-700 py-2">
+                    Back to sign in
+                </button>
+            </div>
         </div>
     </main>
 

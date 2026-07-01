@@ -43,9 +43,9 @@ npm install
 ### 3. Supabase Backend Setup
 1. Create a new project on [Supabase](https://supabase.com).
 2. Go to the **SQL Editor** in your Supabase dashboard.
-3. Run `supabase/migrations/20260628180000_initial_schema.sql` (tables, RLS, RPC functions, seed positions, and Realtime).
+3. Run all SQL migrations in `supabase/migrations/` **in timestamp order** via the SQL Editor, or use the Supabase CLI: `supabase link --project-ref <ref>` then `supabase db push`.
 
-   Or with the [Supabase CLI](https://supabase.com/docs/guides/cli): `supabase link --project-ref <ref>` then `supabase db push`.
+   The final migration (`20260701120000_security_hardening.sql`) adds production security fixes — do not skip it.
 
 ### 4. Environment Variables
 Copy `.env.example` to `.env.local` and fill in your Supabase project credentials:
@@ -58,7 +58,14 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```bash
 npm run dev
 ```
-Open your browser to `http://localhost:5173/` (or the port Vite provides) to view the application!
+Open your browser to `http://localhost:3000/` to view the application!
+
+### 6. Supabase Auth URLs (production)
+In Supabase → **Authentication** → **URL Configuration**, set:
+- **Site URL:** your production domain (e.g. `https://your-app.vercel.app`)
+- **Redirect URLs:** include `https://your-app.vercel.app/pages/reset-password.html` (and the same path on localhost for testing)
+
+This is required for password reset emails to work.
 
 ---
 

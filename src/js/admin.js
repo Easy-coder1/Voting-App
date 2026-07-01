@@ -1,5 +1,6 @@
 import { supabase, getCurrentUser, subscribeToTableChanges, confirmSignOut } from './supabase.js';
 import { sortPositionEntries, candidatePhotoHtml, fetchCandidatePhotos } from './positionOrder.js';
+import { showToast, showConfirm, escapeHtml } from './ui.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -25,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('id', currentUser.id)
             .single();
 
-        if (profileError || !profile || profile.role !== 'admin') {
+        if (profileError || !profile || profile.role !== 'admin' || profile.account_status !== 'approved') {
             console.error('Admin profile error:', profileError);
             window.location.href = '/pages/member/dashboard.html';
             return;
@@ -438,7 +439,7 @@ async function loadMembers() {
         .order('created_at', { ascending: false });
 
     if (error) {
-        alert('Error fetching members: ' + error.message);
+        showToast('error', 'Error fetching members: ' + error.message);
         return;
     }
 
@@ -450,7 +451,12 @@ async function loadMembers() {
 window.rejectMember = async (id) => {
     const member = allMembers.find(m => m.id === id);
     const name = member?.full_name || 'this member';
-    if (!confirm(`Reject registration for ${name}? They will not be able to vote.`)) return;
+    if (!(await showConfirm(`Reject registration for ${name}? They will not be able to vote.`, {
+        title: 'Reject member',
+        confirmLabel: 'Reject',
+        cancelLabel: 'Cancel',
+        destructive: true,
+    }))) return;
     await window.updateMemberStatus(id, 'rejected');
 };
 
@@ -465,13 +471,17 @@ window.updateMemberStatus = async (id, status) => {
 
         const { error } = await supabase.from('profiles').update(updateData).eq('id', id);
         if (error) {
-            alert('Error updating status: ' + error.message);
+            showToast('error', 'Error updating status: ' + error.message);
         } else {
+            const msg = status === 'approved' ? 'Member approved — they can now vote when an election opens.'
+                : status === 'rejected' ? 'Member rejected.'
+                : 'Member status updated.';
+            showToast('success', msg);
             loadMembers();
             loadAnalytics();
         }
     } catch (err) {
-        alert('Exception updating status: ' + err.message);
+        showToast('error', 'Exception updating status: ' + err.message);
     }
 };
 
@@ -493,10 +503,11 @@ function setupForms() {
             .select();
 
         if (error || !created || created.length === 0) {
-            alert('Error creating election: ' + (error?.message || 'Unknown error'));
+            showToast('error', 'Error creating election: ' + (error?.message || 'Unknown error'));
             return;
         }
 
+        showToast('success', 'Election created. Set its status to Open when you are ready for voting.');
         e.target.reset();
         loadElections();
         loadCandidates();
@@ -515,10 +526,11 @@ function setupForms() {
         }]);
 
         if (error) {
-            alert('Error adding candidate: ' + error.message);
+            showToast('error', 'Error adding candidate: ' + error.message);
             return;
         }
 
+        showToast('success', 'Candidate added to the roster.');
         e.target.reset();
         resetImageUpload();
         loadCandidates();
@@ -584,7 +596,7 @@ function setupImageUpload() {
 
 function handleSelectedFile(file) {
     if (!file || !file.type.startsWith('image/')) {
-        alert('Please select a valid image file.');
+        showToast('warning', 'Please select a valid image file.');
         return;
     }
 
@@ -629,11 +641,23 @@ function handleSelectedFile(file) {
 }
 
 async function loadElections() {
-    const { data: elections } = await supabase.from('elections').select('*').order('created_at', { ascending: false });
+    const { data: elections, error } = await supabase.from('elections').select('*').order('created_at', { ascending: false });
     const list = document.getElementById('elections-list');
     list.innerHTML = '';
 
-    if(!elections) return;
+    if (error) {
+        showToast('error', 'Error loading elections: ' + error.message);
+        return;
+    }
+
+    if (!elections || elections.length === 0) {
+        list.innerHTML = `
+            <div class="member-empty py-12">
+                <p>No elections yet. Create one using the form on the left, then add candidates and set the status to Open when ready.</p>
+            </div>
+        `;
+        return;
+    }
 
     elections.forEach(el => {
         const div = document.createElement('div');
@@ -645,9 +669,12 @@ async function loadElections() {
             'closed': 'bg-slate-100 text-slate-600 border-slate-200'
         };
 
+        const safeTitle = escapeHtml(el.title || 'Untitled');
+        const deleteTitle = (el.title || '').replace(/'/g, "\\'");
+
         div.innerHTML = `
             <div class="space-y-2">
-                <h4 class="font-extrabold text-lg text-slate-800 tracking-tight leading-tight">${el.title}</h4>
+                <h4 class="font-extrabold text-lg text-slate-800 tracking-tight leading-tight">${safeTitle}</h4>
                 <p class="text-sm text-slate-400 font-semibold flex items-center space-x-1.5">
                     <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     <span>${new Date(el.start_date).toLocaleDateString()} - ${new Date(el.end_date).toLocaleDateString()}</span>
@@ -658,18 +685,15 @@ async function loadElections() {
                 </div>
             </div>
             <div class="space-x-2 mt-6 md:mt-0 flex items-center w-full md:w-auto flex-wrap gap-2">
-                <select onchange="window.updateElectionStatus('${el.id}', this.value)" class="text-xs border border-slate-200 bg-white shadow-sm rounded-full px-4 py-2.5 font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-church-500">
+                <select onchange="window.updateElectionStatus('${el.id}', this.value)" class="text-xs border border-slate-200 bg-white shadow-sm rounded-full px-4 py-2.5 font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-church-500 min-h-[44px]">
                     <option value="upcoming" ${el.status === 'upcoming' ? 'selected' : ''}>Upcoming</option>
                     <option value="open" ${el.status === 'open' ? 'selected' : ''}>Open</option>
                     <option value="closed" ${el.status === 'closed' ? 'selected' : ''}>Closed</option>
                 </select>
-                <button onclick="window.viewElectionResults('${el.id}')" class="text-xs bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full font-bold transition-all duration-300 active:scale-95">
+                <button onclick="window.viewElectionResults('${el.id}')" class="text-xs bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full font-bold transition-all duration-300 active:scale-95 min-h-[44px]">
                     View Results
                 </button>
-                <button onclick="window.toggleResults('${el.id}', ${!el.results_published})" class="text-xs bg-church-50 border border-church-200 text-church-700 px-4 py-2.5 rounded-full font-bold hover:bg-church-100 hover:text-church-900 transition-all duration-300 active:scale-95">
-                    Toggle Publish
-                </button>
-                <button onclick="window.deleteElection('${el.id}', '${(el.title || '').replace(/'/g, "\\'")}')" class="text-xs bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-full font-bold hover:bg-red-100 hover:text-red-700 transition-all duration-300 active:scale-95">
+                <button onclick="window.deleteElection('${el.id}', '${deleteTitle}')" class="text-xs bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-full font-bold hover:bg-red-100 hover:text-red-700 transition-all duration-300 active:scale-95 min-h-[44px]">
                     Delete
                 </button>
             </div>
@@ -688,57 +712,51 @@ window.updateElectionStatus = async (id, status) => {
                 .neq('id', id);
 
             if (closeError) {
-                alert('Error closing the previous election: ' + closeError.message);
+                showToast('error', 'Error closing the previous election: ' + closeError.message);
                 return;
             }
         }
 
         const { error } = await supabase.from('elections').update({ status }).eq('id', id);
         if (error) {
-            alert('Error updating election status: ' + error.message);
+            showToast('error', 'Error updating election status: ' + error.message);
             return;
         }
 
+        showToast('success', status === 'open' ? 'Election is now open for voting.' : status === 'closed' ? 'Election closed.' : 'Election marked as upcoming.');
         loadElections();
         loadAnalytics();
     } catch (err) {
-        alert('Exception updating election status: ' + err.message);
+        showToast('error', 'Exception updating election status: ' + err.message);
     }
 };
 
 window.deleteElection = async (id, title) => {
-    if (!confirm(`Delete election "${title}"? This will permanently remove the election and all of its votes. This action cannot be undone.`)) {
+    if (!(await showConfirm(`Delete election "${title}"? This will permanently remove the election and all of its votes. This action cannot be undone.`, {
+        title: 'Delete election',
+        confirmLabel: 'Delete',
+        cancelLabel: 'Cancel',
+        destructive: true,
+    }))) {
         return;
     }
     try {
         const { error: votesError } = await supabase.from('votes').delete().eq('election_id', id);
         if (votesError) {
-            alert('Error deleting election votes: ' + votesError.message);
+            showToast('error', 'Error deleting election votes: ' + votesError.message);
             return;
         }
 
         const { error } = await supabase.from('elections').delete().eq('id', id);
         if (error) {
-            alert('Error deleting election: ' + error.message);
+            showToast('error', 'Error deleting election: ' + error.message);
         } else {
+            showToast('success', 'Election deleted.');
             loadElections();
             loadAnalytics();
         }
     } catch (err) {
-        alert('Exception deleting election: ' + err.message);
-    }
-};
-
-window.toggleResults = async (id, pub) => {
-    try {
-        const { error } = await supabase.from('elections').update({ results_published: pub }).eq('id', id);
-        if (error) {
-            alert('Error toggling results: ' + error.message);
-        } else {
-            loadElections();
-        }
-    } catch (err) {
-        alert('Exception toggling results: ' + err.message);
+        showToast('error', 'Exception deleting election: ' + err.message);
     }
 };
 
@@ -835,19 +853,26 @@ async function loadCandidates() {
 }
 
 window.deleteCandidate = async (id) => {
-    if(!confirm('Delete candidate?')) return;
+    if (!(await showConfirm('Delete this candidate from the roster?', {
+        title: 'Delete candidate',
+        confirmLabel: 'Delete',
+        cancelLabel: 'Cancel',
+        destructive: true,
+    }))) return;
     
     const { error } = await supabase.from('candidates').delete().eq('id', id);
     
     if (error) {
         if (error.code === '23503') {
-            alert('Cannot delete this candidate because votes have already been cast for them. To delete this candidate, you must first remove all associated votes.');
+            showToast('error', 'Cannot delete this candidate because votes have already been cast for them.');
         } else {
-            alert('Error deleting candidate: ' + error.message);
+            showToast('error', 'Error deleting candidate: ' + error.message);
         }
         console.error('Delete candidate error:', error);
+        return;
     }
-    
+
+    showToast('success', 'Candidate removed.');
     loadCandidates();
 };
 
@@ -918,7 +943,10 @@ function setupPublishModal() {
 
         const { error } = await supabase.from('elections').update(updateData).eq('id', electionId);
         if (error) {
-            alert('Error updating results visibility: ' + error.message);
+            showToast('error', 'Error updating results visibility: ' + error.message);
+        } else {
+            showToast('success', action === 'publish' ? 'Results published — members can now see them.' : 'Results hidden from members.');
+            loadElections();
         }
 
         modal.classList.add('hidden');

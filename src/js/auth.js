@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ) {
                         showAlert('warning',
                             'Your email address has not been confirmed yet. ' +
-                            'Please check your inbox (and spam folder) for a confirmation link from Supabase, ' +
+                            'Please check your inbox (and spam folder) for a confirmation link, ' +
                             'then try logging in again.');
                     } else if (
                         msg.includes('invalid login credentials') ||
@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (error) {
                     const msg = (error.message || '').toLowerCase();
                     if (msg.includes('failed to fetch') || msg.includes('network')) {
-                        showAlert('error', 'Could not reach Supabase. Check that VITE_SUPABASE_URL in .env.local matches your project (https://<ref>.supabase.co) and restart the dev server.');
+                        showAlert('error', 'Could not reach the server. Please check your internet connection or contact the election administrator.');
                     } else {
                         showAlert('error', error.message);
                     }
@@ -415,4 +415,54 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // ── FORGOT PASSWORD ────────────────────────────────────────────────────
+    const forgotToggle = document.getElementById('forgot-password-toggle');
+    const forgotPanel = document.getElementById('forgot-password-panel');
+    const forgotBack = document.getElementById('forgot-password-back');
+    const forgotSubmit = document.getElementById('forgot-password-submit');
+    const loginFormEl = document.getElementById('login-form');
+
+    function showForgotPanel(show) {
+        if (!forgotPanel || !loginFormEl) return;
+        forgotPanel.classList.toggle('hidden', !show);
+        loginFormEl.classList.toggle('hidden', show);
+        document.getElementById('login-heading')?.classList.toggle('hidden', show);
+        document.getElementById('login-subheading')?.classList.toggle('hidden', show);
+    }
+
+    forgotToggle?.addEventListener('click', () => showForgotPanel(true));
+    forgotBack?.addEventListener('click', () => showForgotPanel(false));
+
+    forgotSubmit?.addEventListener('click', async () => {
+        const emailInput = document.getElementById('reset-email');
+        const email = emailInput?.value.trim() || '';
+
+        if (!email || !/\S+@\S+\.\S+/.test(email)) {
+            showAlert('error', 'Please enter a valid email address.');
+            return;
+        }
+
+        forgotSubmit.disabled = true;
+        forgotSubmit.textContent = 'Sending…';
+
+        const redirectTo = `${window.location.origin}/pages/reset-password.html`;
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+
+        forgotSubmit.disabled = false;
+        forgotSubmit.textContent = 'Send reset link';
+
+        if (error) {
+            const msg = (error.message || '').toLowerCase();
+            if (msg.includes('failed to fetch') || msg.includes('network')) {
+                showAlert('error', 'Could not reach the server. Please check your internet connection.');
+            } else {
+                showAlert('error', error.message);
+            }
+            return;
+        }
+
+        showAlert('success', 'If an account exists for that email, a reset link has been sent. Check your inbox and spam folder.');
+        showForgotPanel(false);
+    });
 });
