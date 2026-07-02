@@ -114,6 +114,7 @@
 .member-row-avatar--pending { @apply bg-gradient-to-tr from-amber-500 to-amber-400; }
 .member-row-avatar--approved { @apply bg-gradient-to-tr from-church-700 to-church-500; }
 .member-row-avatar--rejected { @apply bg-gradient-to-tr from-red-500 to-red-400; }
+.member-row-avatar--voted { @apply bg-gradient-to-tr from-emerald-600 to-emerald-500; }
 
 .member-row-text { @apply min-w-0; }
 .member-row-text h4 { @apply font-extrabold text-church-900 leading-tight text-base; }

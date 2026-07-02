@@ -170,7 +170,7 @@
                         </div>
                         <p id="stat-rejected" class="text-2xl sm:text-3xl font-bold text-ink tracking-tight">0</p>
                     </div>
-                    <div class="card-premium p-5 sm:p-6 relative overflow-hidden hover:shadow-card-hover transition-shadow sm:col-span-1 col-span-2 lg:col-span-1">
+                    <div id="stat-votes-card" class="card-premium p-5 sm:p-6 relative overflow-hidden hover:shadow-card-hover transition-all sm:col-span-1 col-span-2 lg:col-span-1">
                         <div class="absolute top-0 left-0 w-full h-1 bg-church-500"></div>
                         <div class="flex justify-between items-start mb-3">
                             <span class="text-xs text-church-400 font-bold uppercase tracking-wider">Members Voted</span>
@@ -179,7 +179,6 @@
                             </span>
                         </div>
                         <p id="stat-votes" class="text-2xl sm:text-3xl font-bold text-ink tracking-tight">0</p>
-                        <p class="text-[10px] text-slate-400 font-semibold mt-1">Live count during open elections only</p>
                     </div>
                 </div>
 
@@ -222,7 +221,7 @@
                             autocomplete="off"
                         >
                     </div>
-                    <p class="text-xs text-slate-500 font-medium mt-2.5">Type a name or email to quickly find someone waiting for approval.</p>
+                    <p class="text-xs text-slate-500 font-medium mt-2.5">Search pending, approved, rejected, and voted members by name or email.</p>
                 </div>
 
                 <!-- Pending status -->
@@ -253,6 +252,27 @@
                     </div>
                     <div id="approved-empty" class="hidden px-6 py-12 text-center">
                         <p class="text-sm font-semibold text-slate-500">No approved members match your search.</p>
+                    </div>
+                </div>
+
+                <!-- Members who voted -->
+                <div id="members-voted-section" class="hidden card-premium overflow-hidden border border-church-100 scroll-mt-6">
+                    <div class="px-6 py-5 border-b border-church-100 flex flex-wrap justify-between items-center gap-3 bg-church-50/50">
+                        <div class="min-w-0">
+                            <h3 class="text-lg font-bold text-church-900 tracking-tight">Members who voted</h3>
+                            <p id="members-voted-subtitle" class="text-xs text-slate-500 font-medium mt-0.5 truncate">Live ballot activity</p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span id="members-voted-live-badge" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-extrabold uppercase tracking-wider">
+                                <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                                Live
+                            </span>
+                            <span id="members-voted-count" class="inline-flex items-center justify-center min-w-[2rem] h-8 px-2.5 rounded-full bg-church-100 text-church-800 text-xs font-extrabold border border-church-200">0</span>
+                        </div>
+                    </div>
+                    <div id="members-voted-list" class="divide-y divide-church-100"></div>
+                    <div id="members-voted-empty" class="hidden px-6 py-12 text-center">
+                        <p class="text-sm font-semibold text-slate-500">No voted members match your search.</p>
                     </div>
                 </div>
 

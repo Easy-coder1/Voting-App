@@ -6,6 +6,11 @@ let currentUser = null;
 let currentProfile = null;
 let turnoutChartInstance = null;
 let selectedResultsElection = null;
+let activeAnalyticsElection = null;
+let votedMembers = [];
+let votedMembersHighlightIds = new Set();
+let membersVotedContext = null;
+let liveVoterSnapshot = { electionId: null, voterIds: new Set() };
 let allMembers = [];
 let memberSearchQuery = '';
 let allAdmins = [];
@@ -67,8 +72,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Subscribe to realtime updates for live analytics
         try {
-            subscribeToTableChanges(['profiles', 'votes', 'runoff_votes'], () => {
+            subscribeToTableChanges(['profiles', 'votes', 'runoff_votes'], async () => {
                 loadAnalytics();
+                await refreshAllLiveVoterViews({ notifyNew: true });
                 if (!document.getElementById('tab-members').classList.contains('hidden')) {
                     loadMembers();
                 }
@@ -220,73 +226,70 @@ function setupAdminPresence(fullName) {
     });
 }
 
+const TAB_META = {
+    analytics: {
+        title: 'Analytics',
+        subtitle: 'Member stats, pending, approved, rejected, and live election status',
+    },
+    members: {
+        title: 'Member Management',
+        subtitle: 'Search members, approve registrations, and view who has voted',
+    },
+    elections: {
+        title: 'Election Management',
+        subtitle: 'Create elections and control ballot status',
+    },
+    candidates: {
+        title: 'Candidate Management',
+        subtitle: 'Manage the shared candidate roster used by all elections',
+    },
+    results: {
+        title: 'Election Results',
+        subtitle: 'View tallies, turnout, and publish results',
+    },
+};
+
+function activateAdminTab(tabId, customMeta = null, { deferLoad = false } = {}) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        const targetTab = b.getAttribute('data-tab');
+        const isMobile = b.closest('aside') === null;
+
+        if (targetTab === tabId) {
+            b.className = isMobile
+                ? 'tab-btn flex flex-col items-center p-2 text-church-800 transition duration-300'
+                : 'tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/10 text-white font-semibold text-sm border border-white/10 transition-all';
+        } else {
+            b.className = isMobile
+                ? 'tab-btn flex flex-col items-center p-2 text-ink-subtle hover:text-church-800 transition duration-300'
+                : 'tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-church-400 hover:text-white hover:bg-white/5 font-medium text-sm transition-all';
+        }
+    });
+
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById(`tab-${tabId}`)?.classList.remove('hidden');
+
+    const meta = customMeta || TAB_META[tabId] || {
+        title: tabId.charAt(0).toUpperCase() + tabId.slice(1),
+        subtitle: '',
+    };
+    setPageHeader(meta.title, meta.subtitle);
+
+    if (deferLoad) return;
+
+    if (tabId === 'analytics') loadAnalytics();
+    if (tabId === 'members') loadMembers();
+    if (tabId === 'elections') loadElections();
+    if (tabId === 'candidates') {
+        loadPositions();
+        loadCandidates();
+    }
+    if (tabId === 'results') loadResultsTab();
+}
+
 function setupTabs() {
-    const btns = document.querySelectorAll('.tab-btn');
-    const contents = document.querySelectorAll('.tab-content');
-
-    btns.forEach(btn => {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const tabId = btn.getAttribute('data-tab');
-            
-            // Loop through all buttons to apply correct responsive classes
-            btns.forEach(b => {
-                const targetTab = b.getAttribute('data-tab');
-                const isMobile = b.closest('aside') === null;
-                
-                if (targetTab === tabId) {
-                    if (isMobile) {
-                        b.className = 'tab-btn flex flex-col items-center p-2 text-church-800 transition duration-300';
-                    } else {
-                        b.className = 'tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/10 text-white font-semibold text-sm border border-white/10 transition-all';
-                    }
-                } else {
-                    if (isMobile) {
-                        b.className = 'tab-btn flex flex-col items-center p-2 text-ink-subtle hover:text-church-800 transition duration-300';
-                    } else {
-                        b.className = 'tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-church-400 hover:text-white hover:bg-white/5 font-medium text-sm transition-all';
-                    }
-                }
-            });
-
-            // Show corresponding content
-            contents.forEach(c => c.classList.add('hidden'));
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-
-            const tabMeta = {
-                analytics: {
-                    title: 'Analytics',
-                    subtitle: 'Member stats, pending, approved, rejected, and live election status'
-                },
-                members: {
-                    title: 'Member Management',
-                    subtitle: 'Search members, approve registrations, and view approved voters'
-                },
-                elections: {
-                    title: 'Election Management',
-                    subtitle: 'Create elections and control ballot status'
-                },
-                candidates: {
-                    title: 'Candidate Management',
-                    subtitle: 'Manage the shared candidate roster used by all elections'
-                },
-                results: {
-                    title: 'Election Results',
-                    subtitle: 'View tallies, turnout, and publish results'
-                }
-            };
-            const meta = tabMeta[tabId] || {
-                title: tabId.charAt(0).toUpperCase() + tabId.slice(1),
-                subtitle: ''
-            };
-            setPageHeader(meta.title, meta.subtitle);
-
-            if (tabId === 'members') loadMembers();
-            if (tabId === 'elections') loadElections();
-            if (tabId === 'candidates') {
-                loadPositions();
-                loadCandidates();
-            }
-            if (tabId === 'results') loadResultsTab();
+            activateAdminTab(btn.getAttribute('data-tab'));
         });
     });
 }
@@ -310,13 +313,13 @@ async function loadAnalytics() {
     ]);
 
     let votersWhoVoted = 0;
-    const activeElection = openElections?.[0] || null;
+    activeAnalyticsElection = openElections?.[0] || null;
 
-    if (activeElection) {
+    if (activeAnalyticsElection) {
         const { data: voteRows } = await supabase
             .from('votes')
             .select('voter_id')
-            .eq('election_id', activeElection.id);
+            .eq('election_id', activeAnalyticsElection.id);
         votersWhoVoted = new Set((voteRows || []).map(r => r.voter_id).filter(Boolean)).size;
     }
 
@@ -325,23 +328,36 @@ async function loadAnalytics() {
     document.getElementById('stat-approved').textContent = approved || 0;
     document.getElementById('stat-rejected').textContent = rejected || 0;
     document.getElementById('stat-votes').textContent = votersWhoVoted;
+    updateStatVotesCard();
+
+    if (activeAnalyticsElection) {
+        if (!membersVotedContext || membersVotedContext.isLive) {
+            membersVotedContext = {
+                electionId: activeAnalyticsElection.id,
+                title: activeAnalyticsElection.title,
+                isLive: true,
+            };
+        }
+    } else if (membersVotedContext?.isLive) {
+        membersVotedContext = null;
+    }
 
     renderMemberStatusChart(pending || 0, approved || 0, rejected || 0);
 
     const statusContainer = document.getElementById('live-election-status');
     if (statusContainer) {
-        if (activeElection) {
+        if (activeAnalyticsElection) {
             statusContainer.innerHTML = `
                 <div class="space-y-4">
                     <div class="flex items-center space-x-2.5">
                         <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span class="font-extrabold text-base text-slate-800">Active: ${activeElection.title}</span>
+                        <span class="font-extrabold text-base text-slate-800">Active: ${activeAnalyticsElection.title}</span>
                     </div>
                     <div class="flex justify-between border-t border-slate-200/50 pt-4 text-xs font-semibold text-slate-400">
                         <span>Closing Date</span>
-                        <span class="text-slate-700 font-bold">${new Date(activeElection.end_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                        <span class="text-slate-700 font-bold">${new Date(activeAnalyticsElection.end_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                     </div>
-                    <button onclick="window.switchToResultsTab('${activeElection.id}')" class="mt-3 w-full bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
+                    <button onclick="window.switchToResultsTab('${activeAnalyticsElection.id}')" class="mt-3 w-full bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
                         View Live Results →
                     </button>
                 </div>
@@ -432,6 +448,7 @@ function setupMemberSearch() {
     input.addEventListener('input', () => {
         memberSearchQuery = input.value.trim();
         renderMembersUI();
+        renderVotedMembersUI();
     });
 }
 
@@ -569,6 +586,80 @@ function renderMembersUI() {
         rejected.map(m => renderRejectedMemberRow(m)),
         memberSearchQuery ? 'No rejected members match your search.' : 'No rejected members.'
     );
+
+    renderVotedMembersUI();
+}
+
+function matchesVoterSearch(voter, query) {
+    if (!query) return true;
+    const needle = query.toLowerCase();
+    return (voter.full_name || '').toLowerCase().includes(needle)
+        || (voter.email || '').toLowerCase().includes(needle);
+}
+
+function renderVotedMemberRow(voter) {
+    const initials = getMemberInitials(voter.full_name);
+    const div = document.createElement('div');
+    div.className = 'member-row';
+    if (votedMembersHighlightIds.has(voter.id)) {
+        div.classList.add('bg-emerald-50/80');
+    }
+
+    div.innerHTML = `
+        <div class="member-row-info">
+            <div class="member-row-avatar member-row-avatar--voted">${initials}</div>
+            <div class="member-row-text">
+                <h4>${voter.full_name}</h4>
+                <p>${voter.email}</p>
+            </div>
+        </div>
+        <div class="member-row-actions">
+            <span class="member-badge member-badge--ok">Voted ✓</span>
+            <span class="text-[11px] font-semibold text-slate-400 whitespace-nowrap">${formatVotedAt(voter.voted_at)}</span>
+        </div>
+    `;
+    return div;
+}
+
+function renderVotedMembersUI() {
+    const section = document.getElementById('members-voted-section');
+    const listEl = document.getElementById('members-voted-list');
+    const emptyEl = document.getElementById('members-voted-empty');
+    const countEl = document.getElementById('members-voted-count');
+    const subtitleEl = document.getElementById('members-voted-subtitle');
+    const liveBadge = document.getElementById('members-voted-live-badge');
+
+    if (!section || !listEl) return;
+
+    if (!membersVotedContext?.electionId) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+
+    const filtered = votedMembers.filter(v => matchesVoterSearch(v, memberSearchQuery));
+    if (countEl) countEl.textContent = String(filtered.length);
+    if (subtitleEl) {
+        const title = membersVotedContext.title || 'Current election';
+        subtitleEl.textContent = membersVotedContext.isLive
+            ? `${title} · updating live`
+            : title;
+    }
+    if (liveBadge) {
+        liveBadge.classList.toggle('hidden', !membersVotedContext.isLive);
+    }
+
+    const emptyMessage = memberSearchQuery
+        ? 'No voted members match your search.'
+        : 'No votes yet. Members will appear here when they cast their ballot.';
+
+    renderMemberSection(
+        listEl,
+        emptyEl,
+        filtered.map(v => renderVotedMemberRow(v)),
+        emptyMessage
+    );
 }
 
 async function loadMembers() {
@@ -586,6 +677,18 @@ async function loadMembers() {
     allMembers = members || [];
     setupMemberSearch();
     renderMembersUI();
+
+    if (activeAnalyticsElection) {
+        if (!membersVotedContext || membersVotedContext.isLive) {
+            membersVotedContext = {
+                electionId: activeAnalyticsElection.id,
+                title: activeAnalyticsElection.title,
+                isLive: true,
+            };
+        }
+    }
+
+    await syncMembersVotedPanel({ notifyNew: false });
 }
 
 window.rejectMember = async (id) => {
@@ -901,33 +1004,28 @@ window.deleteElection = async (id, title) => {
 };
 
 window.viewElectionResults = (electionId) => {
-    // Switch to results tab and select this election
-    document.querySelectorAll('.tab-btn').forEach(b => {
-        const isMobile = b.closest('aside') === null;
-        if (b.getAttribute('data-tab') === 'results') {
-            if (isMobile) {
-                b.className = 'tab-btn flex flex-col items-center p-2 text-church-800 transition duration-300';
-            } else {
-                b.className = 'tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/10 text-white font-semibold text-sm border border-white/10 transition-all';
-            }
-        } else {
-            if (isMobile) {
-                b.className = 'tab-btn flex flex-col items-center p-2 text-ink-subtle hover:text-church-800 transition duration-300';
-            } else {
-                b.className = 'tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-church-400 hover:text-white hover:bg-white/5 font-medium text-sm transition-all';
-            }
-        }
-    });
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-    document.getElementById('tab-results').classList.remove('hidden');
-    setPageHeader('Election Results', 'View tallies, turnout, and publish results');
-    
-    // Trigger results load with this election pre-selected
+    activateAdminTab('results');
     loadResultsTab(electionId);
 };
 
 window.switchToResultsTab = (electionId) => {
     window.viewElectionResults(electionId);
+};
+
+window.viewMembersVoted = (electionId, electionTitle, isLive = false) => {
+    membersVotedContext = { electionId, title: electionTitle, isLive };
+
+    activateAdminTab('members', {
+        title: 'Members Who Voted',
+        subtitle: isLive ? `Live · ${electionTitle}` : electionTitle,
+    }, { deferLoad: true });
+
+    const section = document.getElementById('members-voted-section');
+    if (section) section.classList.remove('hidden');
+    section?.scrollIntoView({ block: 'start' });
+
+    syncMembersVotedPanel();
+    loadMembers();
 };
 
 // ----------------------
@@ -1433,6 +1531,140 @@ async function renderResults(election) {
     }
 }
 
+function formatVotedAt(iso) {
+    if (!iso) return '';
+    const date = new Date(iso);
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 60_000) return 'Just now';
+    if (diffMs < 3_600_000) return `${Math.floor(diffMs / 60_000)}m ago`;
+    if (diffMs < 86_400_000) return `${Math.floor(diffMs / 3_600_000)}h ago`;
+    return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function updateStatVotesCard() {
+    const card = document.getElementById('stat-votes-card');
+    if (!card) return;
+
+    const isLive = Boolean(activeAnalyticsElection);
+    card.classList.toggle('cursor-pointer', isLive);
+    card.classList.toggle('hover:ring-2', isLive);
+    card.classList.toggle('hover:ring-emerald-200', isLive);
+    card.classList.toggle('active:scale-[0.99]', isLive);
+    card.classList.toggle('border-2', isLive);
+    card.classList.toggle('border-emerald-200', isLive);
+
+    if (isLive) {
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', 'View members who have voted');
+        card.onclick = () => viewMembersVoted(activeAnalyticsElection.id, activeAnalyticsElection.title, true);
+        card.onkeydown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                viewMembersVoted(activeAnalyticsElection.id, activeAnalyticsElection.title, true);
+            }
+        };
+    } else {
+        card.removeAttribute('role');
+        card.removeAttribute('tabindex');
+        card.removeAttribute('aria-label');
+        card.onclick = null;
+        card.onkeydown = null;
+    }
+}
+
+async function syncMembersVotedPanel({ notifyNew = false } = {}) {
+    const section = document.getElementById('members-voted-section');
+    if (!section) return;
+
+    const ctx = membersVotedContext;
+    if (!ctx?.electionId) {
+        votedMembers = [];
+        votedMembersHighlightIds = new Set();
+        section.classList.add('hidden');
+        return;
+    }
+
+    try {
+        const voters = await fetchVotersForElection(ctx.electionId);
+        const highlightIds = new Set();
+
+        if (liveVoterSnapshot.electionId !== ctx.electionId) {
+            liveVoterSnapshot = { electionId: ctx.electionId, voterIds: new Set(voters.map(v => v.id)) };
+        } else if (notifyNew && ctx.isLive) {
+            voters.forEach(voter => {
+                if (!liveVoterSnapshot.voterIds.has(voter.id)) {
+                    highlightIds.add(voter.id);
+                    showToast('success', `${voter.full_name} has voted`);
+                }
+            });
+            liveVoterSnapshot.voterIds = new Set(voters.map(v => v.id));
+        } else {
+            liveVoterSnapshot.voterIds = new Set(voters.map(v => v.id));
+        }
+
+        votedMembers = voters;
+        votedMembersHighlightIds = highlightIds;
+
+        const membersTab = document.getElementById('tab-members');
+        if (membersTab?.classList.contains('hidden')) return voters;
+
+        renderVotedMembersUI();
+
+        setTimeout(() => {
+            votedMembersHighlightIds = new Set();
+            renderVotedMembersUI();
+        }, 4000);
+
+        return voters;
+    } catch (err) {
+        console.warn('Failed to sync members voted panel:', err);
+        const membersTab = document.getElementById('tab-members');
+        if (membersTab?.classList.contains('hidden')) return;
+
+        section.classList.remove('hidden');
+        const listEl = document.getElementById('members-voted-list');
+        if (listEl) {
+            listEl.innerHTML = `
+                <div class="member-empty">
+                    <p class="text-red-600">Could not load voters: ${escapeHtml(err.message)}</p>
+                </div>`;
+        }
+    }
+}
+
+async function refreshAllLiveVoterViews(options = {}) {
+    await syncMembersVotedPanel(options);
+}
+
+async function fetchVotersForElection(electionId) {
+    const { data, error } = await supabase
+        .from('votes')
+        .select('voter_id, created_at, profiles:voter_id(full_name, email)')
+        .eq('election_id', electionId)
+        .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    const byVoter = new Map();
+    for (const row of data || []) {
+        const profile = row.profiles;
+        const existing = byVoter.get(row.voter_id);
+        if (!existing || new Date(row.created_at) < new Date(existing.voted_at)) {
+            byVoter.set(row.voter_id, {
+                id: row.voter_id,
+                full_name: profile?.full_name || 'Unknown member',
+                email: profile?.email || '',
+                voted_at: row.created_at,
+            });
+        }
+    }
+
+    return Array.from(byVoter.values()).sort(
+        (a, b) => new Date(a.voted_at) - new Date(b.voted_at)
+    );
+}
+
 function renderTurnoutCards(container, turnout, election) {
     if (!container) return;
 
@@ -1449,6 +1681,7 @@ function renderTurnoutCards(container, turnout, election) {
     const turnoutPct = Math.max(0, Math.min(100, Number(data.turnout_percentage) || 0));
     const pendingMembers = data.pending_members ?? 0;
     const rejectedMembers = data.rejected_members ?? 0;
+    const isLive = election.status === 'open';
 
     const stat = (label, value, sub, ring, iconPath) => `
         <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-soft hover:shadow-card-hover transition-all duration-300">
@@ -1473,20 +1706,34 @@ function renderTurnoutCards(container, turnout, election) {
         ${stat('Pending', pendingMembers, 'Awaiting approval', 'bg-amber-50 text-amber-600', clockIcon)}
         ${stat('Approved', data.approved_voters, 'Eligible to vote', 'bg-emerald-50 text-emerald-600', checkIcon)}
         ${stat('Rejected', rejectedMembers, 'Not approved', 'bg-red-50 text-red-600', rejectIcon)}
-        ${stat('Members Voted', data.votes_cast, election.status === 'open' ? 'Counting live' : 'Unique voters', 'bg-ember-50 text-ember-600', ballotIcon)}
-        <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl p-4 shadow-premium flex items-center gap-4">
-            <div class="relative w-14 h-14 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
-                <div class="absolute inset-[5px] rounded-full bg-church-900 flex items-center justify-center">
-                    <span class="text-[13px] font-black">${turnoutPct}%</span>
+        <button type="button" data-voters-card class="bg-white border border-slate-100 rounded-2xl p-4 shadow-soft hover:shadow-card-hover hover:ring-2 hover:ring-ember-100 active:scale-[0.99] transition-all duration-300 text-left w-full cursor-pointer">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Members Voted</span>
+                <span class="w-8 h-8 rounded-xl bg-ember-50 text-ember-600 flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${ballotIcon}"></path></svg>
+                </span>
+            </div>
+            <span class="text-2xl font-black text-church-900 leading-none">${data.votes_cast}</span>
+            <span class="block mt-1.5 text-[11px] font-semibold text-slate-400">${isLive ? 'Counting live' : 'Unique voters'}</span>
+        </button>
+        <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl p-3.5 sm:p-4 shadow-premium flex flex-col items-center text-center overflow-hidden">
+            <span class="text-[10px] font-bold uppercase tracking-wide text-white/60 leading-none">Turnout</span>
+            <div class="flex items-center justify-center gap-2.5 my-2">
+                <div class="relative w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
+                    <div class="absolute inset-[4px] rounded-full bg-church-900 flex items-center justify-center">
+                        <span class="text-[10px] font-black leading-none tabular-nums">${turnoutPct}%</span>
+                    </div>
                 </div>
+                <span class="text-xl font-black leading-none tabular-nums">${data.votes_cast}/${data.approved_voters}</span>
             </div>
-            <div class="min-w-0">
-                <span class="block text-[11px] font-bold uppercase tracking-wider text-white/60">Turnout</span>
-                <span class="block text-lg font-black leading-tight">${data.votes_cast}/${data.approved_voters}</span>
-                <span class="block text-[11px] font-semibold text-white/60">voters participated</span>
-            </div>
+            <span class="text-[10px] font-semibold text-white/55 leading-snug px-2">voters participated</span>
         </div>
     `;
+
+    const votersCard = container.querySelector('[data-voters-card]');
+    if (votersCard) {
+        votersCard.addEventListener('click', () => viewMembersVoted(election.id, election.title, isLive));
+    }
 }
 
 window.showPublishModal = (electionId, action) => {
