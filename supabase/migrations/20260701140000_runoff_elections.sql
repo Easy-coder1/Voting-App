@@ -237,6 +237,10 @@ END;
 $$;
 
 -- ── FINAL RESULTS (round 1 + runoff merged) ───────────────────────────────────
+-- Must DROP first: return type adds `outcome` column (Postgres cannot OR REPLACE)
+DROP FUNCTION IF EXISTS public.get_election_results(uuid);
+DROP FUNCTION IF EXISTS public.get_final_election_results(uuid);
+
 CREATE OR REPLACE FUNCTION public.get_final_election_results(p_election_id uuid)
 RETURNS TABLE(
   position_id uuid,
@@ -392,6 +396,7 @@ GRANT EXECUTE ON FUNCTION public.get_election_ties(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.start_election_runoff(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.close_election_runoff(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_final_election_results(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_election_results(uuid) TO authenticated;
 
 DO $$
 BEGIN
