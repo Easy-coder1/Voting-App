@@ -8,6 +8,19 @@ let turnoutChartInstance = null;
 let selectedResultsElection = null;
 let allMembers = [];
 let memberSearchQuery = '';
+let allAdmins = [];
+let onlineAdminIds = new Set();
+let adminPresenceChannel = null;
+
+function getInitials(name) {
+    return (name || '?')
+        .split(' ')
+        .filter(Boolean)
+        .map(n => n[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase() || '?';
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -34,9 +47,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentProfile = profile;
         const name = profile.full_name || 'Admin';
         document.getElementById('admin-name').textContent = name;
-        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
+        const initials = getInitials(name);
         const avatarEl = document.getElementById('admin-avatar-badge');
         if (avatarEl) avatarEl.textContent = initials;
+
+        setupAdminMenu();
+        setupAdminPresence(name);
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
             if (!(await confirmSignOut())) return;
@@ -78,6 +94,130 @@ function setPageHeader(titleText, subtitleText) {
     const subtitle = document.getElementById('page-subtitle');
     if (title) title.textContent = titleText;
     if (subtitle) subtitle.textContent = subtitleText;
+}
+
+async function loadAdmins() {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'admin')
+        .order('full_name');
+
+    if (error) {
+        console.warn('Could not load admin roster:', error);
+        return;
+    }
+    allAdmins = data || [];
+    renderAdminRoster();
+}
+
+function syncOnlineAdminIds() {
+    onlineAdminIds = new Set();
+    if (!adminPresenceChannel) return;
+
+    const state = adminPresenceChannel.presenceState();
+    Object.values(state).forEach(presences => {
+        (presences || []).forEach(p => {
+            if (p?.user_id) onlineAdminIds.add(p.user_id);
+        });
+    });
+    if (currentUser?.id) onlineAdminIds.add(currentUser.id);
+    renderAdminRoster();
+}
+
+function renderAdminRoster() {
+    const listEl = document.getElementById('admin-roster-list');
+    if (!listEl) return;
+
+    if (!allAdmins.length) {
+        listEl.innerHTML = '<li class="admin-roster-empty">No administrators found</li>';
+        return;
+    }
+
+    const sorted = [...allAdmins].sort((a, b) => {
+        const aOnline = onlineAdminIds.has(a.id) ? 0 : 1;
+        const bOnline = onlineAdminIds.has(b.id) ? 0 : 1;
+        if (aOnline !== bOnline) return aOnline - bOnline;
+        return (a.full_name || '').localeCompare(b.full_name || '');
+    });
+
+    listEl.innerHTML = sorted.map(admin => {
+        const isOnline = onlineAdminIds.has(admin.id);
+        const initials = getInitials(admin.full_name);
+        const isSelf = admin.id === currentUser?.id;
+
+        return `
+            <li class="admin-roster-item" role="listitem">
+                <div class="admin-roster-avatar">
+                    ${initials}
+                    <span class="admin-status-dot ${isOnline ? 'admin-status-dot--online' : 'admin-status-dot--offline'}" title="${isOnline ? 'Online' : 'Offline'}"></span>
+                </div>
+                <div class="min-w-0">
+                    <span class="admin-roster-name">${escapeHtml(admin.full_name || 'Admin')}${isSelf ? ' (you)' : ''}</span>
+                    <span class="admin-roster-status-text ${isOnline ? 'is-online' : ''}">${isOnline ? 'Online now' : 'Offline'}</span>
+                </div>
+            </li>
+        `;
+    }).join('');
+}
+
+function setupAdminMenu() {
+    const btn = document.getElementById('admin-menu-btn');
+    const popover = document.getElementById('admin-menu-popover');
+    if (!btn || !popover) return;
+
+    btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const isOpen = popover.classList.toggle('open');
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        popover.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        if (isOpen) await loadAdmins();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!popover.classList.contains('open')) return;
+        if (e.target.closest('.admin-menu')) return;
+        popover.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        popover.setAttribute('aria-hidden', 'true');
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && popover.classList.contains('open')) {
+            popover.classList.remove('open');
+            btn.setAttribute('aria-expanded', 'false');
+            popover.setAttribute('aria-hidden', 'true');
+            btn.focus();
+        }
+    });
+
+    loadAdmins();
+}
+
+function setupAdminPresence(fullName) {
+    adminPresenceChannel = supabase.channel('admin-dashboard-presence', {
+        config: { presence: { key: currentUser.id } },
+    });
+
+    adminPresenceChannel
+        .on('presence', { event: 'sync' }, syncOnlineAdminIds)
+        .on('presence', { event: 'join' }, syncOnlineAdminIds)
+        .on('presence', { event: 'leave' }, syncOnlineAdminIds)
+        .subscribe(async (status) => {
+            if (status !== 'SUBSCRIBED') return;
+            await adminPresenceChannel.track({
+                user_id: currentUser.id,
+                full_name: fullName,
+                online_at: new Date().toISOString(),
+            });
+            syncOnlineAdminIds();
+        });
+
+    window.addEventListener('beforeunload', () => {
+        if (adminPresenceChannel) {
+            adminPresenceChannel.untrack();
+        }
+    });
 }
 
 function setupTabs() {
