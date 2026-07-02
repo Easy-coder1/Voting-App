@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Subscribe to realtime updates for live analytics
         try {
-            subscribeToTableChanges(['profiles', 'votes'], () => {
+            subscribeToTableChanges(['profiles', 'votes', 'runoff_votes'], () => {
                 loadAnalytics();
                 if (!document.getElementById('tab-members').classList.contains('hidden')) {
                     loadMembers();
@@ -934,6 +934,17 @@ function setupPublishModal() {
         
         if (!electionId) return;
 
+        const { data: finalCheck } = await supabase.rpc('get_final_election_results', { p_election_id: electionId });
+        const unresolved = (finalCheck || []).some(r =>
+            ['runoff_pending', 'runoff_open', 'tie_unresolved'].includes(r.outcome)
+        );
+        if (action === 'publish' && unresolved) {
+            showToast('warning', 'Resolve all tied positions via runoff before publishing results.');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            return;
+        }
+
         let updateData = {};
         if (action === 'publish') {
             updateData.results_published = true;
@@ -993,6 +1004,98 @@ async function loadResultsTab(preSelectedId = null) {
     }
 }
 
+function analyzePositionTally(cans) {
+    const sorted = [...cans].sort((a, b) => b.vote_count - a.vote_count);
+    const max = sorted[0]?.vote_count || 0;
+    const leaders = sorted.filter(c => c.vote_count === max && max > 0);
+    return { sorted, max, leaders, isTie: leaders.length >= 2 };
+}
+
+window.startRunoff = async (electionId) => {
+    if (!(await showConfirm(
+        'Start a runoff election for all tied positions? Only the tied candidates will appear on the ballot.',
+        { title: 'Start runoff', confirmLabel: 'Start runoff', cancelLabel: 'Cancel' }
+    ))) return;
+
+    const { data: runoffId, error } = await supabase.rpc('start_election_runoff', { p_election_id: electionId });
+    if (error) {
+        showToast('error', error.message);
+        return;
+    }
+    showToast('success', 'Runoff is now open. Members can vote on tied positions only.');
+    if (selectedResultsElection?.id === electionId) {
+        renderResults(selectedResultsElection);
+    }
+    loadElections();
+};
+
+window.closeRunoff = async (runoffId) => {
+    if (!(await showConfirm(
+        'Close runoff voting? Members will no longer be able to submit runoff votes.',
+        { title: 'Close runoff', confirmLabel: 'Close runoff', cancelLabel: 'Cancel' }
+    ))) return;
+
+    const { error } = await supabase.rpc('close_election_runoff', { p_runoff_id: runoffId });
+    if (error) {
+        showToast('error', error.message);
+        return;
+    }
+    showToast('success', 'Runoff closed. Review final outcomes before publishing results.');
+    if (selectedResultsElection) renderResults(selectedResultsElection);
+    loadElections();
+};
+
+async function buildRunoffBanner(election) {
+    if (election.status !== 'closed') return '';
+
+    const [{ data: ties }, { data: runoff }] = await Promise.all([
+        supabase.rpc('get_election_ties', { p_election_id: election.id }),
+        supabase.from('runoffs').select('*').eq('election_id', election.id).maybeSingle(),
+    ]);
+
+    const tiedPositions = new Set((ties || []).map(t => t.position_id));
+    const tiedCount = tiedPositions.size;
+
+    if (runoff?.status === 'open') {
+        return `
+            <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <p class="text-sm font-bold text-blue-900">Runoff voting is open</p>
+                    <p class="text-xs font-semibold text-blue-700 mt-1">Members are voting again on ${tiedCount} tied position${tiedCount !== 1 ? 's' : ''}.</p>
+                </div>
+                <button onclick="window.closeRunoff('${runoff.id}')" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-full text-xs font-bold transition active:scale-95 shrink-0">
+                    Close runoff
+                </button>
+            </div>
+        `;
+    }
+
+    if (runoff?.status === 'closed') {
+        return `
+            <div class="bg-church-50 border border-church-200 rounded-2xl p-4 mb-6">
+                <p class="text-sm font-bold text-church-900">Runoff completed</p>
+                <p class="text-xs font-semibold text-church-700 mt-1">Review final outcomes below, then publish when ready.</p>
+            </div>
+        `;
+    }
+
+    if (tiedCount > 0) {
+        return `
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <p class="text-sm font-bold text-amber-900">${tiedCount} position${tiedCount !== 1 ? 's' : ''} tied</p>
+                    <p class="text-xs font-semibold text-amber-800 mt-1">Start a runoff so members can vote again between the tied candidates only.</p>
+                </div>
+                <button onclick="window.startRunoff('${election.id}')" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-full text-xs font-bold transition active:scale-95 shrink-0">
+                    Start runoff
+                </button>
+            </div>
+        `;
+    }
+
+    return '';
+}
+
 async function renderResults(election) {
     const contentEl = document.getElementById('results-content');
     const turnoutEl = document.getElementById('results-turnout');
@@ -1011,12 +1114,25 @@ async function renderResults(election) {
     // Publish button
     publishArea.innerHTML = '';
     if (election.status === 'closed') {
+        const { data: finalCheck } = await supabase.rpc('get_final_election_results', { p_election_id: election.id });
+        const unresolved = (finalCheck || []).some(r =>
+            ['runoff_pending', 'runoff_open', 'tie_unresolved'].includes(r.outcome)
+        );
+
         if (!election.results_published) {
-            publishArea.innerHTML = `
-                <button onclick="window.showPublishModal('${election.id}', 'publish')" class="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white px-5 py-2.5 rounded-full text-xs font-bold transition active:scale-95 shadow-sm">
-                    Publish Results
-                </button>
-            `;
+            if (unresolved) {
+                publishArea.innerHTML = `
+                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        Resolve all ties before publishing
+                    </span>
+                `;
+            } else {
+                publishArea.innerHTML = `
+                    <button onclick="window.showPublishModal('${election.id}', 'publish')" class="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white px-5 py-2.5 rounded-full text-xs font-bold transition active:scale-95 shadow-sm">
+                        Publish Results
+                    </button>
+                `;
+            }
         } else {
             publishArea.innerHTML = `
                 <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-church-50 text-church-700 border border-church-200 mr-2">Published ✓</span>
@@ -1080,24 +1196,26 @@ async function renderResults(election) {
         });
 
         // Render tallies
-        let html = '<div class="space-y-6">';
+        const runoffBanner = await buildRunoffBanner(election);
+        let html = runoffBanner + '<div class="space-y-6">';
         for (const [posName, cans] of sortPositionEntries(grouped)) {
             const totalInPos = cans[0]?.total_votes_in_position || 0;
-            const leaderVotes = cans[0]?.vote_count || 0;
-            const isTie = leaderVotes > 0 && (cans[1]?.vote_count || 0) === leaderVotes;
+            const { sorted, isTie, leaders } = analyzePositionTally(cans);
+            const tiedNames = leaders.map(c => escapeHtml(c.candidate_name)).join(', ');
 
             html += `
                 <section class="rounded-3xl border border-slate-100 bg-white shadow-soft overflow-hidden">
                     <header class="flex items-center justify-between gap-3 px-5 py-4 bg-gradient-to-r from-church-900 to-church-700 text-white">
                         <div class="flex items-center gap-2.5 min-w-0">
                             <svg class="w-5 h-5 text-church-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-                            <h4 class="text-base sm:text-lg font-extrabold tracking-tight truncate">${posName}</h4>
+                            <h4 class="text-base sm:text-lg font-extrabold tracking-tight truncate">${escapeHtml(posName)}</h4>
                         </div>
                         <span class="flex-shrink-0 text-[11px] font-bold uppercase tracking-wider bg-white/15 border border-white/20 px-3 py-1 rounded-full">${totalInPos} vote${totalInPos !== 1 ? 's' : ''}</span>
                     </header>
+                    ${isTie ? `<p class="px-5 py-3 text-xs font-bold text-amber-800 bg-amber-50 border-b border-amber-100">Tie: ${tiedNames}</p>` : ''}
                     <div class="p-4 sm:p-5 space-y-3">`;
 
-            cans.forEach((c, index) => {
+            sorted.forEach((c, index) => {
                 const isWinner = !isTie && index === 0 && c.vote_count > 0;
                 const pct = totalInPos > 0 ? Math.round((c.vote_count / totalInPos) * 100) : 0;
                 const rankBadge = isWinner

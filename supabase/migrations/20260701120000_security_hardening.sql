@@ -1,6 +1,38 @@
 -- Security hardening for production deployment
 -- Run after all prior migrations in supabase/migrations/
 
+-- ── 0. RLS helpers (SECURITY DEFINER — avoids infinite recursion on profiles) ─
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_approved_voter()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid()
+      AND account_status = 'approved'
+      AND voting_rights = true
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_approved_voter() TO authenticated;
+
 -- ── 1. Protect privileged profile fields from self-elevation ─────────────────
 CREATE OR REPLACE FUNCTION public.protect_profile_privileged_fields()
 RETURNS TRIGGER
@@ -13,10 +45,7 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  ) THEN
+  IF NOT public.is_admin() THEN
     IF NEW.role IS DISTINCT FROM OLD.role THEN
       RAISE EXCEPTION 'Not authorized to change role';
     END IF;
@@ -43,11 +72,7 @@ DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.prof
 
 CREATE POLICY "Users can view own profile, admins view all."
   ON public.profiles FOR SELECT USING (
-    auth.uid() = id
-    OR EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = auth.uid() AND p.role = 'admin'
-    )
+    auth.uid() = id OR public.is_admin()
   );
 
 -- ── 3. Strengthen vote INSERT integrity ──────────────────────────────────────
@@ -56,12 +81,7 @@ DROP POLICY IF EXISTS "Members can insert vote if eligible." ON public.votes;
 CREATE POLICY "Members can insert vote if eligible."
   ON public.votes FOR INSERT WITH CHECK (
     auth.uid() = voter_id
-    AND EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid()
-        AND account_status = 'approved'
-        AND voting_rights = true
-    )
+    AND public.is_approved_voter()
     AND EXISTS (
       SELECT 1 FROM public.elections e
       WHERE e.id = election_id AND e.status = 'open'
@@ -76,23 +96,13 @@ CREATE POLICY "Members can insert vote if eligible."
 DROP POLICY IF EXISTS "Admins can delete votes." ON public.votes;
 
 CREATE POLICY "Admins can delete votes."
-  ON public.votes FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  ON public.votes FOR DELETE USING (public.is_admin());
 
 -- ── 5. Restrict audit log inserts to admins ─────────────────────────────────
 DROP POLICY IF EXISTS "System can insert audit logs." ON public.audit_logs;
 
 CREATE POLICY "Admins can insert audit logs."
-  ON public.audit_logs FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  ON public.audit_logs FOR INSERT WITH CHECK (public.is_admin());
 
 -- ── 6. Enforce at most one open election at a time ───────────────────────────
 CREATE UNIQUE INDEX IF NOT EXISTS elections_one_open_idx

@@ -5,6 +5,7 @@ import { escapeHtml, showToast, trapFocus } from './ui.js';
 let currentUser = null;
 let currentProfile = null;
 let activeElection = null;
+let activeRunoff = null;
 let positions = [];
 let candidates = [];
 let userVotes = [];
@@ -124,6 +125,7 @@ async function loadPage() {
     ballotSelections = {};
     userVotes = [];
     activeElection = null;
+    activeRunoff = null;
     positions = [];
     candidates = [];
 
@@ -147,6 +149,29 @@ async function loadPage() {
     if (openElections?.length) {
         activeElection = openElections[0];
         await loadElectionBallot();
+        return;
+    }
+
+    const { data: openRunoffs, error: runoffErr } = await supabase
+        .from('runoffs')
+        .select('*, elections(*)')
+        .eq('status', 'open')
+        .limit(1);
+
+    if (runoffErr) {
+        renderStatusPage({
+            icon: '⚠',
+            title: 'Could not load runoff',
+            message: 'Please check your connection and refresh.',
+            tone: 'info',
+        });
+        return;
+    }
+
+    if (openRunoffs?.length) {
+        activeRunoff = openRunoffs[0];
+        activeElection = openRunoffs[0].elections;
+        await loadRunoffBallot();
         return;
     }
 
@@ -189,6 +214,72 @@ async function loadPage() {
 
     activeElection = closedElections[0];
     await loadElectionBallot();
+}
+
+async function loadRunoffBallot() {
+    const [{ data: rcData, error: rcErr }, { data: canData, error: canErr }] = await Promise.all([
+        supabase.from('runoff_candidates').select('position_id, candidate_id').eq('runoff_id', activeRunoff.id),
+        supabase.from('candidates').select('*'),
+    ]);
+
+    if (rcErr || canErr || !rcData?.length) {
+        renderStatusPage({
+            icon: '⚠',
+            title: 'Runoff ballot not ready',
+            message: 'Please contact the election committee.',
+            tone: 'info',
+        });
+        return;
+    }
+
+    const allCandidates = canData || [];
+    const candidateMap = new Map(allCandidates.map(c => [c.id, c]));
+    const positionIds = [...new Set(rcData.map(r => r.position_id))];
+
+    const { data: posData } = await supabase.from('positions').select('*').in('id', positionIds);
+    positions = sortPositions(posData || []);
+    candidates = rcData
+        .map(r => candidateMap.get(r.candidate_id))
+        .filter(Boolean);
+
+    await loadUserRunoffVotes();
+    renderEligibility();
+
+    if (!isEligible()) {
+        renderStatusPage({
+            icon: '👋',
+            title: 'Almost ready',
+            message: 'Once an admin approves your account, your runoff ballot will show up here.',
+            tone: 'waiting',
+        });
+        return;
+    }
+    if (hasSubmitted) {
+        renderStatusPage({
+            icon: '✓',
+            title: 'Runoff vote recorded',
+            message: `Thank you for voting in the runoff for <strong>${escapeHtml(activeElection.title)}</strong>.`,
+            tone: 'success',
+        });
+        return;
+    }
+    renderBallot({ isRunoff: true });
+}
+
+async function loadUserRunoffVotes() {
+    if (!activeRunoff) return;
+    const { data } = await supabase
+        .from('runoff_votes')
+        .select('position_id, candidate_id')
+        .eq('voter_id', currentUser.id)
+        .eq('runoff_id', activeRunoff.id);
+
+    userVotes = (data || []).map(v => v.position_id);
+    ballotSelections = {};
+    (data || []).forEach(v => {
+        ballotSelections[v.position_id] = v.candidate_id;
+    });
+    hasSubmitted = positions.length > 0 && userVotes.length >= positions.length;
 }
 
 async function loadElectionBallot() {
@@ -297,13 +388,28 @@ function renderEligibility() {
         return;
     }
 
-    if (hasSubmitted && activeElection) {
+    if (hasSubmitted && (activeElection || activeRunoff)) {
         card.className = 'eligibility-card visible done';
+        const label = activeRunoff
+            ? `You finished voting in the runoff for ${activeElection?.title || 'this election'}.`
+            : `You finished voting in ${activeElection.title}.`;
         card.innerHTML = `
             <div class="eligibility-icon">✓</div>
             <div class="eligibility-text">
                 <strong>Vote recorded</strong>
-                You finished voting in ${activeElection.title}. Thank you for taking part!
+                ${label} Thank you for taking part!
+            </div>
+        `;
+        return;
+    }
+
+    if (activeRunoff?.status === 'open') {
+        card.className = 'eligibility-card visible ok';
+        card.innerHTML = `
+            <div class="eligibility-icon">🗳️</div>
+            <div class="eligibility-text">
+                <strong>Runoff voting is open</strong>
+                These positions were tied. Choose one candidate for each tied role below.
             </div>
         `;
         return;
@@ -335,13 +441,14 @@ function renderMain(html) {
     document.getElementById('main-content').innerHTML = html;
 }
 
-function renderBallot() {
+function renderBallot({ isRunoff = false } = {}) {
     const chosen = countSelections();
     const total = positions.length;
     const pct = total > 0 ? Math.round((chosen / total) * 100) : 0;
     const allSelected = total > 0 && chosen >= total;
     const remaining = total - chosen;
     const firstName = getFirstName();
+    const electionTitle = escapeHtml(activeElection?.title || 'Election');
 
     const positionBlocks = positions.map((pos, index) => {
         const posCandidates = candidates.filter(c => c.position_id === pos.id);
@@ -395,9 +502,11 @@ function renderBallot() {
     renderMain(`
         <div class="vote-shell">
             <div class="vote-hero">
-                <span class="live-badge">Voting is open</span>
-                <h1 class="vote-hero-title">${escapeHtml(activeElection.title)}</h1>
-                <p class="vote-hero-greet">Hello ${firstName}! Take your time and choose one person for each role.</p>
+                <span class="live-badge">${isRunoff ? 'Runoff voting is open' : 'Voting is open'}</span>
+                <h1 class="vote-hero-title">${electionTitle}${isRunoff ? ' — Runoff' : ''}</h1>
+                <p class="vote-hero-greet">${isRunoff
+                    ? `Hello ${firstName}! These roles were tied — pick one candidate for each position below.`
+                    : `Hello ${firstName}! Take your time and choose one person for each role.`}</p>
             </div>
 
             <div class="steps-row" aria-hidden="true">
@@ -421,7 +530,9 @@ function renderBallot() {
             <div class="submit-panel">
                 <p class="submit-panel-hint${allSelected ? ' ready' : ''}">${submitHint}</p>
                 <button type="button" id="submit-votes-btn" class="btn-submit-votes" disabled>
-                    ${allSelected ? 'Review & submit my votes' : `Choose ${remaining} more to continue`}
+                    ${allSelected
+                        ? (isRunoff ? 'Review & submit runoff vote' : 'Review & submit my votes')
+                        : `Choose ${remaining} more to continue`}
                 </button>
             </div>
         </div>
@@ -495,7 +606,7 @@ function openConfirmModal() {
 
     const submitBtn = document.getElementById('confirm-submit');
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Submit votes';
+    submitBtn.textContent = activeRunoff ? 'Submit runoff vote' : 'Submit votes';
 
     const modal = document.getElementById('confirm-modal');
     modal.classList.add('open');
@@ -531,6 +642,29 @@ async function performSubmit() {
     }
 
     try {
+        if (activeRunoff) {
+            const votesToInsert = selections.map(s => ({
+                runoff_id: activeRunoff.id,
+                voter_id: currentUser.id,
+                candidate_id: s.candidateId,
+                position_id: s.positionId,
+            }));
+            const { error } = await supabase.from('runoff_votes').insert(votesToInsert);
+            if (error) throw error;
+
+            hideConfirmModal();
+            hasSubmitted = true;
+            await loadUserRunoffVotes();
+            renderEligibility();
+            renderStatusPage({
+                icon: '✓',
+                title: 'Thank you!',
+                message: `Your runoff vote for <strong>${escapeHtml(activeElection.title)}</strong> is in.`,
+                tone: 'success',
+            });
+            return;
+        }
+
         const votesToInsert = selections.map(s => ({
             voter_id: currentUser.id,
             candidate_id: s.candidateId,
@@ -554,14 +688,19 @@ async function performSubmit() {
     } catch (err) {
         const msg = (err.message || '').toLowerCase();
         if (msg.includes('duplicate') || msg.includes('unique')) {
-            showToast('warning', 'You have already submitted your votes for this election.');
+            showToast('warning', activeRunoff
+                ? 'You have already submitted your runoff vote.'
+                : 'You have already submitted your votes for this election.');
             hasSubmitted = true;
-            await loadUserVotes();
+            if (activeRunoff) await loadUserRunoffVotes();
+            else await loadUserVotes();
             renderEligibility();
             renderStatusPage({
                 icon: '✓',
                 title: 'Already voted',
-                message: `You have already voted in <strong>${activeElection.title}</strong>. Thank you for taking part!`,
+                message: activeRunoff
+                    ? `You have already voted in the runoff for <strong>${escapeHtml(activeElection.title)}</strong>.`
+                    : `You have already voted in <strong>${activeElection.title}</strong>. Thank you for taking part!`,
                 tone: 'success',
             });
         } else {
@@ -599,31 +738,62 @@ async function renderResults() {
         return;
     }
 
-    const grouped = {};
-    (results || []).forEach(r => {
-        if (!grouped[r.position_name]) grouped[r.position_name] = [];
-        grouped[r.position_name].push(r);
-    });
+    const rows = results || [];
 
-    const groups = sortPositionEntries(grouped).map(([posName, cans]) => {
-        cans.sort((a, b) => b.vote_count - a.vote_count);
-        const winner = cans[0];
-        if (!winner) return '';
+    const groups = sortPositionEntries(
+        Object.fromEntries(rows.map(r => [r.position_name, [r]]))
+    ).map(([posName, [row]]) => {
+        const outcome = row.outcome || 'winner';
 
-        const avatar = candidatePhotoHtml(photoById[winner.candidate_id], winner.candidate_name, {
+        if (outcome === 'runoff_pending') {
+            return `
+                <div class="result-group result-group--pending">
+                    <div class="result-pos-label">${escapeHtml(posName)}</div>
+                    <p class="result-pending-msg">Tied — runoff election pending</p>
+                </div>
+            `;
+        }
+        if (outcome === 'runoff_open') {
+            return `
+                <div class="result-group result-group--pending">
+                    <div class="result-pos-label">${escapeHtml(posName)}</div>
+                    <p class="result-pending-msg">Tied — runoff voting is in progress</p>
+                </div>
+            `;
+        }
+        if (outcome === 'tie_unresolved') {
+            return `
+                <div class="result-group result-group--pending">
+                    <div class="result-pos-label">${escapeHtml(posName)}</div>
+                    <p class="result-pending-msg">Still tied after runoff — committee decision required</p>
+                </div>
+            `;
+        }
+        if (outcome === 'no_votes' || !row.candidate_id) {
+            return `
+                <div class="result-group result-group--pending">
+                    <div class="result-pos-label">${escapeHtml(posName)}</div>
+                    <p class="result-pending-msg">No votes recorded</p>
+                </div>
+            `;
+        }
+
+        const avatar = candidatePhotoHtml(photoById[row.candidate_id], row.candidate_name, {
             imgClass: 'pick-photo',
             fallbackClass: 'pick-initials',
         });
-
-        const voteLabel = winner.vote_count === 1 ? '1 vote' : `${winner.vote_count} votes`;
+        const voteLabel = row.vote_count === 1 ? '1 vote' : `${row.vote_count} votes`;
+        const runoffNote = outcome === 'runoff_winner'
+            ? '<span class="result-runoff-badge">Runoff winner</span>'
+            : '';
 
         return `
             <div class="result-group">
-                <div class="result-pos-label">${posName}</div>
+                <div class="result-pos-label">${escapeHtml(posName)}</div>
                 <div class="result-row">
                     ${avatar}
                     <div>
-                        <div class="result-winner-name">${winner.candidate_name}</div>
+                        <div class="result-winner-name">${escapeHtml(row.candidate_name)} ${runoffNote}</div>
                         <span class="result-vote-count">${voteLabel}</span>
                     </div>
                 </div>
@@ -634,9 +804,9 @@ async function renderResults() {
     renderMain(`
         <div class="result-shell">
             <div class="result-shell-head">
-                <div class="election-label">${activeElection.title}</div>
+                <div class="election-label">${escapeHtml(activeElection.title)}</div>
                 <h2>Election results</h2>
-                <p class="result-shell-sub">Winners for each position are shown below.</p>
+                <p class="result-shell-sub">Final outcomes for each position are shown below.</p>
             </div>
             ${groups || '<p class="result-empty">No results to show yet.</p>'}
         </div>

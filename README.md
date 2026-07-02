@@ -47,6 +47,10 @@ npm install
 
    The final migration (`20260701120000_security_hardening.sql`) adds production security fixes — do not skip it.
 
+   Runoff elections (`20260701140000_runoff_elections.sql`) enable a second voting round for tied positions.
+
+   If login fails with **infinite recursion on profiles**, run `20260701150000_fix_profiles_rls_recursion.sql` immediately.
+
 ### 4. Environment Variables
 Copy `.env.example` to `.env.local` and fill in your Supabase project credentials:
 ```env
