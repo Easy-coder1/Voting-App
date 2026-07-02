@@ -6,6 +6,9 @@ let currentUser = null;
 let currentProfile = null;
 let turnoutChartInstance = null;
 let selectedResultsElection = null;
+let activeAnalyticsElection = null;
+let votersModalElectionId = null;
+let votersModalIsLive = false;
 let allMembers = [];
 let memberSearchQuery = '';
 let allAdmins = [];
@@ -64,6 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupForms();
         setupResultsTab();
         setupPublishModal();
+        setupVotersModal();
 
         // Subscribe to realtime updates for live analytics
         try {
@@ -74,6 +78,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 if (!document.getElementById('tab-results').classList.contains('hidden') && selectedResultsElection && selectedResultsElection.status === 'open') {
                     renderResults(selectedResultsElection);
+                }
+                if (votersModalElectionId) {
+                    refreshVotersModal();
                 }
             });
         } catch (realtimeErr) {
@@ -310,13 +317,13 @@ async function loadAnalytics() {
     ]);
 
     let votersWhoVoted = 0;
-    const activeElection = openElections?.[0] || null;
+    activeAnalyticsElection = openElections?.[0] || null;
 
-    if (activeElection) {
+    if (activeAnalyticsElection) {
         const { data: voteRows } = await supabase
             .from('votes')
             .select('voter_id')
-            .eq('election_id', activeElection.id);
+            .eq('election_id', activeAnalyticsElection.id);
         votersWhoVoted = new Set((voteRows || []).map(r => r.voter_id).filter(Boolean)).size;
     }
 
@@ -325,23 +332,24 @@ async function loadAnalytics() {
     document.getElementById('stat-approved').textContent = approved || 0;
     document.getElementById('stat-rejected').textContent = rejected || 0;
     document.getElementById('stat-votes').textContent = votersWhoVoted;
+    updateStatVotesCard();
 
     renderMemberStatusChart(pending || 0, approved || 0, rejected || 0);
 
     const statusContainer = document.getElementById('live-election-status');
     if (statusContainer) {
-        if (activeElection) {
+        if (activeAnalyticsElection) {
             statusContainer.innerHTML = `
                 <div class="space-y-4">
                     <div class="flex items-center space-x-2.5">
                         <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span class="font-extrabold text-base text-slate-800">Active: ${activeElection.title}</span>
+                        <span class="font-extrabold text-base text-slate-800">Active: ${activeAnalyticsElection.title}</span>
                     </div>
                     <div class="flex justify-between border-t border-slate-200/50 pt-4 text-xs font-semibold text-slate-400">
                         <span>Closing Date</span>
-                        <span class="text-slate-700 font-bold">${new Date(activeElection.end_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                        <span class="text-slate-700 font-bold">${new Date(activeAnalyticsElection.end_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                     </div>
-                    <button onclick="window.switchToResultsTab('${activeElection.id}')" class="mt-3 w-full bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
+                    <button onclick="window.switchToResultsTab('${activeAnalyticsElection.id}')" class="mt-3 w-full bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
                         View Live Results →
                     </button>
                 </div>
@@ -1433,6 +1441,185 @@ async function renderResults(election) {
     }
 }
 
+function formatVotedAt(iso) {
+    if (!iso) return '';
+    const date = new Date(iso);
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 60_000) return 'Just now';
+    if (diffMs < 3_600_000) return `${Math.floor(diffMs / 60_000)}m ago`;
+    if (diffMs < 86_400_000) return `${Math.floor(diffMs / 3_600_000)}h ago`;
+    return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function updateStatVotesCard() {
+    const card = document.getElementById('stat-votes-card');
+    const hint = document.getElementById('stat-votes-hint');
+    if (!card) return;
+
+    const isLive = Boolean(activeAnalyticsElection);
+    card.classList.toggle('cursor-pointer', isLive);
+    card.classList.toggle('hover:ring-2', isLive);
+    card.classList.toggle('hover:ring-church-200', isLive);
+    card.classList.toggle('active:scale-[0.99]', isLive);
+
+    if (isLive) {
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', 'View members who have voted');
+        card.onclick = () => openVotersModal(activeAnalyticsElection.id, activeAnalyticsElection.title, true);
+        card.onkeydown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openVotersModal(activeAnalyticsElection.id, activeAnalyticsElection.title, true);
+            }
+        };
+        if (hint) hint.textContent = 'Click to see who voted · live';
+    } else {
+        card.removeAttribute('role');
+        card.removeAttribute('tabindex');
+        card.removeAttribute('aria-label');
+        card.onclick = null;
+        card.onkeydown = null;
+        if (hint) hint.textContent = 'Live count during open elections only';
+    }
+}
+
+function setupVotersModal() {
+    const modal = document.getElementById('voters-modal');
+    const closeBtn = document.getElementById('voters-modal-close');
+    if (!modal || !closeBtn) return;
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeVotersModal();
+    });
+    closeBtn.addEventListener('click', closeVotersModal);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && votersModalElectionId) closeVotersModal();
+    });
+}
+
+async function fetchVotersForElection(electionId) {
+    const { data, error } = await supabase
+        .from('votes')
+        .select('voter_id, created_at, profiles:voter_id(full_name, email)')
+        .eq('election_id', electionId)
+        .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    const byVoter = new Map();
+    for (const row of data || []) {
+        const profile = row.profiles;
+        const existing = byVoter.get(row.voter_id);
+        if (!existing || new Date(row.created_at) < new Date(existing.voted_at)) {
+            byVoter.set(row.voter_id, {
+                id: row.voter_id,
+                full_name: profile?.full_name || 'Unknown member',
+                email: profile?.email || '',
+                voted_at: row.created_at,
+            });
+        }
+    }
+
+    return Array.from(byVoter.values()).sort(
+        (a, b) => new Date(a.voted_at) - new Date(b.voted_at)
+    );
+}
+
+function renderVotersModalList(voters) {
+    const listEl = document.getElementById('voters-modal-list');
+    const subtitleEl = document.getElementById('voters-modal-subtitle');
+    if (!listEl) return;
+
+    const countLabel = `${voters.length} voter${voters.length !== 1 ? 's' : ''}`;
+    if (subtitleEl) {
+        subtitleEl.innerHTML = votersModalIsLive
+            ? `${countLabel} · <span class="inline-flex items-center gap-1.5 text-emerald-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Updating live</span>`
+            : countLabel;
+    }
+
+    if (voters.length === 0) {
+        listEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-14 px-6 text-center text-slate-400 space-y-2">
+                <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                <p class="text-sm font-bold text-slate-500">No votes yet</p>
+                <p class="text-xs font-semibold">Members will appear here as soon as they cast their ballot.</p>
+            </div>`;
+        return;
+    }
+
+    listEl.innerHTML = voters.map((voter, index) => `
+        <div class="flex items-center gap-3 px-5 sm:px-6 py-3.5 border-b border-slate-50 last:border-b-0 hover:bg-slate-50/80 transition-colors">
+            <span class="w-6 text-[11px] font-bold text-slate-300 tabular-nums shrink-0">${index + 1}</span>
+            <div class="w-9 h-9 rounded-full bg-church-50 text-church-700 flex items-center justify-center text-xs font-bold shrink-0">${escapeHtml(getInitials(voter.full_name))}</div>
+            <div class="min-w-0 flex-1">
+                <p class="text-sm font-bold text-church-900 truncate">${escapeHtml(voter.full_name)}</p>
+                <p class="text-xs text-slate-400 truncate">${escapeHtml(voter.email)}</p>
+            </div>
+            <div class="text-right shrink-0">
+                <p class="text-[10px] font-semibold text-slate-400">${escapeHtml(formatVotedAt(voter.voted_at))}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function refreshVotersModal() {
+    if (!votersModalElectionId) return;
+
+    try {
+        const voters = await fetchVotersForElection(votersModalElectionId);
+        renderVotersModalList(voters);
+    } catch (err) {
+        console.warn('Failed to refresh voters list:', err);
+    }
+}
+
+async function openVotersModal(electionId, electionTitle, isLive = false) {
+    const modal = document.getElementById('voters-modal');
+    const titleEl = document.getElementById('voters-modal-title');
+    const listEl = document.getElementById('voters-modal-list');
+    if (!modal || !listEl) return;
+
+    votersModalElectionId = electionId;
+    votersModalIsLive = isLive;
+
+    if (titleEl) titleEl.textContent = electionTitle ? `Voters · ${electionTitle}` : 'Members Who Voted';
+
+    listEl.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 text-slate-400 space-y-3">
+            <div class="animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-t-church-600"></div>
+            <span class="text-xs font-bold uppercase tracking-wider">Loading voters…</span>
+        </div>`;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    try {
+        const voters = await fetchVotersForElection(electionId);
+        if (votersModalElectionId !== electionId) return;
+        renderVotersModalList(voters);
+    } catch (err) {
+        console.error('Failed to load voters:', err);
+        listEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-14 px-6 text-center text-red-500 space-y-2">
+                <p class="text-sm font-bold">Could not load voters</p>
+                <p class="text-xs opacity-80">${escapeHtml(err.message)}</p>
+            </div>`;
+    }
+}
+
+function closeVotersModal() {
+    const modal = document.getElementById('voters-modal');
+    votersModalElectionId = null;
+    votersModalIsLive = false;
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+window.openVotersModal = openVotersModal;
+
 function renderTurnoutCards(container, turnout, election) {
     if (!container) return;
 
@@ -1449,6 +1636,8 @@ function renderTurnoutCards(container, turnout, election) {
     const turnoutPct = Math.max(0, Math.min(100, Number(data.turnout_percentage) || 0));
     const pendingMembers = data.pending_members ?? 0;
     const rejectedMembers = data.rejected_members ?? 0;
+    const isLive = election.status === 'open';
+    const votedSub = isLive ? 'Click to see who voted · live' : 'Click to view voter list';
 
     const stat = (label, value, sub, ring, iconPath) => `
         <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-soft hover:shadow-card-hover transition-all duration-300">
@@ -1467,26 +1656,45 @@ function renderTurnoutCards(container, turnout, election) {
     const clockIcon = 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z';
     const rejectIcon = 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z';
     const ballotIcon = 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
+    const chartIcon = 'M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z';
 
     container.innerHTML = `
         ${stat('Total Members', data.total_members, 'On the register', 'bg-church-50 text-church-700', peopleIcon)}
         ${stat('Pending', pendingMembers, 'Awaiting approval', 'bg-amber-50 text-amber-600', clockIcon)}
         ${stat('Approved', data.approved_voters, 'Eligible to vote', 'bg-emerald-50 text-emerald-600', checkIcon)}
         ${stat('Rejected', rejectedMembers, 'Not approved', 'bg-red-50 text-red-600', rejectIcon)}
-        ${stat('Members Voted', data.votes_cast, election.status === 'open' ? 'Counting live' : 'Unique voters', 'bg-ember-50 text-ember-600', ballotIcon)}
-        <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl p-4 shadow-premium flex items-center gap-4">
-            <div class="relative w-14 h-14 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
-                <div class="absolute inset-[5px] rounded-full bg-church-900 flex items-center justify-center">
-                    <span class="text-[13px] font-black">${turnoutPct}%</span>
-                </div>
+        <button type="button" data-voters-card class="bg-white border border-slate-100 rounded-2xl p-4 shadow-soft hover:shadow-card-hover hover:ring-2 hover:ring-ember-200 active:scale-[0.99] transition-all duration-300 text-left w-full cursor-pointer">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Members Voted</span>
+                <span class="w-8 h-8 rounded-xl bg-ember-50 text-ember-600 flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${ballotIcon}"></path></svg>
+                </span>
             </div>
-            <div class="min-w-0">
-                <span class="block text-[11px] font-bold uppercase tracking-wider text-white/60">Turnout</span>
-                <span class="block text-lg font-black leading-tight">${data.votes_cast}/${data.approved_voters}</span>
-                <span class="block text-[11px] font-semibold text-white/60">voters participated</span>
+            <span class="text-2xl font-black text-church-900 leading-none">${data.votes_cast}</span>
+            <span class="block mt-1.5 text-[11px] font-semibold text-ember-600/80">${votedSub}</span>
+        </button>
+        <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-soft hover:shadow-card-hover transition-all duration-300">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Turnout</span>
+                <span class="w-8 h-8 rounded-xl bg-church-50 text-church-700 flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${chartIcon}"></path></svg>
+                </span>
             </div>
+            <div class="flex items-baseline gap-2">
+                <span class="text-2xl font-black text-church-900 leading-none">${data.votes_cast}<span class="text-base font-bold text-slate-400">/${data.approved_voters}</span></span>
+                <span class="text-sm font-extrabold text-church-600">${turnoutPct}%</span>
+            </div>
+            <div class="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full bg-gradient-to-r from-church-600 to-ember-500 transition-all duration-500" style="width: ${turnoutPct}%"></div>
+            </div>
+            <span class="block mt-1.5 text-[11px] font-semibold text-slate-400">voters participated</span>
         </div>
     `;
+
+    const votersCard = container.querySelector('[data-voters-card]');
+    if (votersCard) {
+        votersCard.addEventListener('click', () => openVotersModal(election.id, election.title, isLive));
+    }
 }
 
 window.showPublishModal = (electionId, action) => {
