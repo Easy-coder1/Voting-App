@@ -82,9 +82,29 @@
                 </div>
             </div>
             <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-black/[0.06] bg-white">
-                    <div id="admin-avatar-badge" class="w-7 h-7 rounded-md bg-church-700 text-white flex items-center justify-center text-[10px] font-bold uppercase">A</div>
-                    <span class="text-sm text-ink-muted hidden sm:block"><span id="admin-name" class="font-semibold text-ink">...</span></span>
+                <div class="admin-menu relative">
+                    <button type="button" id="admin-menu-btn" class="admin-menu-trigger flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-black/[0.06] bg-white hover:bg-canvas-alt transition-colors" aria-expanded="false" aria-haspopup="true" aria-controls="admin-menu-popover" aria-label="View administrators">
+                        <span class="relative shrink-0">
+                            <span id="admin-avatar-badge" class="w-7 h-7 rounded-md bg-church-700 text-white flex items-center justify-center text-[10px] font-bold uppercase">A</span>
+                            <span id="admin-self-status" class="admin-status-dot admin-status-dot--online" aria-hidden="true"></span>
+                        </span>
+                        <span class="text-sm text-ink-muted hidden sm:block text-left">
+                            <span id="admin-name" class="font-semibold text-ink block leading-tight">...</span>
+                            <span class="text-[10px] font-semibold text-slate-400">Administrators</span>
+                        </span>
+                        <svg class="w-4 h-4 text-slate-400 hidden sm:block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div id="admin-menu-popover" class="admin-menu-popover" role="dialog" aria-label="Administrators on this system" aria-hidden="true">
+                        <div class="admin-menu-popover-head">
+                            <p class="admin-menu-popover-title">Administrators</p>
+                            <p class="admin-menu-popover-sub">Who can manage this system</p>
+                        </div>
+                        <ul id="admin-roster-list" class="admin-roster-list" role="list"></ul>
+                        <p class="admin-roster-legend">
+                            <span class="admin-status-dot admin-status-dot--online" aria-hidden="true"></span> Online
+                            <span class="admin-status-dot admin-status-dot--offline" aria-hidden="true"></span> Offline
+                        </p>
+                    </div>
                 </div>
                 <button id="logout-btn-mob" class="md:hidden p-2 rounded-lg border border-black/[0.06] hover:bg-canvas-alt transition" onclick="document.getElementById('logout-btn').click()">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -121,10 +141,10 @@
                         <p id="stat-total-members" class="text-2xl sm:text-3xl font-bold text-ink tracking-tight">0</p>
                     </div>
                     <div class="card-premium p-5 sm:p-6 relative overflow-hidden hover:shadow-card-hover transition-shadow">
-                        <div class="absolute top-0 left-0 w-full h-1 bg-church-400"></div>
+                        <div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
                         <div class="flex justify-between items-start mb-3">
                             <span class="text-xs text-church-400 font-bold uppercase tracking-wider">Pending</span>
-                            <span class="p-1.5 bg-church-50 rounded-lg text-church-500">
+                            <span class="p-1.5 bg-amber-50 rounded-lg text-amber-600">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </span>
                         </div>

@@ -163,6 +163,171 @@
   @apply text-sm font-semibold text-slate-500;
 }
 
+/* ── Admin roster popover ───────────────────────────────────────── */
+.admin-menu { position: relative; }
+
+.admin-menu-trigger {
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.admin-menu-trigger:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.admin-status-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-sizing: content-box;
+}
+
+.admin-status-dot--online {
+  background: #22c55e;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35);
+}
+
+.admin-status-dot--offline {
+  background: #94a3b8;
+}
+
+.admin-menu-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(280px, calc(100vw - 32px));
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+  padding: 14px;
+  z-index: 60;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.18s, transform 0.18s, visibility 0.18s;
+}
+
+.admin-menu-popover.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.admin-menu-popover-head {
+  padding: 2px 4px 10px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  margin-bottom: 8px;
+}
+
+.admin-menu-popover-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.admin-menu-popover-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+.admin-roster-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.admin-roster-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-radius: 10px;
+}
+
+.admin-roster-item:hover {
+  background: #f8fafc;
+}
+
+.admin-roster-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1e40af, #2563eb);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+}
+
+.admin-roster-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-roster-status-text {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.admin-roster-status-text.is-online { color: #15803d; }
+
+.admin-roster-empty {
+  padding: 12px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-align: center;
+}
+
+.admin-roster-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px 12px;
+  flex-wrap: wrap;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.admin-roster-legend .admin-status-dot {
+  position: static;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-width: 1px;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
 /* ── App toast & confirm (shared) ─────────────────────────────── */
 .app-toast {
   position: fixed;
