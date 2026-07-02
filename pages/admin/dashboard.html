@@ -222,10 +222,20 @@
                         >
                     </div>
                     <p class="text-xs text-slate-500 font-medium mt-2.5">Search pending, approved, rejected, and voted members by name or email.</p>
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Show only</p>
+                        <div id="member-status-filters" class="flex flex-wrap gap-2" role="group" aria-label="Filter by member status">
+                            <button type="button" data-member-filter="all" class="member-filter-btn member-filter-btn--active">All</button>
+                            <button type="button" data-member-filter="pending" class="member-filter-btn">Pending</button>
+                            <button type="button" data-member-filter="approved" class="member-filter-btn">Approved</button>
+                            <button type="button" data-member-filter="voted" class="member-filter-btn">Voted</button>
+                            <button type="button" data-member-filter="rejected" class="member-filter-btn">Rejected</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Pending status -->
-                <div class="card-premium overflow-hidden border border-church-100">
+                <div id="members-section-pending" class="card-premium overflow-hidden border border-church-100">
                     <div class="px-6 py-5 border-b border-church-100 flex flex-wrap justify-between items-center gap-3 bg-amber-50/60">
                         <div>
                             <h3 class="text-lg font-bold text-church-900 tracking-tight">Pending status</h3>
@@ -239,7 +249,7 @@
                 </div>
 
                 <!-- Approved members -->
-                <div class="card-premium overflow-hidden border border-church-100">
+                <div id="members-section-approved" class="card-premium overflow-hidden border border-church-100">
                     <div class="px-6 py-5 border-b border-church-100 flex flex-wrap justify-between items-center gap-3 bg-emerald-50/50">
                         <div>
                             <h3 class="text-lg font-bold text-church-900 tracking-tight">Approved members</h3>
@@ -277,7 +287,7 @@
                 </div>
 
                 <!-- Rejected members -->
-                <div class="card-premium overflow-hidden border border-church-100">
+                <div id="members-section-rejected" class="card-premium overflow-hidden border border-church-100">
                     <div class="px-6 py-5 border-b border-church-100 flex flex-wrap justify-between items-center gap-3 bg-red-50/50">
                         <div>
                             <h3 class="text-lg font-bold text-church-900 tracking-tight">Rejected members</h3>

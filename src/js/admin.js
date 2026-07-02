@@ -13,6 +13,7 @@ let membersVotedContext = null;
 let liveVoterSnapshot = { electionId: null, voterIds: new Set() };
 let allMembers = [];
 let memberSearchQuery = '';
+let memberStatusFilter = 'all';
 let allAdmins = [];
 let onlineAdminIds = new Set();
 let adminPresenceChannel = null;
@@ -459,6 +460,56 @@ function setupMemberSearch() {
     });
 }
 
+function setupMemberStatusFilter() {
+    const group = document.getElementById('member-status-filters');
+    if (!group || group.dataset.bound) return;
+    group.dataset.bound = 'true';
+
+    group.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-member-filter]');
+        if (!btn) return;
+
+        setMemberStatusFilter(btn.getAttribute('data-member-filter'));
+    });
+}
+
+function setMemberStatusFilter(filter) {
+    const valid = ['all', 'pending', 'approved', 'voted', 'rejected'];
+    memberStatusFilter = valid.includes(filter) ? filter : 'all';
+
+    document.querySelectorAll('[data-member-filter]').forEach(btn => {
+        const isActive = btn.getAttribute('data-member-filter') === memberStatusFilter;
+        btn.classList.toggle('member-filter-btn--active', isActive);
+    });
+
+    renderMembersUI();
+}
+
+function applyMemberStatusFilterVisibility() {
+    const show = (id, visible) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden', !visible);
+    };
+
+    const filter = memberStatusFilter;
+    const showAll = filter === 'all';
+
+    show('members-section-pending', showAll || filter === 'pending');
+    show('members-section-approved', showAll || filter === 'approved');
+    show('members-section-rejected', showAll || filter === 'rejected');
+
+    const votedSection = document.getElementById('members-voted-section');
+    if (filter === 'all' || filter === 'voted') {
+        if (filter === 'voted' || membersVotedContext?.electionId) {
+            // visibility handled by renderVotedMembersUI
+        } else if (votedSection) {
+            votedSection.classList.add('hidden');
+        }
+    } else if (votedSection) {
+        votedSection.classList.add('hidden');
+    }
+}
+
 function renderPendingMemberRow(m) {
     const initials = getMemberInitials(m.full_name);
     const div = document.createElement('div');
@@ -594,6 +645,7 @@ function renderMembersUI() {
         memberSearchQuery ? 'No rejected members match your search.' : 'No rejected members.'
     );
 
+    applyMemberStatusFilterVisibility();
     renderVotedMembersUI();
 }
 
@@ -639,6 +691,24 @@ function renderVotedMembersUI() {
     if (!section || !listEl) return;
 
     if (!membersVotedContext?.electionId) {
+        if (memberStatusFilter === 'voted') {
+            section.classList.remove('hidden');
+            if (countEl) countEl.textContent = '0';
+            if (subtitleEl) subtitleEl.textContent = 'No active election';
+            if (liveBadge) liveBadge.classList.add('hidden');
+            listEl.innerHTML = `
+                <div class="member-empty">
+                    <p>No election is open. Voted members appear here during active voting.</p>
+                </div>`;
+            listEl.classList.remove('hidden');
+            emptyEl?.classList.add('hidden');
+        } else {
+            section.classList.add('hidden');
+        }
+        return;
+    }
+
+    if (memberStatusFilter !== 'all' && memberStatusFilter !== 'voted') {
         section.classList.add('hidden');
         return;
     }
@@ -683,6 +753,7 @@ async function loadMembers() {
 
     allMembers = members || [];
     setupMemberSearch();
+    setupMemberStatusFilter();
     renderMembersUI();
 
     if (activeAnalyticsElection) {
@@ -1021,6 +1092,7 @@ window.switchToResultsTab = (electionId) => {
 
 window.viewMembersVoted = (electionId, electionTitle, isLive = false) => {
     membersVotedContext = { electionId, title: electionTitle, isLive };
+    setMemberStatusFilter('voted');
 
     activateAdminTab('members', {
         title: 'Members Who Voted',
