@@ -7,6 +7,8 @@ let currentProfile = null;
 let turnoutChartInstance = null;
 let selectedResultsElection = null;
 let activeAnalyticsElection = null;
+let votedMembers = [];
+let votedMembersHighlightIds = new Set();
 let membersVotedContext = null;
 let membersVotedFocus = false;
 let liveVoterSnapshot = { electionId: null, voterIds: new Set() };
@@ -445,6 +447,7 @@ function setupMemberSearch() {
     input.addEventListener('input', () => {
         memberSearchQuery = input.value.trim();
         renderMembersUI();
+        renderVotedMembersUI();
     });
 }
 
@@ -581,6 +584,80 @@ function renderMembersUI() {
         rejectedEmpty,
         rejected.map(m => renderRejectedMemberRow(m)),
         memberSearchQuery ? 'No rejected members match your search.' : 'No rejected members.'
+    );
+
+    renderVotedMembersUI();
+}
+
+function matchesVoterSearch(voter, query) {
+    if (!query) return true;
+    const needle = query.toLowerCase();
+    return (voter.full_name || '').toLowerCase().includes(needle)
+        || (voter.email || '').toLowerCase().includes(needle);
+}
+
+function renderVotedMemberRow(voter) {
+    const initials = getMemberInitials(voter.full_name);
+    const div = document.createElement('div');
+    div.className = 'member-row';
+    if (votedMembersHighlightIds.has(voter.id)) {
+        div.classList.add('bg-emerald-50/80');
+    }
+
+    div.innerHTML = `
+        <div class="member-row-info">
+            <div class="member-row-avatar member-row-avatar--voted">${initials}</div>
+            <div class="member-row-text">
+                <h4>${voter.full_name}</h4>
+                <p>${voter.email}</p>
+            </div>
+        </div>
+        <div class="member-row-actions">
+            <span class="member-badge member-badge--ok">Voted ✓</span>
+            <span class="text-[11px] font-semibold text-slate-400 whitespace-nowrap">${formatVotedAt(voter.voted_at)}</span>
+        </div>
+    `;
+    return div;
+}
+
+function renderVotedMembersUI() {
+    const section = document.getElementById('members-voted-section');
+    const listEl = document.getElementById('members-voted-list');
+    const emptyEl = document.getElementById('members-voted-empty');
+    const countEl = document.getElementById('members-voted-count');
+    const subtitleEl = document.getElementById('members-voted-subtitle');
+    const liveBadge = document.getElementById('members-voted-live-badge');
+
+    if (!section || !listEl) return;
+
+    if (!membersVotedContext?.electionId) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+
+    const filtered = votedMembers.filter(v => matchesVoterSearch(v, memberSearchQuery));
+    if (countEl) countEl.textContent = String(filtered.length);
+    if (subtitleEl) {
+        const title = membersVotedContext.title || 'Current election';
+        subtitleEl.textContent = membersVotedContext.isLive
+            ? `${title} · updating live`
+            : title;
+    }
+    if (liveBadge) {
+        liveBadge.classList.toggle('hidden', !membersVotedContext.isLive);
+    }
+
+    const emptyMessage = memberSearchQuery
+        ? 'No voted members match your search.'
+        : 'No votes yet. Members will appear here when they cast their ballot.';
+
+    renderMemberSection(
+        listEl,
+        emptyEl,
+        filtered.map(v => renderVotedMemberRow(v)),
+        emptyMessage
     );
 }
 
@@ -1496,61 +1573,15 @@ function updateStatVotesCard() {
     }
 }
 
-function buildMembersVotedPanelHtml(voters, { electionTitle, isLive }, highlightIds = new Set()) {
-    const countLabel = `${voters.length} member${voters.length !== 1 ? 's' : ''}`;
-    const liveBadge = isLive
-        ? `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-sm">
-                <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-                Live
-           </span>`
-        : '';
-
-    const emptyState = `
-        <div class="flex flex-col items-center justify-center py-10 px-6 text-center rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/30">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-            </div>
-            <p class="text-base font-extrabold text-church-900">No votes yet</p>
-            <p class="text-sm font-semibold text-slate-500 mt-1 max-w-sm">Members will appear here in real time as soon as they submit their ballot.</p>
-        </div>`;
-
-    const voterGrid = voters.length
-        ? `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                ${voters.map((voter, index) => buildVoterCardHtml(voter, index, { highlight: highlightIds.has(voter.id) })).join('')}
-           </div>`
-        : emptyState;
-
-    return `
-        <div class="card-premium border-2 border-emerald-200 overflow-hidden shadow-card-hover">
-            <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-emerald-50 via-emerald-50/80 to-white border-b border-emerald-100 flex flex-wrap items-center justify-between gap-3">
-                <div class="flex items-center gap-3 min-w-0">
-                    <span class="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a3 3 0 10-2.83-5"></path></svg>
-                    </span>
-                    <div class="min-w-0">
-                        <h3 class="text-lg sm:text-xl font-extrabold text-church-900 tracking-tight">Members Who Have Voted</h3>
-                        <p class="text-sm font-bold text-emerald-700 mt-0.5 truncate">
-                            ${escapeHtml(electionTitle || 'Election')} · ${countLabel}${isLive ? ' · updating automatically' : ''}
-                        </p>
-                    </div>
-                </div>
-                ${liveBadge}
-            </div>
-            <div class="p-4 sm:p-6 bg-gradient-to-b from-white to-emerald-50/20">
-                ${voterGrid}
-            </div>
-        </div>`;
-}
-
 async function syncMembersVotedPanel({ notifyNew = false, scrollIntoView = false } = {}) {
     const section = document.getElementById('members-voted-section');
-    const panel = document.getElementById('members-voted-panel');
-    if (!section || !panel) return;
+    if (!section) return;
 
     const ctx = membersVotedContext;
     if (!ctx?.electionId) {
+        votedMembers = [];
+        votedMembersHighlightIds = new Set();
         section.classList.add('hidden');
-        panel.innerHTML = '';
         return;
     }
 
@@ -1572,15 +1603,22 @@ async function syncMembersVotedPanel({ notifyNew = false, scrollIntoView = false
             liveVoterSnapshot.voterIds = new Set(voters.map(v => v.id));
         }
 
+        votedMembers = voters;
+        votedMembersHighlightIds = highlightIds;
+
         const membersTab = document.getElementById('tab-members');
         if (membersTab?.classList.contains('hidden')) return voters;
 
-        panel.innerHTML = buildMembersVotedPanelHtml(voters, ctx, highlightIds);
-        section.classList.remove('hidden');
+        renderVotedMembersUI();
 
         if (scrollIntoView) {
             section.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+
+        setTimeout(() => {
+            votedMembersHighlightIds = new Set();
+            renderVotedMembersUI();
+        }, 4000);
 
         return voters;
     } catch (err) {
@@ -1588,12 +1626,14 @@ async function syncMembersVotedPanel({ notifyNew = false, scrollIntoView = false
         const membersTab = document.getElementById('tab-members');
         if (membersTab?.classList.contains('hidden')) return;
 
-        panel.innerHTML = `
-            <div class="card-premium border border-red-200 bg-red-50/50 p-6 text-center text-red-600">
-                <p class="text-sm font-bold">Could not load voters</p>
-                <p class="text-xs mt-1 opacity-80">${escapeHtml(err.message)}</p>
-            </div>`;
         section.classList.remove('hidden');
+        const listEl = document.getElementById('members-voted-list');
+        if (listEl) {
+            listEl.innerHTML = `
+                <div class="member-empty">
+                    <p class="text-red-600">Could not load voters: ${escapeHtml(err.message)}</p>
+                </div>`;
+        }
     }
 }
 
@@ -1627,31 +1667,6 @@ async function fetchVotersForElection(electionId) {
     return Array.from(byVoter.values()).sort(
         (a, b) => new Date(a.voted_at) - new Date(b.voted_at)
     );
-}
-
-function buildVoterCardHtml(voter, index, { highlight = false } = {}) {
-    const highlightClass = highlight
-        ? 'border-emerald-400 bg-emerald-100/80 ring-2 ring-emerald-300 animate-pulse'
-        : 'border-emerald-200/80 bg-white hover:border-emerald-300 hover:shadow-md';
-
-    return `
-        <div class="flex items-center gap-3 p-4 rounded-2xl border-2 ${highlightClass} transition-all duration-300 shadow-sm" data-voter-id="${voter.id}">
-            <span class="w-7 text-sm font-extrabold text-emerald-600/70 tabular-nums shrink-0">${index + 1}</span>
-            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-white flex items-center justify-center text-sm font-extrabold shrink-0 shadow-sm">
-                ${escapeHtml(getInitials(voter.full_name))}
-            </div>
-            <div class="min-w-0 flex-1">
-                <p class="text-base font-extrabold text-church-900 truncate leading-tight">${escapeHtml(voter.full_name)}</p>
-                <p class="text-xs font-medium text-slate-500 truncate mt-0.5">${escapeHtml(voter.email)}</p>
-            </div>
-            <div class="text-right shrink-0">
-                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-extrabold uppercase tracking-wide shadow-sm">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                    Voted
-                </span>
-                <p class="text-[11px] font-bold text-slate-500 mt-1.5">${escapeHtml(formatVotedAt(voter.voted_at))}</p>
-            </div>
-        </div>`;
 }
 
 function renderTurnoutCards(container, turnout, election) {
@@ -1708,17 +1723,17 @@ function renderTurnoutCards(container, turnout, election) {
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
             </span>
         </button>
-        <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl px-3 py-3.5 sm:px-3.5 sm:py-4 shadow-premium flex items-center gap-2.5 sm:gap-3 overflow-hidden min-w-0">
-            <div class="relative w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
-                <div class="absolute inset-[4px] rounded-full bg-church-900 flex items-center justify-center">
-                    <span class="text-[10px] sm:text-[11px] font-black leading-none tabular-nums">${turnoutPct}%</span>
+        <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl p-3.5 sm:p-4 shadow-premium flex flex-col items-center justify-between text-center min-h-[148px] overflow-hidden">
+            <span class="text-[10px] font-bold uppercase tracking-wide text-white/60 leading-none">Turnout</span>
+            <div class="flex flex-col items-center gap-2 py-1">
+                <div class="relative w-12 h-12 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
+                    <div class="absolute inset-[4px] rounded-full bg-church-900 flex items-center justify-center">
+                        <span class="text-[10px] font-black leading-none tabular-nums">${turnoutPct}%</span>
+                    </div>
                 </div>
+                <span class="text-lg font-black leading-none tabular-nums">${data.votes_cast}/${data.approved_voters}</span>
             </div>
-            <div class="min-w-0 flex-1 py-0.5">
-                <span class="block text-[10px] font-bold uppercase tracking-wide text-white/60 leading-none mb-1">Turnout</span>
-                <span class="block text-base sm:text-lg font-black leading-none tabular-nums">${data.votes_cast}/${data.approved_voters}</span>
-                <span class="block text-[10px] font-semibold text-white/55 leading-snug mt-1 break-words">voters participated</span>
-            </div>
+            <span class="text-[10px] font-semibold text-white/55 leading-snug px-2">voters participated</span>
         </div>
     `;
 
