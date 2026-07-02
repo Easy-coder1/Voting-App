@@ -1028,8 +1028,10 @@ window.viewMembersVoted = (electionId, electionTitle, isLive = false) => {
     }, { deferLoad: true, skipScrollToTop: true });
 
     const section = document.getElementById('members-voted-section');
-    if (section) section.classList.remove('hidden');
-    section?.scrollIntoView({ block: 'start' });
+    if (section) {
+        section.classList.remove('hidden');
+        section.scrollIntoView({ block: 'start' });
+    }
 
     syncMembersVotedPanel();
     loadMembers();
