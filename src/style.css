@@ -100,15 +100,15 @@
 
 /* Admin — member management rows */
 .member-row {
-  @apply flex flex-row flex-wrap justify-between items-center gap-3 p-4 sm:p-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition bg-white;
+  @apply flex flex-col gap-3 p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition bg-white sm:flex-row sm:flex-wrap sm:justify-between sm:items-center sm:gap-3 sm:p-5;
 }
 
 .member-row-info {
-  @apply flex items-center gap-3 min-w-0 flex-1;
+  @apply flex items-start gap-3 min-w-0 w-full sm:flex-1 sm:items-center;
 }
 
 .member-row-avatar {
-  @apply w-9 h-9 rounded-full text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm shrink-0;
+  @apply w-9 h-9 rounded-full text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm shrink-0 mt-0.5 sm:mt-0;
 }
 
 .member-row-avatar--pending { @apply bg-gradient-to-tr from-amber-500 to-amber-400; }
@@ -116,12 +116,12 @@
 .member-row-avatar--rejected { @apply bg-gradient-to-tr from-red-500 to-red-400; }
 .member-row-avatar--voted { @apply bg-gradient-to-tr from-emerald-600 to-emerald-500; }
 
-.member-row-text { @apply min-w-0; }
-.member-row-text h4 { @apply font-extrabold text-church-900 leading-tight text-base; }
-.member-row-text p { @apply text-[11px] text-slate-400 font-semibold mt-0.5 truncate; }
+.member-row-text { @apply min-w-0 flex-1; }
+.member-row-text h4 { @apply font-extrabold text-church-900 leading-snug text-base break-words; }
+.member-row-text p { @apply text-[11px] text-slate-400 font-semibold mt-0.5 break-all sm:truncate; }
 
 .member-row-actions {
-  @apply flex items-center gap-2 shrink-0 flex-wrap justify-end;
+  @apply flex items-center gap-2 w-full flex-wrap pl-12 sm:pl-0 sm:w-auto sm:shrink-0 sm:justify-end;
 }
 
 .member-btn {

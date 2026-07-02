@@ -251,7 +251,10 @@ const TAB_META = {
 
 function scrollAdminContentToTop() {
     const main = document.querySelector('main');
-    if (main) main.scrollTop = 0;
+    if (!main) return;
+    requestAnimationFrame(() => {
+        main.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 }
 
 function activateAdminTab(tabId, customMeta = null, { deferLoad = false, skipScrollToTop = false } = {}) {
@@ -1029,7 +1032,7 @@ window.viewMembersVoted = (electionId, electionTitle, isLive = false) => {
 
     const section = document.getElementById('members-voted-section');
     if (section) section.classList.remove('hidden');
-    section?.scrollIntoView({ block: 'start' });
+    section?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 
     syncMembersVotedPanel();
     loadMembers();
