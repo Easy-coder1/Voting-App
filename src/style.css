@@ -164,6 +164,31 @@
   @apply text-sm font-semibold text-slate-500;
 }
 
+.member-filter-btn {
+  @apply inline-flex items-center px-3.5 py-2 rounded-full text-xs font-bold border transition active:scale-95;
+  @apply bg-white border-slate-200 text-slate-600 hover:border-church-300 hover:text-church-800;
+}
+
+.member-filter-btn--active {
+  @apply bg-church-900 border-church-900 text-white shadow-sm hover:bg-church-800 hover:border-church-800 hover:text-white;
+}
+
+.member-filter-btn[data-member-filter="pending"].member-filter-btn--active {
+  @apply bg-amber-600 border-amber-600 hover:bg-amber-700 hover:border-amber-700;
+}
+
+.member-filter-btn[data-member-filter="approved"].member-filter-btn--active {
+  @apply bg-emerald-600 border-emerald-600 hover:bg-emerald-700 hover:border-emerald-700;
+}
+
+.member-filter-btn[data-member-filter="voted"].member-filter-btn--active {
+  @apply bg-church-700 border-church-700 hover:bg-church-800 hover:border-church-800;
+}
+
+.member-filter-btn[data-member-filter="rejected"].member-filter-btn--active {
+  @apply bg-red-600 border-red-600 hover:bg-red-700 hover:border-red-700;
+}
+
 /* ── Admin roster popover ───────────────────────────────────────── */
 .admin-menu { position: relative; }
 
