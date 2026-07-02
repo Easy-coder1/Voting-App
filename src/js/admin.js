@@ -251,10 +251,7 @@ const TAB_META = {
 
 function scrollAdminContentToTop() {
     const main = document.querySelector('main');
-    if (!main) return;
-    requestAnimationFrame(() => {
-        main.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    if (main) main.scrollTop = 0;
 }
 
 function activateAdminTab(tabId, customMeta = null, { deferLoad = false, skipScrollToTop = false } = {}) {
@@ -1031,8 +1028,10 @@ window.viewMembersVoted = (electionId, electionTitle, isLive = false) => {
     }, { deferLoad: true, skipScrollToTop: true });
 
     const section = document.getElementById('members-voted-section');
-    if (section) section.classList.remove('hidden');
-    section?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    if (section) {
+        section.classList.remove('hidden');
+        section.scrollIntoView({ block: 'start' });
+    }
 
     syncMembersVotedPanel();
     loadMembers();
