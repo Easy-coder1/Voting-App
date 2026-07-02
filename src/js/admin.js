@@ -1353,8 +1353,13 @@ async function renderResults(election) {
         'open': 'bg-emerald-50 text-emerald-700 border-emerald-100',
         'closed': 'bg-slate-100 text-slate-600 border-slate-200'
     };
-    statusEl.className = `inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${statusColors[election.status] || 'bg-slate-100 text-slate-500'}`;
-    statusEl.innerHTML = `${election.status}${election.status === 'open' ? ' <span class="animate-pulse">🔴</span>' : ''}`;
+    if (election.status === 'open') {
+        statusEl.className = 'hidden';
+        statusEl.innerHTML = '';
+    } else {
+        statusEl.className = `inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${statusColors[election.status] || 'bg-slate-100 text-slate-500'}`;
+        statusEl.innerHTML = election.status;
+    }
 
     // Publish button
     publishArea.innerHTML = '';
@@ -1387,8 +1392,7 @@ async function renderResults(election) {
             `;
         }
     } else if (election.status === 'open') {
-        // Don't show publish button for open elections
-        publishArea.innerHTML = `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100">Results show live during voting</span>`;
+        publishArea.innerHTML = '';
     } else {
         publishArea.innerHTML = `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">Voting has not started</span>`;
     }
