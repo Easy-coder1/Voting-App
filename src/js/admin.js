@@ -10,7 +10,6 @@ let activeAnalyticsElection = null;
 let votedMembers = [];
 let votedMembersHighlightIds = new Set();
 let membersVotedContext = null;
-let membersVotedFocus = false;
 let liveVoterSnapshot = { electionId: null, voterIds: new Set() };
 let allMembers = [];
 let memberSearchQuery = '';
@@ -250,7 +249,7 @@ const TAB_META = {
     },
 };
 
-function activateAdminTab(tabId, customMeta = null) {
+function activateAdminTab(tabId, customMeta = null, { deferLoad = false } = {}) {
     document.querySelectorAll('.tab-btn').forEach(b => {
         const targetTab = b.getAttribute('data-tab');
         const isMobile = b.closest('aside') === null;
@@ -274,6 +273,8 @@ function activateAdminTab(tabId, customMeta = null) {
         subtitle: '',
     };
     setPageHeader(meta.title, meta.subtitle);
+
+    if (deferLoad) return;
 
     if (tabId === 'analytics') loadAnalytics();
     if (tabId === 'members') loadMembers();
@@ -677,7 +678,7 @@ async function loadMembers() {
     setupMemberSearch();
     renderMembersUI();
 
-    if (activeAnalyticsElection && !membersVotedFocus) {
+    if (activeAnalyticsElection) {
         if (!membersVotedContext || membersVotedContext.isLive) {
             membersVotedContext = {
                 electionId: activeAnalyticsElection.id,
@@ -687,8 +688,7 @@ async function loadMembers() {
         }
     }
 
-    await syncMembersVotedPanel({ notifyNew: false, scrollIntoView: membersVotedFocus });
-    membersVotedFocus = false;
+    await syncMembersVotedPanel({ notifyNew: false });
 }
 
 window.rejectMember = async (id) => {
@@ -1014,13 +1014,18 @@ window.switchToResultsTab = (electionId) => {
 
 window.viewMembersVoted = (electionId, electionTitle, isLive = false) => {
     membersVotedContext = { electionId, title: electionTitle, isLive };
-    membersVotedFocus = true;
+
     activateAdminTab('members', {
         title: 'Members Who Voted',
-        subtitle: isLive
-            ? `Live updates · ${electionTitle}`
-            : `Ballot activity · ${electionTitle}`,
-    });
+        subtitle: isLive ? `Live · ${electionTitle}` : electionTitle,
+    }, { deferLoad: true });
+
+    const section = document.getElementById('members-voted-section');
+    if (section) section.classList.remove('hidden');
+    section?.scrollIntoView({ block: 'start' });
+
+    syncMembersVotedPanel();
+    loadMembers();
 };
 
 // ----------------------
@@ -1538,7 +1543,6 @@ function formatVotedAt(iso) {
 
 function updateStatVotesCard() {
     const card = document.getElementById('stat-votes-card');
-    const hint = document.getElementById('stat-votes-hint');
     if (!card) return;
 
     const isLive = Boolean(activeAnalyticsElection);
@@ -1560,20 +1564,16 @@ function updateStatVotesCard() {
                 viewMembersVoted(activeAnalyticsElection.id, activeAnalyticsElection.title, true);
             }
         };
-        if (hint) hint.textContent = 'Click to view voter list in Members tab';
-        if (hint) hint.className = 'text-[11px] text-emerald-600 font-bold mt-2';
     } else {
         card.removeAttribute('role');
         card.removeAttribute('tabindex');
         card.removeAttribute('aria-label');
         card.onclick = null;
         card.onkeydown = null;
-        if (hint) hint.textContent = 'Live count during open elections only';
-        if (hint) hint.className = 'text-[10px] text-slate-400 font-semibold mt-1';
     }
 }
 
-async function syncMembersVotedPanel({ notifyNew = false, scrollIntoView = false } = {}) {
+async function syncMembersVotedPanel({ notifyNew = false } = {}) {
     const section = document.getElementById('members-voted-section');
     if (!section) return;
 
@@ -1610,10 +1610,6 @@ async function syncMembersVotedPanel({ notifyNew = false, scrollIntoView = false
         if (membersTab?.classList.contains('hidden')) return voters;
 
         renderVotedMembersUI();
-
-        if (scrollIntoView) {
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
 
         setTimeout(() => {
             votedMembersHighlightIds = new Set();
@@ -1710,28 +1706,25 @@ function renderTurnoutCards(container, turnout, election) {
         ${stat('Pending', pendingMembers, 'Awaiting approval', 'bg-amber-50 text-amber-600', clockIcon)}
         ${stat('Approved', data.approved_voters, 'Eligible to vote', 'bg-emerald-50 text-emerald-600', checkIcon)}
         ${stat('Rejected', rejectedMembers, 'Not approved', 'bg-red-50 text-red-600', rejectIcon)}
-        <button type="button" data-voters-card class="bg-white border-2 border-ember-200 rounded-2xl p-4 shadow-soft hover:shadow-card-hover hover:border-ember-400 hover:ring-2 hover:ring-ember-100 active:scale-[0.99] transition-all duration-300 text-left w-full cursor-pointer group">
+        <button type="button" data-voters-card class="bg-white border border-slate-100 rounded-2xl p-4 shadow-soft hover:shadow-card-hover hover:ring-2 hover:ring-ember-100 active:scale-[0.99] transition-all duration-300 text-left w-full cursor-pointer">
             <div class="flex items-center justify-between mb-3">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Members Voted</span>
-                <span class="w-8 h-8 rounded-xl bg-ember-50 text-ember-600 group-hover:bg-ember-100 flex items-center justify-center transition-colors">
+                <span class="w-8 h-8 rounded-xl bg-ember-50 text-ember-600 flex items-center justify-center">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${ballotIcon}"></path></svg>
                 </span>
             </div>
             <span class="text-2xl font-black text-church-900 leading-none">${data.votes_cast}</span>
-            <span class="inline-flex items-center gap-1 mt-2 text-[11px] font-extrabold text-ember-600 group-hover:text-ember-700">
-                View in Members tab
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-            </span>
+            <span class="block mt-1.5 text-[11px] font-semibold text-slate-400">${isLive ? 'Counting live' : 'Unique voters'}</span>
         </button>
-        <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl p-3.5 sm:p-4 shadow-premium flex flex-col items-center justify-between text-center min-h-[148px] overflow-hidden">
+        <div class="bg-gradient-to-br from-church-900 to-church-700 text-white rounded-2xl p-3.5 sm:p-4 shadow-premium flex flex-col items-center text-center overflow-hidden">
             <span class="text-[10px] font-bold uppercase tracking-wide text-white/60 leading-none">Turnout</span>
-            <div class="flex flex-col items-center gap-2 py-1">
-                <div class="relative w-12 h-12 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
+            <div class="flex items-center justify-center gap-2.5 my-2">
+                <div class="relative w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 rounded-full" style="background: conic-gradient(#ee8636 ${turnoutPct}%, rgba(255,255,255,0.18) ${turnoutPct}%);">
                     <div class="absolute inset-[4px] rounded-full bg-church-900 flex items-center justify-center">
                         <span class="text-[10px] font-black leading-none tabular-nums">${turnoutPct}%</span>
                     </div>
                 </div>
-                <span class="text-lg font-black leading-none tabular-nums">${data.votes_cast}/${data.approved_voters}</span>
+                <span class="text-xl font-black leading-none tabular-nums">${data.votes_cast}/${data.approved_voters}</span>
             </div>
             <span class="text-[10px] font-semibold text-white/55 leading-snug px-2">voters participated</span>
         </div>
