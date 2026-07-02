@@ -249,7 +249,12 @@ const TAB_META = {
     },
 };
 
-function activateAdminTab(tabId, customMeta = null, { deferLoad = false } = {}) {
+function scrollAdminContentToTop() {
+    const main = document.querySelector('main');
+    if (main) main.scrollTop = 0;
+}
+
+function activateAdminTab(tabId, customMeta = null, { deferLoad = false, skipScrollToTop = false } = {}) {
     document.querySelectorAll('.tab-btn').forEach(b => {
         const targetTab = b.getAttribute('data-tab');
         const isMobile = b.closest('aside') === null;
@@ -273,6 +278,8 @@ function activateAdminTab(tabId, customMeta = null, { deferLoad = false } = {}) 
         subtitle: '',
     };
     setPageHeader(meta.title, meta.subtitle);
+
+    if (!skipScrollToTop) scrollAdminContentToTop();
 
     if (deferLoad) return;
 
@@ -1018,7 +1025,7 @@ window.viewMembersVoted = (electionId, electionTitle, isLive = false) => {
     activateAdminTab('members', {
         title: 'Members Who Voted',
         subtitle: isLive ? `Live · ${electionTitle}` : electionTitle,
-    }, { deferLoad: true });
+    }, { deferLoad: true, skipScrollToTop: true });
 
     const section = document.getElementById('members-voted-section');
     if (section) section.classList.remove('hidden');
@@ -1346,8 +1353,13 @@ async function renderResults(election) {
         'open': 'bg-emerald-50 text-emerald-700 border-emerald-100',
         'closed': 'bg-slate-100 text-slate-600 border-slate-200'
     };
-    statusEl.className = `inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${statusColors[election.status] || 'bg-slate-100 text-slate-500'}`;
-    statusEl.innerHTML = `${election.status}${election.status === 'open' ? ' <span class="animate-pulse">🔴</span>' : ''}`;
+    if (election.status === 'open') {
+        statusEl.className = 'hidden';
+        statusEl.innerHTML = '';
+    } else {
+        statusEl.className = `inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${statusColors[election.status] || 'bg-slate-100 text-slate-500'}`;
+        statusEl.innerHTML = election.status;
+    }
 
     // Publish button
     publishArea.innerHTML = '';
@@ -1380,8 +1392,7 @@ async function renderResults(election) {
             `;
         }
     } else if (election.status === 'open') {
-        // Don't show publish button for open elections
-        publishArea.innerHTML = `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100">Results show live during voting</span>`;
+        publishArea.innerHTML = '';
     } else {
         publishArea.innerHTML = `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">Voting has not started</span>`;
     }
@@ -1443,12 +1454,12 @@ async function renderResults(election) {
 
             html += `
                 <section class="rounded-3xl border border-slate-100 bg-white shadow-soft overflow-hidden">
-                    <header class="flex items-center justify-between gap-3 px-5 py-4 bg-gradient-to-r from-church-900 to-church-700 text-white">
+                    <header class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-4 bg-gradient-to-r from-church-900 to-church-700 text-white">
                         <div class="flex items-center gap-2.5 min-w-0">
                             <svg class="w-5 h-5 text-church-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-                            <h4 class="text-base sm:text-lg font-extrabold tracking-tight truncate">${escapeHtml(posName)}</h4>
+                            <h4 class="text-base sm:text-lg font-extrabold tracking-tight break-words">${escapeHtml(posName)}</h4>
                         </div>
-                        <span class="flex-shrink-0 text-[11px] font-bold uppercase tracking-wider bg-white/15 border border-white/20 px-3 py-1 rounded-full">${totalInPos} vote${totalInPos !== 1 ? 's' : ''}</span>
+                        <span class="self-start sm:self-auto flex-shrink-0 text-[11px] font-bold uppercase tracking-wider bg-white/15 border border-white/20 px-3 py-1 rounded-full">${totalInPos} vote${totalInPos !== 1 ? 's' : ''}</span>
                     </header>
                     ${isTie ? `<p class="px-5 py-3 text-xs font-bold text-amber-800 bg-amber-50 border-b border-amber-100">Tie: ${tiedNames}</p>` : ''}
                     <div class="p-4 sm:p-5 space-y-3">`;
@@ -1461,27 +1472,31 @@ async function renderResults(election) {
                     : `<span class="w-8 h-8 flex-shrink-0 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-sm font-black">${index + 1}</span>`;
 
                 const avatar = candidatePhotoHtml(photoById[c.candidate_id], c.candidate_name, {
-                    imgClass: 'w-20 h-20 flex-shrink-0 rounded-none object-cover object-[center_20%] border-2 border-white shadow-sm',
-                    fallbackClass: 'w-20 h-20 flex-shrink-0 rounded-none bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm',
+                    imgClass: 'w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-none object-cover object-[center_20%] border-2 border-white shadow-sm',
+                    fallbackClass: 'w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-none bg-gradient-to-tr from-church-700 to-church-500 text-white flex items-center justify-center font-bold text-xs sm:text-sm uppercase shadow-sm',
                 });
 
                 html += `
-                    <div class="relative overflow-hidden rounded-2xl border p-4 transition duration-300 hover:shadow-card-hover ${isWinner ? 'border-gold-300 bg-gold-50/50' : 'border-slate-100 bg-slate-50/60'}">
-                        <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="relative overflow-hidden rounded-2xl border p-3 sm:p-4 transition duration-300 hover:shadow-card-hover ${isWinner ? 'border-gold-300 bg-gold-50/50' : 'border-slate-100 bg-slate-50/60'}">
+                        <div class="flex gap-3 sm:gap-4">
                             ${rankBadge}
                             ${avatar}
                             <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="font-extrabold text-sm sm:text-base ${isWinner ? 'text-church-900' : 'text-slate-700'} truncate">${c.candidate_name}</span>
-                                    ${isWinner ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-gold-100 text-gold-800 uppercase tracking-wider">Leading</span>' : ''}
+                                <div class="flex items-start justify-between gap-2 sm:gap-3">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                            <span class="font-extrabold text-sm sm:text-base ${isWinner ? 'text-church-900' : 'text-slate-700'} break-words leading-snug">${escapeHtml(c.candidate_name)}</span>
+                                            ${isWinner ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-gold-100 text-gold-800 uppercase tracking-wider shrink-0">Leading</span>' : ''}
+                                        </div>
+                                    </div>
+                                    <div class="text-right shrink-0 pl-1">
+                                        <span class="block font-black text-base sm:text-lg leading-none tabular-nums ${isWinner ? 'text-gold-700' : 'text-church-900'}">${c.vote_count}</span>
+                                        <span class="text-[10px] sm:text-[11px] text-slate-400 font-bold tabular-nums">${pct}%</span>
+                                    </div>
                                 </div>
                                 <div class="mt-2 w-full h-2 bg-slate-200/70 rounded-full overflow-hidden">
                                     <div class="h-full rounded-full transition-all duration-700 ${isWinner ? 'bg-gradient-to-r from-gold-500 to-gold-400' : 'bg-gradient-to-r from-church-700 to-church-500'}" style="width: ${pct}%"></div>
                                 </div>
-                            </div>
-                            <div class="text-right flex-shrink-0">
-                                <span class="block font-black text-lg leading-none ${isWinner ? 'text-gold-700' : 'text-church-900'}">${c.vote_count}</span>
-                                <span class="text-[11px] text-slate-400 font-bold">${pct}%</span>
                             </div>
                         </div>
                     </div>`;

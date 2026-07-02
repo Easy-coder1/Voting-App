@@ -402,15 +402,15 @@
                     </div>
                     <div class="p-6 sm:p-8">
                         <!-- Election Selector -->
-                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-                            <div class="flex items-center gap-4 flex-1 w-full sm:w-auto">
-                                <label class="text-xs font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Select Election</label>
-                                <select id="results-election-select" class="premium-input bg-slate-50 flex-1 sm:flex-none sm:min-w-[280px]">
+                        <div class="flex flex-col gap-4 mb-8">
+                            <div class="flex flex-col gap-3 w-full sm:flex-row sm:flex-wrap sm:items-center">
+                                <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Select Election</label>
+                                <select id="results-election-select" class="premium-input bg-slate-50 w-full sm:flex-1 sm:min-w-[200px] sm:max-w-md">
                                     <option value="">Loading elections...</option>
                                 </select>
-                                <span id="results-election-status" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border"></span>
+                                <span id="results-election-status" class="inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border"></span>
                             </div>
-                            <div id="results-publish-area" class="flex items-center gap-2">
+                            <div id="results-publish-area" class="flex flex-wrap items-center gap-2">
                                 <!-- Publish/Unpublish button rendered by JS -->
                             </div>
                         </div>
