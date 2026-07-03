@@ -656,9 +656,14 @@ function renderMembersUI() {
     const rejectedCount = document.getElementById('rejected-count');
 
     const pending = allMembers.filter(m => m.role === 'member' && m.account_status === 'pending' && matchesMemberSearch(m, memberSearchQuery));
-    const approved = allMembers.filter(m =>
-        m.account_status === 'approved' && matchesMemberSearch(m, memberSearchQuery)
-    );
+    const approved = allMembers
+        .filter(m => m.account_status === 'approved' && matchesMemberSearch(m, memberSearchQuery))
+        .sort((a, b) => {
+            const aIsAdmin = a.role === 'admin' ? 0 : 1;
+            const bIsAdmin = b.role === 'admin' ? 0 : 1;
+            if (aIsAdmin !== bIsAdmin) return aIsAdmin - bIsAdmin;
+            return (a.full_name || '').localeCompare(b.full_name || '', undefined, { sensitivity: 'base' });
+        });
     const rejected = allMembers.filter(m => m.role === 'member' && m.account_status === 'rejected' && matchesMemberSearch(m, memberSearchQuery));
 
     if (pendingCount) pendingCount.textContent = String(pending.length);
