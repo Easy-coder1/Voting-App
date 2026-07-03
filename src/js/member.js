@@ -1,6 +1,7 @@
 import { supabase, getCurrentUser, ensureProfile, confirmSignOut } from './supabase.js';
 import { sortPositions, sortPositionEntries, candidatePhotoHtml, fetchCandidatePhotos } from './positionOrder.js';
 import { escapeHtml, showToast, trapFocus } from './ui.js';
+import { fetchValidOpenRunoff } from './runoff.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -132,17 +133,23 @@ async function loadPage() {
 
     const [
         { data: openElections, error: openErr },
-        { data: openRunoffs, error: runoffErr },
         { data: publishedClosed, error: publishedErr },
         { data: upcomingElections, error: upcomingErr },
         { data: closedWaiting, error: closedErr },
     ] = await Promise.all([
         supabase.from('elections').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(1),
-        supabase.from('runoffs').select('*, elections(*)').eq('status', 'open').limit(1),
         supabase.from('elections').select('*').eq('status', 'closed').eq('results_published', true).order('created_at', { ascending: false }).limit(1),
         supabase.from('elections').select('*').eq('status', 'upcoming').order('created_at', { ascending: false }).limit(1),
         supabase.from('elections').select('*').eq('status', 'closed').eq('results_published', false).order('created_at', { ascending: false }).limit(1),
     ]);
+
+    let validRunoff = null;
+    let runoffErr = null;
+    try {
+        validRunoff = await fetchValidOpenRunoff(supabase);
+    } catch (err) {
+        runoffErr = err;
+    }
 
     if (openErr) {
         renderEligibility();
@@ -172,9 +179,9 @@ async function loadPage() {
         return;
     }
 
-    if (openRunoffs?.length) {
-        activeRunoff = openRunoffs[0];
-        activeElection = openRunoffs[0].elections;
+    if (validRunoff) {
+        activeRunoff = validRunoff.runoff;
+        activeElection = validRunoff.election;
         await loadRunoffBallot();
         return;
     }

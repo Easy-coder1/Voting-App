@@ -1404,12 +1404,12 @@ async function buildRunoffBanner(election) {
     const tiedPositions = new Set((ties || []).map(t => t.position_id));
     const tiedCount = tiedPositions.size;
 
-    if (runoff?.status === 'open') {
+    if (runoff?.status === 'open' && tiedCount > 0) {
         return `
             <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <p class="text-sm font-bold text-blue-900">Runoff voting is open</p>
-                    <p class="text-xs font-semibold text-blue-700 mt-1">Members are voting again on ${tiedCount} tied position${tiedCount !== 1 ? 's' : ''}.</p>
+                    <p class="text-xs font-semibold text-blue-700 mt-1">Members are voting again on ${tiedCount} tied position${tiedCount !== 1 ? 's' : ''} only.</p>
                 </div>
                 <button onclick="window.closeRunoff('${runoff.id}')" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-full text-xs font-bold transition active:scale-95 shrink-0">
                     Close runoff
