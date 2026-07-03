@@ -375,9 +375,9 @@ async function loadAnalytics() {
         { count: approved },
         { count: rejected },
     ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['member', 'admin']),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').in('role', ['member', 'admin']),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).or('role.eq.admin,and(account_status.eq.approved,voting_rights.eq.true)'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'rejected').eq('role', 'member'),
     ]);
 
@@ -482,6 +482,16 @@ function getMemberInitials(name) {
         .join('')
         .substring(0, 2)
         .toUpperCase();
+}
+
+function sortAdminsFirst(items, compareWithinGroup = (a, b) =>
+    (a.full_name || '').localeCompare(b.full_name || '', undefined, { sensitivity: 'base' })) {
+    return [...items].sort((a, b) => {
+        const aIsAdmin = a.role === 'admin' ? 0 : 1;
+        const bIsAdmin = b.role === 'admin' ? 0 : 1;
+        if (aIsAdmin !== bIsAdmin) return aIsAdmin - bIsAdmin;
+        return compareWithinGroup(a, b);
+    });
 }
 
 function matchesMemberSearch(member, query) {
@@ -656,14 +666,9 @@ function renderMembersUI() {
     const rejectedCount = document.getElementById('rejected-count');
 
     const pending = allMembers.filter(m => m.role === 'member' && m.account_status === 'pending' && matchesMemberSearch(m, memberSearchQuery));
-    const approved = allMembers
-        .filter(m => m.account_status === 'approved' && matchesMemberSearch(m, memberSearchQuery))
-        .sort((a, b) => {
-            const aIsAdmin = a.role === 'admin' ? 0 : 1;
-            const bIsAdmin = b.role === 'admin' ? 0 : 1;
-            if (aIsAdmin !== bIsAdmin) return aIsAdmin - bIsAdmin;
-            return (a.full_name || '').localeCompare(b.full_name || '', undefined, { sensitivity: 'base' });
-        });
+    const approved = sortAdminsFirst(
+        allMembers.filter(m => (m.role === 'admin' || m.account_status === 'approved') && matchesMemberSearch(m, memberSearchQuery))
+    );
     const rejected = allMembers.filter(m => m.role === 'member' && m.account_status === 'rejected' && matchesMemberSearch(m, memberSearchQuery));
 
     if (pendingCount) pendingCount.textContent = String(pending.length);
@@ -708,6 +713,7 @@ function matchesVoterSearch(voter, query) {
 
 function renderVotedMemberRow(voter) {
     const initials = getMemberInitials(voter.full_name);
+    const isAdmin = voter.role === 'admin';
     const div = document.createElement('div');
     div.className = 'member-row';
     if (votedMembersHighlightIds.has(voter.id)) {
@@ -718,8 +724,8 @@ function renderVotedMemberRow(voter) {
         <div class="member-row-info">
             <div class="member-row-avatar member-row-avatar--voted">${initials}</div>
             <div class="member-row-text">
-                <h4>${voter.full_name}</h4>
-                <p>${voter.email}</p>
+                <h4>${escapeHtml(voter.full_name || 'Member')}${isAdmin ? ' <span class="text-[10px] font-bold uppercase tracking-wider text-church-600">Admin</span>' : ''}</h4>
+                <p>${escapeHtml(voter.email || '')}</p>
             </div>
         </div>
         <div class="member-row-actions">
@@ -765,7 +771,10 @@ function renderVotedMembersUI() {
 
     section.classList.remove('hidden');
 
-    const filtered = votedMembers.filter(v => matchesVoterSearch(v, memberSearchQuery));
+    const filtered = sortAdminsFirst(
+        votedMembers.filter(v => matchesVoterSearch(v, memberSearchQuery)),
+        (a, b) => new Date(a.voted_at) - new Date(b.voted_at)
+    );
     if (countEl) countEl.textContent = String(filtered.length);
     if (subtitleEl) {
         const title = membersVotedContext.title || 'Current election';
@@ -1847,7 +1856,7 @@ async function fetchVotersForElection(electionId) {
     if (voterIds.length) {
         const { data: profiles, error: profileErr } = await supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, full_name, email, role')
             .in('id', voterIds);
 
         if (profileErr) throw profileErr;
@@ -1865,12 +1874,14 @@ async function fetchVotersForElection(electionId) {
                 id: row.voter_id,
                 full_name: profile?.full_name || 'Unknown member',
                 email: profile?.email || '',
+                role: profile?.role || 'member',
                 voted_at: row.created_at,
             });
         }
     }
 
-    return Array.from(byVoter.values()).sort(
+    return sortAdminsFirst(
+        Array.from(byVoter.values()),
         (a, b) => new Date(a.voted_at) - new Date(b.voted_at)
     );
 }
