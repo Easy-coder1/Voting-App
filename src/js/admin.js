@@ -331,40 +331,6 @@ function setupElectionChecklist() {
 // ----------------------
 // ANALYTICS
 // ----------------------
-async function resolveAnalyticsElection() {
-    if (selectedResultsElection) return selectedResultsElection;
-
-    const { data: openElections, error: openErr } = await supabase
-        .from('elections')
-        .select('id, title, end_date, status')
-        .eq('status', 'open')
-        .order('end_date', { ascending: false })
-        .limit(1);
-
-    if (openErr) throw openErr;
-    if (openElections?.length) return openElections[0];
-
-    const { data: closedElections, error: closedErr } = await supabase
-        .from('elections')
-        .select('id, title, end_date, status')
-        .eq('status', 'closed')
-        .order('end_date', { ascending: false });
-
-    if (closedErr) throw closedErr;
-    if (!closedElections?.length) return null;
-
-    const electionIds = closedElections.map(e => e.id);
-    const { data: voteRows, error: voteErr } = await supabase
-        .from('votes')
-        .select('election_id')
-        .in('election_id', electionIds);
-
-    if (voteErr) throw voteErr;
-
-    const electionsWithVotes = new Set((voteRows || []).map(r => r.election_id));
-    return closedElections.find(e => electionsWithVotes.has(e.id)) || null;
-}
-
 async function countUniqueVoters(electionId) {
     const { data: voteRows, error } = await supabase
         .from('votes')
@@ -377,13 +343,7 @@ async function countUniqueVoters(electionId) {
 
 async function refreshAnalyticsElectionStats() {
     let votersWhoVoted = 0;
-
-    try {
-        activeAnalyticsElection = await resolveAnalyticsElection();
-    } catch (err) {
-        console.warn('Could not resolve analytics election:', err);
-        activeAnalyticsElection = null;
-    }
+    activeAnalyticsElection = selectedResultsElection || null;
 
     if (activeAnalyticsElection) {
         try {
@@ -397,7 +357,7 @@ async function refreshAnalyticsElectionStats() {
             title: activeAnalyticsElection.title,
             isLive: activeAnalyticsElection.status === 'open',
         };
-    } else if (!selectedResultsElection) {
+    } else {
         membersVotedContext = null;
     }
 
@@ -437,14 +397,13 @@ function renderAnalyticsElectionStatus() {
 
     if (activeAnalyticsElection) {
         const isOpen = activeAnalyticsElection.status === 'open';
-        const followingSelected = Boolean(selectedResultsElection);
         statusContainer.innerHTML = `
             <div class="space-y-4">
                 <div class="flex items-center space-x-2.5">
                     <span class="w-3 h-3 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
                     <span class="font-extrabold text-base text-slate-800">${isOpen ? 'Active' : 'Selected'}: ${escapeHtml(activeAnalyticsElection.title)}</span>
                 </div>
-                ${followingSelected ? '<p class="text-[11px] font-semibold text-church-600">Matches your Results tab selection</p>' : ''}
+                <p class="text-[11px] font-semibold text-church-600">Matches your Results tab selection</p>
                 <div class="flex justify-between border-t border-slate-200/50 pt-4 text-xs font-semibold text-slate-400">
                     <span>${isOpen ? 'Closing Date' : 'Ended'}</span>
                     <span class="text-slate-700 font-bold">${new Date(activeAnalyticsElection.end_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
@@ -842,13 +801,7 @@ async function loadMembers() {
     setupMemberStatusFilter();
     renderMembersUI();
 
-    if (activeAnalyticsElection) {
-        membersVotedContext = {
-            electionId: activeAnalyticsElection.id,
-            title: activeAnalyticsElection.title,
-            isLive: activeAnalyticsElection.status === 'open',
-        };
-    } else if (selectedResultsElection) {
+    if (selectedResultsElection) {
         membersVotedContext = {
             electionId: selectedResultsElection.id,
             title: selectedResultsElection.title,
@@ -1763,19 +1716,6 @@ function updateStatVotesCard() {
     card.classList.toggle('active:scale-[0.99]', hasElection);
     card.classList.toggle('border-2', hasElection);
     card.classList.toggle('border-emerald-200', hasElection);
-
-    const subtitle = document.getElementById('stat-votes-election');
-    if (subtitle) {
-        if (hasElection) {
-            subtitle.textContent = selectedResultsElection
-                ? `Results selection · ${activeAnalyticsElection.title}`
-                : activeAnalyticsElection.title;
-            subtitle.classList.remove('hidden');
-        } else {
-            subtitle.textContent = '';
-            subtitle.classList.add('hidden');
-        }
-    }
 
     if (hasElection) {
         card.setAttribute('role', 'button');
