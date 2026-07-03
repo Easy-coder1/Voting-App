@@ -219,7 +219,7 @@ async function loadPage() {
 async function loadRunoffBallot() {
     const [{ data: rcData, error: rcErr }, { data: canData, error: canErr }] = await Promise.all([
         supabase.from('runoff_candidates').select('position_id, candidate_id').eq('runoff_id', activeRunoff.id),
-        supabase.from('candidates').select('*'),
+        supabase.from('candidates').select('*').eq('election_id', activeElection.id),
     ]);
 
     if (rcErr || canErr || !rcData?.length) {
@@ -285,7 +285,7 @@ async function loadUserRunoffVotes() {
 async function loadElectionBallot() {
     const [{ data: posData, error: posErr }, { data: canData, error: canErr }] = await Promise.all([
         supabase.from('positions').select('*'),
-        supabase.from('candidates').select('*'),
+        supabase.from('candidates').select('*').eq('election_id', activeElection.id),
     ]);
 
     if (posErr || canErr) {
@@ -725,7 +725,7 @@ async function renderResults() {
 
     const [{ data: results, error }, photoById] = await Promise.all([
         supabase.rpc('get_election_results', { election_id: activeElection.id }),
-        fetchCandidatePhotos(supabase),
+        fetchCandidatePhotos(supabase, activeElection.id),
     ]);
 
     if (error) {

@@ -35,10 +35,12 @@ export function candidatePhotoHtml(photoUrl, name, { imgClass, fallbackClass } =
     return `<span class="${fallbackClass}">${initials}</span>`;
 }
 
-export async function fetchCandidatePhotos(supabase) {
-    const { data } = await supabase
-        .from('candidates')
-        .select('id, photo_url');
+export async function fetchCandidatePhotos(supabase, electionId = null) {
+    let query = supabase.from('candidates').select('id, photo_url');
+    if (electionId) {
+        query = query.eq('election_id', electionId);
+    }
+    const { data } = await query;
 
     return Object.fromEntries((data || []).map(c => [c.id, c.photo_url]));
 }
