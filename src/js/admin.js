@@ -1525,8 +1525,8 @@ async function renderResults(election) {
         'closed': 'bg-slate-100 text-slate-600 border-slate-200'
     };
     if (election.status === 'open') {
-        statusEl.className = 'inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-700 border-emerald-100';
-        statusEl.innerHTML = 'Open';
+        statusEl.className = 'hidden';
+        statusEl.innerHTML = '';
     } else {
         statusEl.className = `inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${statusColors[election.status] || 'bg-slate-100 text-slate-500'}`;
         statusEl.innerHTML = election.status;
