@@ -331,30 +331,84 @@ function setupElectionChecklist() {
 // ----------------------
 // ANALYTICS
 // ----------------------
+async function resolveAnalyticsElection() {
+    const { data: openElections, error: openErr } = await supabase
+        .from('elections')
+        .select('id, title, end_date, status')
+        .eq('status', 'open')
+        .order('end_date', { ascending: false })
+        .limit(1);
+
+    if (openErr) throw openErr;
+    if (openElections?.length) return openElections[0];
+
+    const { data: closedElections, error: closedErr } = await supabase
+        .from('elections')
+        .select('id, title, end_date, status')
+        .eq('status', 'closed')
+        .order('end_date', { ascending: false });
+
+    if (closedErr) throw closedErr;
+    if (!closedElections?.length) return null;
+
+    const electionIds = closedElections.map(e => e.id);
+    const { data: voteRows, error: voteErr } = await supabase
+        .from('votes')
+        .select('election_id')
+        .in('election_id', electionIds);
+
+    if (voteErr) throw voteErr;
+
+    const electionsWithVotes = new Set((voteRows || []).map(r => r.election_id));
+    return closedElections.find(e => electionsWithVotes.has(e.id)) || null;
+}
+
+async function countUniqueVoters(electionId) {
+    const { data: voteRows, error } = await supabase
+        .from('votes')
+        .select('voter_id')
+        .eq('election_id', electionId);
+
+    if (error) throw error;
+    return new Set((voteRows || []).map(r => r.voter_id).filter(Boolean)).size;
+}
+
 async function loadAnalytics() {
     const [
         { count: totalMembers },
         { count: pending },
         { count: approved },
         { count: rejected },
-        { data: openElections },
     ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').in('role', ['member', 'admin']),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'rejected').eq('role', 'member'),
-        supabase.from('elections').select('id, title, end_date').eq('status', 'open').limit(1),
     ]);
 
     let votersWhoVoted = 0;
-    activeAnalyticsElection = openElections?.[0] || null;
+
+    try {
+        activeAnalyticsElection = await resolveAnalyticsElection();
+    } catch (err) {
+        console.warn('Could not resolve analytics election:', err);
+        activeAnalyticsElection = null;
+    }
 
     if (activeAnalyticsElection) {
-        const { data: voteRows } = await supabase
-            .from('votes')
-            .select('voter_id')
-            .eq('election_id', activeAnalyticsElection.id);
-        votersWhoVoted = new Set((voteRows || []).map(r => r.voter_id).filter(Boolean)).size;
+        try {
+            votersWhoVoted = await countUniqueVoters(activeAnalyticsElection.id);
+        } catch (err) {
+            console.warn('Could not count voters:', err);
+        }
+
+        membersVotedContext = {
+            electionId: activeAnalyticsElection.id,
+            title: activeAnalyticsElection.title,
+            isLive: activeAnalyticsElection.status === 'open',
+        };
+    } else if (membersVotedContext?.isLive) {
+        membersVotedContext = null;
     }
 
     document.getElementById('stat-total-members').textContent = totalMembers || 0;
@@ -364,35 +418,24 @@ async function loadAnalytics() {
     document.getElementById('stat-votes').textContent = votersWhoVoted;
     updateStatVotesCard();
 
-    if (activeAnalyticsElection) {
-        if (!membersVotedContext || membersVotedContext.isLive) {
-            membersVotedContext = {
-                electionId: activeAnalyticsElection.id,
-                title: activeAnalyticsElection.title,
-                isLive: true,
-            };
-        }
-    } else if (membersVotedContext?.isLive) {
-        membersVotedContext = null;
-    }
-
     renderMemberStatusChart(pending || 0, approved || 0, rejected || 0);
 
     const statusContainer = document.getElementById('live-election-status');
     if (statusContainer) {
         if (activeAnalyticsElection) {
+            const isOpen = activeAnalyticsElection.status === 'open';
             statusContainer.innerHTML = `
                 <div class="space-y-4">
                     <div class="flex items-center space-x-2.5">
-                        <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span class="font-extrabold text-base text-slate-800">Active: ${activeAnalyticsElection.title}</span>
+                        <span class="w-3 h-3 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
+                        <span class="font-extrabold text-base text-slate-800">${isOpen ? 'Active' : 'Latest'}: ${escapeHtml(activeAnalyticsElection.title)}</span>
                     </div>
                     <div class="flex justify-between border-t border-slate-200/50 pt-4 text-xs font-semibold text-slate-400">
-                        <span>Closing Date</span>
+                        <span>${isOpen ? 'Closing Date' : 'Ended'}</span>
                         <span class="text-slate-700 font-bold">${new Date(activeAnalyticsElection.end_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                     </div>
                     <button onclick="window.switchToResultsTab('${activeAnalyticsElection.id}')" class="mt-3 w-full bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
-                        View Live Results →
+                        ${isOpen ? 'View Live Results →' : 'View Results →'}
                     </button>
                 </div>
             `;
@@ -786,13 +829,11 @@ async function loadMembers() {
     renderMembersUI();
 
     if (activeAnalyticsElection) {
-        if (!membersVotedContext || membersVotedContext.isLive) {
-            membersVotedContext = {
-                electionId: activeAnalyticsElection.id,
-                title: activeAnalyticsElection.title,
-                isLive: true,
-            };
-        }
+        membersVotedContext = {
+            electionId: activeAnalyticsElection.id,
+            title: activeAnalyticsElection.title,
+            isLive: activeAnalyticsElection.status === 'open',
+        };
     }
 
     await syncMembersVotedPanel({ notifyNew: false });
@@ -1118,7 +1159,7 @@ window.switchToResultsTab = (electionId) => {
     window.viewElectionResults(electionId);
 };
 
-window.viewMembersVoted = (electionId, electionTitle, isLive = false) => {
+window.viewMembersVoted = async (electionId, electionTitle, isLive = false) => {
     membersVotedContext = { electionId, title: electionTitle, isLive };
     setMemberStatusFilter('voted');
 
@@ -1133,8 +1174,8 @@ window.viewMembersVoted = (electionId, electionTitle, isLive = false) => {
         section.scrollIntoView({ block: 'start' });
     }
 
-    syncMembersVotedPanel();
-    loadMembers();
+    await syncMembersVotedPanel();
+    await loadMembers();
 };
 
 // ----------------------
@@ -1766,15 +1807,30 @@ async function refreshAllLiveVoterViews(options = {}) {
 async function fetchVotersForElection(electionId) {
     const { data, error } = await supabase
         .from('votes')
-        .select('voter_id, created_at, profiles:voter_id(full_name, email)')
+        .select('voter_id, created_at')
         .eq('election_id', electionId)
         .order('created_at', { ascending: true });
 
     if (error) throw error;
 
+    const voterIds = [...new Set((data || []).map(r => r.voter_id).filter(Boolean))];
+    const profileMap = new Map();
+
+    if (voterIds.length) {
+        const { data: profiles, error: profileErr } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', voterIds);
+
+        if (profileErr) throw profileErr;
+        for (const profile of profiles || []) {
+            profileMap.set(profile.id, profile);
+        }
+    }
+
     const byVoter = new Map();
     for (const row of data || []) {
-        const profile = row.profiles;
+        const profile = profileMap.get(row.voter_id);
         const existing = byVoter.get(row.voter_id);
         if (!existing || new Date(row.created_at) < new Date(existing.voted_at)) {
             byVoter.set(row.voter_id, {
