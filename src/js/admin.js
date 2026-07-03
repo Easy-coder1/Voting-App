@@ -861,6 +861,20 @@ function setupForms() {
         const start = document.getElementById('el-start').value;
         const end = document.getElementById('el-end').value;
 
+        const { count: candidateCount, error: candidateErr } = await supabase
+            .from('candidates')
+            .select('*', { count: 'exact', head: true })
+            .is('election_id', null);
+
+        if (candidateErr) {
+            showToast('error', 'Could not verify candidates: ' + candidateErr.message);
+            return;
+        }
+        if (!candidateCount) {
+            showToast('error', 'Add candidates on the Candidates tab before creating an election.');
+            return;
+        }
+
         const { data: created, error } = await supabase
             .from('elections')
             .insert([{ title, start_date: start, end_date: end, status: 'upcoming' }])
@@ -1094,6 +1108,11 @@ window.updateElectionStatus = async (id, status) => {
         showToast('success', status === 'open' ? 'Election is now open for voting.' : status === 'closed' ? 'Election closed.' : 'Election marked as upcoming.');
         loadElections();
         loadAnalytics();
+        if (status === 'open') {
+            loadResultsTab(id);
+        } else if (!document.getElementById('tab-results').classList.contains('hidden')) {
+            loadResultsTab(selectedResultsElection?.id);
+        }
     } catch (err) {
         showToast('error', 'Exception updating election status: ' + err.message);
     }
@@ -1359,20 +1378,33 @@ async function loadResultsTab(preSelectedId = null) {
     const selector = document.getElementById('results-election-select');
     if (!selector) return;
 
+    const statusOrder = { open: 0, upcoming: 1, closed: 2 };
+    const sortedElections = [...(elections || [])].sort((a, b) => {
+        const byStatus = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
+        if (byStatus !== 0) return byStatus;
+        return new Date(b.created_at) - new Date(a.created_at);
+    });
+
     const keepId = preSelectedId || selectedResultsElection?.id || null;
 
     selector.innerHTML = '<option value="">— Choose an election —</option>';
-    if (!elections) return;
+    if (!sortedElections.length) return;
 
-    elections.forEach(el => {
-        const label = `${el.title} (${el.status}${el.results_published ? ', Published' : ''})`;
+    sortedElections.forEach(el => {
+        const statusLabel = el.status === 'open'
+            ? 'Open'
+            : el.status === 'upcoming'
+                ? 'Upcoming'
+                : 'Closed';
+        const publishedLabel = el.results_published ? ', Published' : '';
+        const label = `${el.title} (${statusLabel}${publishedLabel})`;
         const opt = document.createElement('option');
         opt.value = el.id;
         opt.textContent = label;
         selector.appendChild(opt);
     });
 
-    const selectId = keepId && elections.some(e => e.id === keepId) ? keepId : null;
+    const selectId = keepId && sortedElections.some(e => e.id === keepId) ? keepId : null;
     if (!selectId) {
         if (selectedResultsElection || keepId) clearResultsSelection();
         else selector.value = '';
@@ -1493,8 +1525,8 @@ async function renderResults(election) {
         'closed': 'bg-slate-100 text-slate-600 border-slate-200'
     };
     if (election.status === 'open') {
-        statusEl.className = 'hidden';
-        statusEl.innerHTML = '';
+        statusEl.className = 'inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-700 border-emerald-100';
+        statusEl.innerHTML = 'Open';
     } else {
         statusEl.className = `inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${statusColors[election.status] || 'bg-slate-100 text-slate-500'}`;
         statusEl.innerHTML = election.status;
