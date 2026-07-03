@@ -1518,19 +1518,9 @@ async function renderResults(election) {
     const statusEl = document.getElementById('results-election-status');
     const publishArea = document.getElementById('results-publish-area');
 
-    // Update status pill
-    const statusColors = {
-        'upcoming': 'bg-blue-50 text-blue-700 border-blue-100',
-        'open': 'bg-emerald-50 text-emerald-700 border-emerald-100',
-        'closed': 'bg-slate-100 text-slate-600 border-slate-200'
-    };
-    if (election.status === 'open') {
-        statusEl.className = 'hidden';
-        statusEl.innerHTML = '';
-    } else {
-        statusEl.className = `inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${statusColors[election.status] || 'bg-slate-100 text-slate-500'}`;
-        statusEl.innerHTML = election.status;
-    }
+    // Status is shown in the dropdown label; keep the pill hidden.
+    statusEl.className = 'hidden';
+    statusEl.innerHTML = '';
 
     // Publish button
     publishArea.innerHTML = '';
