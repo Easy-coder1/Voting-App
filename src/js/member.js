@@ -16,16 +16,27 @@ let hasSubmitted = false;
 let confirmFocusCleanup = null;
 
 async function pickMemberElection({ status, resultsPublished = null }) {
+    if (resultsPublished === true) {
+        const { data: elections, error } = await supabase
+            .from('elections')
+            .select('*')
+            .eq('status', status)
+            .eq('results_published', true)
+            .order('end_date', { ascending: false })
+            .limit(1);
+        if (error) throw error;
+        return elections?.[0] || null;
+    }
+
     let query = supabase
         .from('elections')
         .select('*')
         .eq('status', status)
         .order('end_date', { ascending: false });
 
-    if (resultsPublished === true) {
-        query = query.eq('results_published', true).limit(1);
+    if (resultsPublished === false) {
+        query = query.eq('results_published', false).limit(10);
     }
-    if (resultsPublished === false) query = query.eq('results_published', false);
 
     const { data: elections, error } = await query;
     if (error) throw error;
@@ -190,29 +201,6 @@ async function loadPage() {
         .order('end_date', { ascending: false })
         .limit(1);
 
-    let publishedElection = null;
-    let closedWaitingElection = null;
-    let upcomingElection = null;
-    let secondaryErr = null;
-
-    try {
-        [publishedElection, closedWaitingElection, upcomingElection] = await Promise.all([
-            pickMemberElection({ status: 'closed', resultsPublished: true }),
-            pickMemberElection({ status: 'closed', resultsPublished: false }),
-            pickUpcomingElection(),
-        ]);
-    } catch (err) {
-        secondaryErr = err;
-    }
-
-    let validRunoff = null;
-    let runoffErr = null;
-    try {
-        validRunoff = await fetchValidOpenRunoff(supabase);
-    } catch (err) {
-        runoffErr = err;
-    }
-
     if (openErr) {
         renderEligibility();
         renderStatusPage({
@@ -230,22 +218,21 @@ async function loadPage() {
         return;
     }
 
-    if (runoffErr) {
-        renderEligibility();
-        renderStatusPage({
-            icon: '⚠',
-            title: 'Could not load runoff',
-            message: 'Please check your connection and refresh.',
-            tone: 'info',
-        });
-        return;
-    }
+    let validRunoff = null;
+    let publishedElection = null;
+    let closedWaitingElection = null;
+    let upcomingElection = null;
+    let secondaryErr = null;
 
-    if (validRunoff) {
-        activeRunoff = validRunoff.runoff;
-        activeElection = validRunoff.election;
-        await loadRunoffBallot();
-        return;
+    try {
+        [validRunoff, publishedElection, closedWaitingElection, upcomingElection] = await Promise.all([
+            fetchValidOpenRunoff(supabase),
+            pickMemberElection({ status: 'closed', resultsPublished: true }),
+            pickMemberElection({ status: 'closed', resultsPublished: false }),
+            pickUpcomingElection(),
+        ]);
+    } catch (err) {
+        secondaryErr = err;
     }
 
     if (secondaryErr) {
@@ -256,6 +243,13 @@ async function loadPage() {
             message: 'Please refresh the page and try again.',
             tone: 'info',
         });
+        return;
+    }
+
+    if (validRunoff) {
+        activeRunoff = validRunoff.runoff;
+        activeElection = validRunoff.election;
+        await loadRunoffBallot();
         return;
     }
 
@@ -365,12 +359,19 @@ async function loadUserRunoffVotes() {
 }
 
 async function loadElectionBallot() {
-    const [{ data: posData, error: posErr }, { data: canData, error: canErr }] = await Promise.all([
-        supabase.from('positions').select('*'),
-        supabase.from('candidates').select('*').eq('election_id', activeElection.id),
-    ]);
+    if (activeElection.status === 'closed' && activeElection.results_published) {
+        await loadUserVotesForPublished();
+        renderEligibility();
+        await renderResults();
+        return;
+    }
 
-    if (posErr || canErr) {
+    const { data: canData, error: canErr } = await supabase
+        .from('candidates')
+        .select('*')
+        .eq('election_id', activeElection.id);
+
+    if (canErr) {
         renderEligibility();
         renderStatusPage({
             icon: '⚠',
@@ -382,8 +383,29 @@ async function loadElectionBallot() {
     }
 
     candidates = canData || [];
-    const activePositionIds = new Set(candidates.map(c => c.position_id));
-    positions = sortPositions((posData || []).filter(p => activePositionIds.has(p.id)));
+    const positionIds = [...new Set(candidates.map(c => c.position_id).filter(Boolean))];
+
+    let posData = [];
+    if (positionIds.length) {
+        const { data, error: posErr } = await supabase
+            .from('positions')
+            .select('*')
+            .in('id', positionIds);
+
+        if (posErr) {
+            renderEligibility();
+            renderStatusPage({
+                icon: '⚠',
+                title: 'Could not load ballot',
+                message: 'Please refresh the page. If this keeps happening, contact the election committee.',
+                tone: 'info',
+            });
+            return;
+        }
+        posData = data || [];
+    }
+
+    positions = sortPositions(posData);
 
     await loadUserVotes();
     renderEligibility();
@@ -424,12 +446,6 @@ async function loadElectionBallot() {
         return;
     }
 
-    if (activeElection.results_published) {
-        renderEligibility();
-        await renderResults();
-        return;
-    }
-
     renderEligibility();
     renderStatusPage({
         icon: '⏳',
@@ -453,6 +469,31 @@ async function loadUserVotes() {
         ballotSelections[v.position_id] = v.candidate_id;
     });
     hasSubmitted = positions.length > 0 && userVotes.length >= positions.length;
+}
+
+async function loadUserVotesForPublished() {
+    if (!activeElection) return;
+
+    const [{ data: voteRows }, { data: candidateRows }] = await Promise.all([
+        supabase
+            .from('votes')
+            .select('position_id, candidate_id')
+            .eq('voter_id', currentUser.id)
+            .eq('election_id', activeElection.id),
+        supabase
+            .from('candidates')
+            .select('position_id')
+            .eq('election_id', activeElection.id),
+    ]);
+
+    userVotes = (voteRows || []).map(v => v.position_id);
+    ballotSelections = {};
+    (voteRows || []).forEach(v => {
+        ballotSelections[v.position_id] = v.candidate_id;
+    });
+
+    const ballotPositions = new Set((candidateRows || []).map(c => c.position_id).filter(Boolean)).size;
+    hasSubmitted = ballotPositions > 0 && userVotes.length >= ballotPositions;
 }
 
 function renderEligibility() {
