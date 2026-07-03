@@ -332,6 +332,8 @@ function setupElectionChecklist() {
 // ANALYTICS
 // ----------------------
 async function resolveAnalyticsElection() {
+    if (selectedResultsElection) return selectedResultsElection;
+
     const { data: openElections, error: openErr } = await supabase
         .from('elections')
         .select('id, title, end_date, status')
@@ -373,19 +375,7 @@ async function countUniqueVoters(electionId) {
     return new Set((voteRows || []).map(r => r.voter_id).filter(Boolean)).size;
 }
 
-async function loadAnalytics() {
-    const [
-        { count: totalMembers },
-        { count: pending },
-        { count: approved },
-        { count: rejected },
-    ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').in('role', ['member', 'admin']),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'rejected').eq('role', 'member'),
-    ]);
-
+async function refreshAnalyticsElectionStats() {
     let votersWhoVoted = 0;
 
     try {
@@ -407,46 +397,70 @@ async function loadAnalytics() {
             title: activeAnalyticsElection.title,
             isLive: activeAnalyticsElection.status === 'open',
         };
-    } else if (membersVotedContext?.isLive) {
+    } else if (!selectedResultsElection) {
         membersVotedContext = null;
     }
+
+    const statVotes = document.getElementById('stat-votes');
+    if (statVotes) statVotes.textContent = votersWhoVoted;
+
+    updateStatVotesCard();
+    renderAnalyticsElectionStatus();
+}
+
+async function loadAnalytics() {
+    const [
+        { count: totalMembers },
+        { count: pending },
+        { count: approved },
+        { count: rejected },
+    ] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').in('role', ['member', 'admin']),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'rejected').eq('role', 'member'),
+    ]);
 
     document.getElementById('stat-total-members').textContent = totalMembers || 0;
     document.getElementById('stat-pending').textContent = pending || 0;
     document.getElementById('stat-approved').textContent = approved || 0;
     document.getElementById('stat-rejected').textContent = rejected || 0;
-    document.getElementById('stat-votes').textContent = votersWhoVoted;
-    updateStatVotesCard();
+
+    await refreshAnalyticsElectionStats();
 
     renderMemberStatusChart(pending || 0, approved || 0, rejected || 0);
+}
 
+function renderAnalyticsElectionStatus() {
     const statusContainer = document.getElementById('live-election-status');
-    if (statusContainer) {
-        if (activeAnalyticsElection) {
-            const isOpen = activeAnalyticsElection.status === 'open';
-            statusContainer.innerHTML = `
-                <div class="space-y-4">
-                    <div class="flex items-center space-x-2.5">
-                        <span class="w-3 h-3 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
-                        <span class="font-extrabold text-base text-slate-800">${isOpen ? 'Active' : 'Latest'}: ${escapeHtml(activeAnalyticsElection.title)}</span>
-                    </div>
-                    <div class="flex justify-between border-t border-slate-200/50 pt-4 text-xs font-semibold text-slate-400">
-                        <span>${isOpen ? 'Closing Date' : 'Ended'}</span>
-                        <span class="text-slate-700 font-bold">${new Date(activeAnalyticsElection.end_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                    </div>
-                    <button onclick="window.switchToResultsTab('${activeAnalyticsElection.id}')" class="mt-3 w-full bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
-                        ${isOpen ? 'View Live Results →' : 'View Results →'}
-                    </button>
+    if (!statusContainer) return;
+
+    if (activeAnalyticsElection) {
+        const isOpen = activeAnalyticsElection.status === 'open';
+        const followingSelected = Boolean(selectedResultsElection);
+        statusContainer.innerHTML = `
+            <div class="space-y-4">
+                <div class="flex items-center space-x-2.5">
+                    <span class="w-3 h-3 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
+                    <span class="font-extrabold text-base text-slate-800">${isOpen ? 'Active' : 'Selected'}: ${escapeHtml(activeAnalyticsElection.title)}</span>
                 </div>
-            `;
-        } else {
-            statusContainer.innerHTML = `
-                <div class="flex items-center space-x-2.5 text-slate-400 font-semibold py-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
-                    <span>No active elections running</span>
+                ${followingSelected ? '<p class="text-[11px] font-semibold text-church-600">Matches your Results tab selection</p>' : ''}
+                <div class="flex justify-between border-t border-slate-200/50 pt-4 text-xs font-semibold text-slate-400">
+                    <span>${isOpen ? 'Closing Date' : 'Ended'}</span>
+                    <span class="text-slate-700 font-bold">${new Date(activeAnalyticsElection.end_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                 </div>
-            `;
-        }
+                <button onclick="window.switchToResultsTab('${activeAnalyticsElection.id}')" class="mt-3 w-full bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
+                    ${isOpen ? 'View Live Results →' : 'View Results →'}
+                </button>
+            </div>
+        `;
+    } else {
+        statusContainer.innerHTML = `
+            <div class="flex items-center space-x-2.5 text-slate-400 font-semibold py-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+                <span>No election selected — choose one on the Results tab</span>
+            </div>
+        `;
     }
 }
 
@@ -834,6 +848,12 @@ async function loadMembers() {
             title: activeAnalyticsElection.title,
             isLive: activeAnalyticsElection.status === 'open',
         };
+    } else if (selectedResultsElection) {
+        membersVotedContext = {
+            electionId: selectedResultsElection.id,
+            title: selectedResultsElection.title,
+            isLive: selectedResultsElection.status === 'open',
+        };
     }
 
     await syncMembersVotedPanel({ notifyNew: false });
@@ -1083,6 +1103,11 @@ async function loadElections() {
                 <button onclick="window.viewElectionResults('${el.id}')" class="text-xs bg-church-50 border border-church-100 text-church-700 hover:bg-church-100 px-4 py-2.5 rounded-full font-bold transition-all duration-300 active:scale-95 min-h-[44px]">
                     View Results
                 </button>
+                ${el.status === 'closed' && el.results_published
+                    ? `<button type="button" onclick="window.showPublishModal('${el.id}', 'unpublish')" class="text-xs bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 px-4 py-2.5 rounded-full font-bold transition-all duration-300 active:scale-95 min-h-[44px]">
+                        Unpublish
+                    </button>`
+                    : ''}
                 <button onclick="window.deleteElection('${el.id}', '${deleteTitle}')" class="text-xs bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-full font-bold hover:bg-red-100 hover:text-red-700 transition-all duration-300 active:scale-95 min-h-[44px]">
                     Delete
                 </button>
@@ -1282,6 +1307,7 @@ function clearResultsSelection() {
     document.getElementById('results-turnout').innerHTML = '';
     document.getElementById('results-election-status').innerHTML = '';
     document.getElementById('results-publish-area').innerHTML = '';
+    refreshAnalyticsElectionStats();
 }
 
 function setupResultsTab() {
@@ -1300,6 +1326,7 @@ function setupResultsTab() {
             if (elections && elections.length > 0) {
                 selectedResultsElection = elections[0];
                 renderResults(selectedResultsElection);
+                refreshAnalyticsElectionStats();
             }
         });
     }
@@ -1351,7 +1378,12 @@ function setupPublishModal() {
         if (error) {
             showToast('error', 'Error updating results visibility: ' + error.message);
         } else {
-            showToast('success', action === 'publish' ? 'Results published — members can now see them.' : 'Results hidden from members.');
+            showToast(
+                'success',
+                action === 'publish'
+                    ? 'Results published — members see this election only. Any other published results were hidden.'
+                    : 'Results hidden from members. Publish again from the Results tab when ready.'
+            );
             loadElections();
         }
 
@@ -1363,6 +1395,8 @@ function setupPublishModal() {
         if (elections && elections.length > 0) {
             selectedResultsElection = elections[0];
             renderResults(selectedResultsElection);
+            refreshAnalyticsElectionStats();
+            loadResultsTab(selectedResultsElection.id);
         }
     });
 }
@@ -1397,6 +1431,7 @@ async function loadResultsTab(preSelectedId = null) {
     if (elData && elData.length > 0) {
         selectedResultsElection = elData[0];
         renderResults(selectedResultsElection);
+        refreshAnalyticsElectionStats();
     }
 }
 
@@ -1536,10 +1571,17 @@ async function renderResults(election) {
             }
         } else {
             publishArea.innerHTML = `
-                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-church-50 text-church-700 border border-church-200 mr-2">Published ✓</span>
-                <button onclick="window.showPublishModal('${election.id}', 'unpublish')" class="bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 px-5 py-2.5 rounded-full text-xs font-bold transition active:scale-95">
-                    Unpublish
-                </button>
+                <div class="flex flex-col gap-2 w-full sm:w-auto">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            Published — members can see these results
+                        </span>
+                        <button type="button" onclick="window.showPublishModal('${election.id}', 'unpublish')" class="bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 px-5 py-2.5 rounded-full text-xs font-bold transition active:scale-95 shadow-sm">
+                            Unpublish results
+                        </button>
+                    </div>
+                    <p class="text-xs font-semibold text-slate-500">Hide results from the member voting page whenever you need to — you can publish again later.</p>
+                </div>
             `;
         }
     } else if (election.status === 'open') {
@@ -1712,23 +1754,42 @@ function updateStatVotesCard() {
     const card = document.getElementById('stat-votes-card');
     if (!card) return;
 
-    const isLive = Boolean(activeAnalyticsElection);
-    card.classList.toggle('cursor-pointer', isLive);
-    card.classList.toggle('hover:ring-2', isLive);
-    card.classList.toggle('hover:ring-emerald-200', isLive);
-    card.classList.toggle('active:scale-[0.99]', isLive);
-    card.classList.toggle('border-2', isLive);
-    card.classList.toggle('border-emerald-200', isLive);
+    const hasElection = Boolean(activeAnalyticsElection);
+    const isOpen = activeAnalyticsElection?.status === 'open';
 
-    if (isLive) {
+    card.classList.toggle('cursor-pointer', hasElection);
+    card.classList.toggle('hover:ring-2', hasElection);
+    card.classList.toggle('hover:ring-emerald-200', hasElection);
+    card.classList.toggle('active:scale-[0.99]', hasElection);
+    card.classList.toggle('border-2', hasElection);
+    card.classList.toggle('border-emerald-200', hasElection);
+
+    const subtitle = document.getElementById('stat-votes-election');
+    if (subtitle) {
+        if (hasElection) {
+            subtitle.textContent = selectedResultsElection
+                ? `Results selection · ${activeAnalyticsElection.title}`
+                : activeAnalyticsElection.title;
+            subtitle.classList.remove('hidden');
+        } else {
+            subtitle.textContent = '';
+            subtitle.classList.add('hidden');
+        }
+    }
+
+    if (hasElection) {
         card.setAttribute('role', 'button');
         card.setAttribute('tabindex', '0');
-        card.setAttribute('aria-label', 'View members who have voted');
-        card.onclick = () => viewMembersVoted(activeAnalyticsElection.id, activeAnalyticsElection.title, true);
+        card.setAttribute('aria-label', `View members who have voted in ${activeAnalyticsElection.title}`);
+        card.onclick = () => viewMembersVoted(
+            activeAnalyticsElection.id,
+            activeAnalyticsElection.title,
+            isOpen
+        );
         card.onkeydown = (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                viewMembersVoted(activeAnalyticsElection.id, activeAnalyticsElection.title, true);
+                viewMembersVoted(activeAnalyticsElection.id, activeAnalyticsElection.title, isOpen);
             }
         };
     } else {
@@ -1930,18 +1991,18 @@ window.showPublishModal = (electionId, action) => {
 
     if (action === 'publish') {
         titleEl.textContent = 'Publish Election Results?';
-        textEl.textContent = 'Members will be able to see the full election tallies. This action can be reversed.';
+        textEl.textContent = 'Members will see these results on their voting page. Only one election can be published at a time — publishing here will hide any other published results.';
         iconContainer.innerHTML = `<svg class="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
         iconContainer.className = 'w-14 h-14 mx-auto rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center';
         confirmBtn.className = 'flex-1 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold py-3 rounded-full transition active:scale-95 text-sm';
         confirmBtn.textContent = 'Yes, Publish';
     } else {
-        titleEl.textContent = 'Unpublish Election Results?';
-        textEl.textContent = 'Members will no longer see the results. This action can be reversed.';
+        titleEl.textContent = 'Unpublish election results?';
+        textEl.textContent = 'Members will no longer see these results on their voting page. The tallies stay saved — you can publish again whenever you are ready.';
         iconContainer.innerHTML = `<svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
         iconContainer.className = 'w-14 h-14 mx-auto rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center';
         confirmBtn.className = 'flex-1 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold py-3 rounded-full transition active:scale-95 text-sm';
-        confirmBtn.textContent = 'Yes, Unpublish';
+        confirmBtn.textContent = 'Yes, unpublish';
     }
 
     modal.classList.remove('hidden');

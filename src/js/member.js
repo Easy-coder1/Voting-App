@@ -22,7 +22,9 @@ async function pickMemberElection({ status, resultsPublished = null }) {
         .eq('status', status)
         .order('end_date', { ascending: false });
 
-    if (resultsPublished === true) query = query.eq('results_published', true);
+    if (resultsPublished === true) {
+        query = query.eq('results_published', true).limit(1);
+    }
     if (resultsPublished === false) query = query.eq('results_published', false);
 
     const { data: elections, error } = await query;
@@ -956,11 +958,20 @@ async function renderResults() {
 
     renderMain(`
         <div class="result-shell">
-            <div class="result-shell-head">
-                <div class="election-label">${escapeHtml(activeElection.title)}</div>
-                <h2>Election results</h2>
-                <p class="result-shell-sub">Final outcomes for each position are shown below.</p>
-            </div>
+            <header class="result-hero">
+                <div class="result-hero-glow" aria-hidden="true"></div>
+                <div class="result-hero-content">
+                    <span class="result-published-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Official results
+                    </span>
+                    <h1 class="result-election-title">${escapeHtml(activeElection.title)}</h1>
+                    <p class="result-results-heading">Election results</p>
+                    <p class="result-shell-sub">Final outcomes for each position are shown below.</p>
+                </div>
+            </header>
             <div class="results-pos-list">
                 ${positionCards || '<p class="result-empty">No results to show yet.</p>'}
             </div>
