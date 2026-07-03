@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         setupTabs();
+        setupElectionChecklist();
         loadAnalytics();
         setupForms();
         setupResultsTab();
@@ -314,6 +315,19 @@ function setupTabs() {
     });
 }
 
+function setupElectionChecklist() {
+    const toggle = document.getElementById('election-checklist-toggle');
+    const panel = document.getElementById('election-checklist-panel');
+    if (!toggle || !panel) return;
+
+    toggle.addEventListener('click', () => {
+        const isOpen = !panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', isOpen);
+        toggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        toggle.classList.toggle('is-open', !isOpen);
+    });
+}
+
 // ----------------------
 // ANALYTICS
 // ----------------------
@@ -327,7 +341,7 @@ async function loadAnalytics() {
     ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'pending').eq('role', 'member'),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').eq('role', 'member'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'approved').in('role', ['member', 'admin']),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('account_status', 'rejected').eq('role', 'member'),
         supabase.from('elections').select('id, title, end_date').eq('status', 'open').limit(1),
     ]);
@@ -553,20 +567,21 @@ function renderApprovedMemberRow(m) {
     const initials = getMemberInitials(m.full_name);
     const div = document.createElement('div');
     div.className = 'member-row';
+    const isAdmin = m.role === 'admin';
 
     div.innerHTML = `
         <div class="member-row-info">
             <div class="member-row-avatar member-row-avatar--approved">${initials}</div>
             <div class="member-row-text">
-                <h4>${m.full_name}</h4>
-                <p>${m.email}</p>
+                <h4>${escapeHtml(m.full_name || 'Member')}${isAdmin ? ' <span class="text-[10px] font-bold uppercase tracking-wider text-church-600">Admin</span>' : ''}</h4>
+                <p>${escapeHtml(m.email || '')}</p>
             </div>
         </div>
         <div class="member-row-actions">
-            <span class="member-badge member-badge--ok">Enabled ✓</span>
-            <button type="button" onclick="window.updateMemberStatus('${m.id}', 'pending')" class="member-btn member-btn--ghost">
+            <span class="member-badge member-badge--ok">${isAdmin ? 'Auto-approved ✓' : 'Enabled ✓'}</span>
+            ${isAdmin ? '' : `<button type="button" onclick="window.updateMemberStatus('${m.id}', 'pending')" class="member-btn member-btn--ghost">
                 To pending
-            </button>
+            </button>`}
         </div>
     `;
     return div;
@@ -624,9 +639,11 @@ function renderMembersUI() {
     const approvedCount = document.getElementById('approved-count');
     const rejectedCount = document.getElementById('rejected-count');
 
-    const pending = allMembers.filter(m => m.account_status === 'pending' && matchesMemberSearch(m, memberSearchQuery));
-    const approved = allMembers.filter(m => m.account_status === 'approved' && matchesMemberSearch(m, memberSearchQuery));
-    const rejected = allMembers.filter(m => m.account_status === 'rejected' && matchesMemberSearch(m, memberSearchQuery));
+    const pending = allMembers.filter(m => m.role === 'member' && m.account_status === 'pending' && matchesMemberSearch(m, memberSearchQuery));
+    const approved = allMembers.filter(m =>
+        m.account_status === 'approved' && matchesMemberSearch(m, memberSearchQuery)
+    );
+    const rejected = allMembers.filter(m => m.role === 'member' && m.account_status === 'rejected' && matchesMemberSearch(m, memberSearchQuery));
 
     if (pendingCount) pendingCount.textContent = String(pending.length);
     if (approvedCount) approvedCount.textContent = String(approved.length);
@@ -755,7 +772,7 @@ async function loadMembers() {
     const { data: members, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'member')
+        .in('role', ['member', 'admin'])
         .order('created_at', { ascending: false });
 
     if (error) {
