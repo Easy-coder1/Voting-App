@@ -1228,6 +1228,21 @@ window.deleteCandidate = async (id) => {
 // RESULTS TAB
 // ======================================================================
 
+function clearResultsSelection() {
+    selectedResultsElection = null;
+    const selector = document.getElementById('results-election-select');
+    if (selector) selector.value = '';
+    document.getElementById('results-content').innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-3">
+            <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            <span class="text-sm font-semibold">Select an election to view results</span>
+        </div>
+    `;
+    document.getElementById('results-turnout').innerHTML = '';
+    document.getElementById('results-election-status').innerHTML = '';
+    document.getElementById('results-publish-area').innerHTML = '';
+}
+
 function setupResultsTab() {
     // Listen for election selector change
     const selector = document.getElementById('results-election-select');
@@ -1235,16 +1250,7 @@ function setupResultsTab() {
         selector.addEventListener('change', async (e) => {
             const electionId = e.target.value;
             if (!electionId) {
-                selectedResultsElection = null;
-                document.getElementById('results-content').innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-3">
-                        <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        <span class="text-sm font-semibold">Select an election to view results</span>
-                    </div>
-                `;
-                document.getElementById('results-turnout').innerHTML = '';
-                document.getElementById('results-election-status').innerHTML = '';
-                document.getElementById('results-publish-area').innerHTML = '';
+                clearResultsSelection();
                 return;
             }
             
@@ -1321,34 +1327,35 @@ function setupPublishModal() {
 }
 
 async function loadResultsTab(preSelectedId = null) {
-    // Fetch all elections for the selector
     const { data: elections } = await supabase.from('elections').select('*').order('created_at', { ascending: false });
     const selector = document.getElementById('results-election-select');
     if (!selector) return;
 
+    const keepId = preSelectedId || selectedResultsElection?.id || null;
+
     selector.innerHTML = '<option value="">— Choose an election —</option>';
     if (!elections) return;
 
-    let openElectionId = null;
     elections.forEach(el => {
         const label = `${el.title} (${el.status}${el.results_published ? ', Published' : ''})`;
         const opt = document.createElement('option');
         opt.value = el.id;
         opt.textContent = label;
         selector.appendChild(opt);
-        if (el.status === 'open') openElectionId = el.id;
     });
 
-    // Determine which election to select
-    let selectId = preSelectedId || openElectionId || (elections.length > 0 ? elections[0].id : null);
-    if (selectId) {
-        selector.value = selectId;
-        // Trigger change
-        const { data: elData } = await supabase.from('elections').select('*').eq('id', selectId);
-        if (elData && elData.length > 0) {
-            selectedResultsElection = elData[0];
-            renderResults(selectedResultsElection);
-        }
+    const selectId = keepId && elections.some(e => e.id === keepId) ? keepId : null;
+    if (!selectId) {
+        if (selectedResultsElection || keepId) clearResultsSelection();
+        else selector.value = '';
+        return;
+    }
+
+    selector.value = selectId;
+    const { data: elData } = await supabase.from('elections').select('*').eq('id', selectId);
+    if (elData && elData.length > 0) {
+        selectedResultsElection = elData[0];
+        renderResults(selectedResultsElection);
     }
 }
 
