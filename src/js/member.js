@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadPage();
     } catch (err) {
         console.error('Member page error:', err);
+        renderEligibility();
         renderStatusPage({
             icon: '⚠',
             title: 'Something went wrong',
@@ -129,14 +130,22 @@ async function loadPage() {
     positions = [];
     candidates = [];
 
-    const { data: openElections, error: openErr } = await supabase
-        .from('elections')
-        .select('*')
-        .eq('status', 'open')
-        .order('created_at', { ascending: false })
-        .limit(1);
+    const [
+        { data: openElections, error: openErr },
+        { data: openRunoffs, error: runoffErr },
+        { data: publishedClosed, error: publishedErr },
+        { data: upcomingElections, error: upcomingErr },
+        { data: closedWaiting, error: closedErr },
+    ] = await Promise.all([
+        supabase.from('elections').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(1),
+        supabase.from('runoffs').select('*, elections(*)').eq('status', 'open').limit(1),
+        supabase.from('elections').select('*').eq('status', 'closed').eq('results_published', true).order('created_at', { ascending: false }).limit(1),
+        supabase.from('elections').select('*').eq('status', 'upcoming').order('created_at', { ascending: false }).limit(1),
+        supabase.from('elections').select('*').eq('status', 'closed').eq('results_published', false).order('created_at', { ascending: false }).limit(1),
+    ]);
 
     if (openErr) {
+        renderEligibility();
         renderStatusPage({
             icon: '⚠',
             title: 'Could not load election',
@@ -152,13 +161,8 @@ async function loadPage() {
         return;
     }
 
-    const { data: openRunoffs, error: runoffErr } = await supabase
-        .from('runoffs')
-        .select('*, elections(*)')
-        .eq('status', 'open')
-        .limit(1);
-
     if (runoffErr) {
+        renderEligibility();
         renderStatusPage({
             icon: '⚠',
             title: 'Could not load runoff',
@@ -175,12 +179,16 @@ async function loadPage() {
         return;
     }
 
-    const { data: upcomingElections } = await supabase
-        .from('elections')
-        .select('*')
-        .eq('status', 'upcoming')
-        .order('created_at', { ascending: false })
-        .limit(1);
+    if (publishedErr || upcomingErr || closedErr) {
+        renderEligibility();
+        renderStatusPage({
+            icon: '⚠',
+            title: 'Could not load election',
+            message: 'Please refresh the page and try again.',
+            tone: 'info',
+        });
+        return;
+    }
 
     if (upcomingElections?.length) {
         activeElection = upcomingElections[0];
@@ -188,32 +196,31 @@ async function loadPage() {
         renderStatusPage({
             icon: '⏳',
             title: 'Voting has not started',
-            message: `<strong>${activeElection.title}</strong> will open soon. Come back when the admin opens voting.`,
+            message: `<strong>${escapeHtml(activeElection.title)}</strong> will open soon. Come back when the admin opens voting.`,
             tone: 'waiting',
         });
         return;
     }
 
-    const { data: closedElections } = await supabase
-        .from('elections')
-        .select('*')
-        .eq('status', 'closed')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-    if (!closedElections?.length) {
-        renderEligibility();
-        renderStatusPage({
-            icon: '📋',
-            title: 'No election right now',
-            message: 'There is nothing to vote on at the moment. Please check again later.',
-            tone: 'info',
-        });
+    if (publishedClosed?.length) {
+        activeElection = publishedClosed[0];
+        await loadElectionBallot();
         return;
     }
 
-    activeElection = closedElections[0];
-    await loadElectionBallot();
+    if (closedWaiting?.length) {
+        activeElection = closedWaiting[0];
+        await loadElectionBallot();
+        return;
+    }
+
+    renderEligibility();
+    renderStatusPage({
+        icon: '📋',
+        title: 'No election right now',
+        message: 'There is nothing to vote on at the moment. Please check again later.',
+        tone: 'info',
+    });
 }
 
 async function loadRunoffBallot() {
@@ -223,6 +230,7 @@ async function loadRunoffBallot() {
     ]);
 
     if (rcErr || canErr || !rcData?.length) {
+        renderEligibility();
         renderStatusPage({
             icon: '⚠',
             title: 'Runoff ballot not ready',
@@ -246,6 +254,7 @@ async function loadRunoffBallot() {
     renderEligibility();
 
     if (!isEligible()) {
+        renderEligibility();
         renderStatusPage({
             icon: '👋',
             title: 'Almost ready',
@@ -255,6 +264,7 @@ async function loadRunoffBallot() {
         return;
     }
     if (hasSubmitted) {
+        renderEligibility();
         renderStatusPage({
             icon: '✓',
             title: 'Runoff vote recorded',
@@ -263,6 +273,7 @@ async function loadRunoffBallot() {
         });
         return;
     }
+    renderEligibility();
     renderBallot({ isRunoff: true });
 }
 
@@ -289,6 +300,7 @@ async function loadElectionBallot() {
     ]);
 
     if (posErr || canErr) {
+        renderEligibility();
         renderStatusPage({
             icon: '⚠',
             title: 'Could not load ballot',
@@ -307,6 +319,7 @@ async function loadElectionBallot() {
 
     if (activeElection.status === 'open') {
         if (!isEligible()) {
+            renderEligibility();
             renderStatusPage({
                 icon: '👋',
                 title: 'Almost ready',
@@ -316,15 +329,17 @@ async function loadElectionBallot() {
             return;
         }
         if (hasSubmitted) {
+            renderEligibility();
             renderStatusPage({
                 icon: '✓',
                 title: 'You\'re all done!',
-                message: `Thank you for voting in <strong>${activeElection.title}</strong>. You can safely sign out now.`,
+                message: `Thank you for voting in <strong>${escapeHtml(activeElection.title)}</strong>. You can safely sign out now.`,
                 tone: 'success',
             });
             return;
         }
         if (positions.length === 0) {
+            renderEligibility();
             renderStatusPage({
                 icon: '📋',
                 title: 'Ballot not ready',
@@ -333,19 +348,22 @@ async function loadElectionBallot() {
             });
             return;
         }
+        renderEligibility();
         renderBallot();
         return;
     }
 
     if (activeElection.results_published) {
+        renderEligibility();
         await renderResults();
         return;
     }
 
+    renderEligibility();
     renderStatusPage({
         icon: '⏳',
         title: 'Election ended',
-        message: `<strong>${activeElection.title}</strong> is closed. Results will appear here when they are published.`,
+        message: `<strong>${escapeHtml(activeElection.title)}</strong> is closed. Results will appear here when they are published.`,
         tone: 'waiting',
     });
 }
@@ -422,6 +440,42 @@ function renderEligibility() {
             <div class="eligibility-text">
                 <strong>You're ready to vote!</strong>
                 Choose one person for each position below, then press the big blue button at the bottom.
+            </div>
+        `;
+        return;
+    }
+
+    if (activeElection?.status === 'upcoming') {
+        card.className = 'eligibility-card visible wait';
+        card.innerHTML = `
+            <div class="eligibility-icon">⏳</div>
+            <div class="eligibility-text">
+                <strong>Voting has not started yet</strong>
+                <strong>${escapeHtml(activeElection.title)}</strong> will open soon. This page will update automatically when voting begins.
+            </div>
+        `;
+        return;
+    }
+
+    if (activeElection?.status === 'closed' && activeElection.results_published) {
+        card.className = 'eligibility-card visible done';
+        card.innerHTML = `
+            <div class="eligibility-icon">📊</div>
+            <div class="eligibility-text">
+                <strong>Results are published</strong>
+                Final outcomes for <strong>${escapeHtml(activeElection.title)}</strong> are shown below.
+            </div>
+        `;
+        return;
+    }
+
+    if (activeElection?.status === 'closed') {
+        card.className = 'eligibility-card visible wait';
+        card.innerHTML = `
+            <div class="eligibility-icon">⏳</div>
+            <div class="eligibility-text">
+                <strong>Election ended</strong>
+                <strong>${escapeHtml(activeElection.title)}</strong> is closed. Results will appear here once they are published.
             </div>
         `;
         return;
@@ -729,6 +783,7 @@ async function renderResults() {
     ]);
 
     if (error) {
+        renderEligibility();
         renderStatusPage({
             icon: '⚠',
             title: 'Results unavailable',
