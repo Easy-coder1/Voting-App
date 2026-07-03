@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         setupTabs();
+        setupElectionChecklist();
         loadAnalytics();
         setupForms();
         setupResultsTab();
@@ -311,6 +312,19 @@ function setupTabs() {
         btn.addEventListener('click', () => {
             activateAdminTab(btn.getAttribute('data-tab'));
         });
+    });
+}
+
+function setupElectionChecklist() {
+    const toggle = document.getElementById('election-checklist-toggle');
+    const panel = document.getElementById('election-checklist-panel');
+    if (!toggle || !panel) return;
+
+    toggle.addEventListener('click', () => {
+        const isOpen = !panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', isOpen);
+        toggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        toggle.classList.toggle('is-open', !isOpen);
     });
 }
 

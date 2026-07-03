@@ -124,18 +124,23 @@
         <div class="py-8 px-6 sm:px-8 max-w-6xl w-full mx-auto space-y-8 pb-32 md:pb-10">
             <!-- Analytics Tab -->
             <div id="tab-analytics" class="tab-content space-y-8">
-                <div class="card-premium p-5 sm:p-6 border-l-4 border-l-church-600">
-                    <h3 class="text-sm font-extrabold text-ink uppercase tracking-wide mb-3">Election checklist</h3>
-                    <ol class="text-sm text-slate-600 space-y-2 list-decimal list-inside font-medium leading-relaxed">
-                        <li>Approve members on the <strong>Members</strong> tab</li>
-                        <li>Add candidates on the <strong>Candidates</strong> tab (before creating an election)</li>
-                        <li>Create an election on the <strong>Elections</strong> tab — it saves a copy of the current candidates at that moment</li>
-                        <li>Set election status to <strong>Open</strong> when voting should begin</li>
-                        <li>Admins vote on the <strong>Vote</strong> tab — once per election</li>
-                        <li>Set status to <strong>Closed</strong> when voting ends</li>
-                        <li>If any positions are tied, click <strong>Start runoff</strong> on the Results tab</li>
-                        <li>Close the runoff when voting ends, then <strong>Publish results</strong></li>
-                    </ol>
+                <div class="card-premium border-l-4 border-l-church-600 election-checklist overflow-hidden">
+                    <button type="button" id="election-checklist-toggle" class="election-checklist-toggle w-full flex items-center justify-between gap-3 p-5 sm:p-6 text-left" aria-expanded="false" aria-controls="election-checklist-panel">
+                        <span class="text-sm font-extrabold text-ink uppercase tracking-wide">Election checklist</span>
+                        <svg class="election-checklist-chevron w-5 h-5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="election-checklist-panel" class="election-checklist-panel hidden px-5 sm:px-6 pb-5 sm:pb-6">
+                        <ol class="text-sm text-slate-600 space-y-2 list-decimal list-inside font-medium leading-relaxed border-t border-slate-100 pt-4">
+                            <li>Approve members on the <strong>Members</strong> tab</li>
+                            <li>Add candidates on the <strong>Candidates</strong> tab (before creating an election)</li>
+                            <li>Create an election on the <strong>Elections</strong> tab — it saves a copy of the current candidates at that moment</li>
+                            <li>Set election status to <strong>Open</strong> when voting should begin</li>
+                            <li>Admins vote on the <strong>Vote</strong> tab — once per election</li>
+                            <li>Set status to <strong>Closed</strong> when voting ends</li>
+                            <li>If any positions are tied, click <strong>Start runoff</strong> on the Results tab</li>
+                            <li>Close the runoff when voting ends, then <strong>Publish results</strong></li>
+                        </ol>
+                    </div>
                 </div>
                 <!-- Stat Cards -->
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">

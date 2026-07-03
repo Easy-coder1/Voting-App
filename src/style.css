@@ -354,6 +354,31 @@
   margin-right: 2px;
 }
 
+/* ── Election checklist (Analytics) ───────────────────────────── */
+.election-checklist-toggle {
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition: background 0.15s;
+}
+
+.election-checklist-toggle:hover {
+  background: rgba(15, 23, 42, 0.02);
+}
+
+.election-checklist-toggle:focus-visible {
+  outline: 2px solid #1e40af;
+  outline-offset: -2px;
+}
+
+.election-checklist-chevron {
+  transition: transform 0.2s ease;
+}
+
+.election-checklist-toggle.is-open .election-checklist-chevron {
+  transform: rotate(180deg);
+}
+
 /* ── App toast & confirm (shared) ─────────────────────────────── */
 .app-toast {
   position: fixed;
