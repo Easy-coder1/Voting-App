@@ -353,36 +353,98 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  padding: 22px 20px;
+  padding: 0;
   box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
-.result-shell-head {
-  margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+.result-hero {
+  position: relative;
+  background: var(--grad-brand);
+  color: #fff;
+  padding: 28px 22px 26px;
+  overflow: hidden;
 }
 
-.result-shell-head .election-label {
-  font-size: 11px; font-weight: 800; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--brand); margin-bottom: 4px;
+.result-hero-glow {
+  position: absolute;
+  top: -48px;
+  right: -32px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  pointer-events: none;
 }
 
-.result-shell-head h2 {
+.result-hero-glow::after {
+  content: '';
+  position: absolute;
+  bottom: -80px;
+  left: -100px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.result-hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.result-published-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  padding: 6px 12px;
+  border-radius: 99px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.result-election-title {
   font-family: var(--font-display);
-  font-size: 1.5rem; font-weight: 600; margin: 0; color: var(--text-1);
+  font-size: clamp(1.65rem, 5vw, 2rem);
+  font-weight: 700;
+  line-height: 1.12;
+  margin: 0 0 10px;
+  letter-spacing: -0.025em;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.12);
+}
+
+.result-results-heading {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .result-shell-sub {
-  margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-2);
-}
-
-.result-empty {
-  text-align: center; font-size: 15px; color: var(--text-3); margin: 0;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  opacity: 0.88;
+  max-width: 36ch;
 }
 
 .results-pos-list {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding: 20px;
+}
+
+.result-empty {
+  text-align: center; font-size: 15px; color: var(--text-3); margin: 0;
 }
 
 .results-pos-card {
