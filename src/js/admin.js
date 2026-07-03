@@ -1,6 +1,7 @@
 import { supabase, getCurrentUser, subscribeToTableChanges, confirmSignOut } from './supabase.js';
 import { sortPositionEntries, candidatePhotoHtml, fetchCandidatePhotos } from './positionOrder.js';
 import { showToast, showConfirm, escapeHtml } from './ui.js';
+import { initAdminVote, loadAdminVoteTab } from './adminVote.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -63,6 +64,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('logout-btn').addEventListener('click', async () => {
             if (!(await confirmSignOut())) return;
             window.location.href = '/';
+        });
+
+        initAdminVote({
+            supabaseClient: supabase,
+            getCurrentUser: () => currentUser,
+            getCurrentProfile: () => currentProfile,
         });
 
         setupTabs();
@@ -240,6 +247,10 @@ const TAB_META = {
         title: 'Election Management',
         subtitle: 'Create elections and control ballot status',
     },
+    vote: {
+        title: 'Cast Your Vote',
+        subtitle: 'Vote once when an election or runoff is open — same rules as members',
+    },
     candidates: {
         title: 'Candidate Management',
         subtitle: 'Manage the shared candidate roster used by all elections',
@@ -287,6 +298,7 @@ function activateAdminTab(tabId, customMeta = null, { deferLoad = false, skipScr
     if (tabId === 'analytics') loadAnalytics();
     if (tabId === 'members') loadMembers();
     if (tabId === 'elections') loadElections();
+    if (tabId === 'vote') loadAdminVoteTab();
     if (tabId === 'candidates') {
         loadPositions();
         loadCandidates();
@@ -828,10 +840,9 @@ function setupForms() {
             return;
         }
 
-        showToast('success', 'Election created. Set its status to Open when you are ready for voting.');
+        showToast('success', 'Election created with a snapshot of the current candidate roster.');
         e.target.reset();
         loadElections();
-        loadCandidates();
     });
 
     document.getElementById('add-candidate-form').addEventListener('submit', async (e) => {
@@ -974,7 +985,7 @@ async function loadElections() {
     if (!elections || elections.length === 0) {
         list.innerHTML = `
             <div class="member-empty py-12">
-                <p>No elections yet. Create one using the form on the left, then add candidates and set the status to Open when ready.</p>
+                <p>No elections yet. Add candidates to the roster first, then create an election — it will snapshot whoever is on the roster at that moment.</p>
             </div>
         `;
         return;
@@ -1126,6 +1137,7 @@ async function loadCandidates() {
     const { data: candidates } = await supabase
         .from('candidates')
         .select('*, positions(position_name)')
+        .is('election_id', null)
         .order('created_at', { ascending: false });
     const list = document.getElementById('candidates-list');
     list.innerHTML = '';
@@ -1140,7 +1152,7 @@ async function loadCandidates() {
                 </div>
                 <div>
                     <p class="text-sm font-bold text-slate-600">No candidates yet</p>
-                    <p class="text-xs font-semibold text-slate-400 mt-1">Add candidates once — every election uses this shared roster.</p>
+                    <p class="text-xs font-semibold text-slate-400 mt-1">Build the roster here. Each new election copies these candidates at creation time.</p>
                 </div>
             </div>
         `;
@@ -1179,7 +1191,7 @@ window.deleteCandidate = async (id) => {
         destructive: true,
     }))) return;
     
-    const { error } = await supabase.from('candidates').delete().eq('id', id);
+    const { error } = await supabase.from('candidates').delete().eq('id', id).is('election_id', null);
     
     if (error) {
         if (error.code === '23503') {
@@ -1483,7 +1495,7 @@ async function renderResults(election) {
         // Fetch summary results and candidate photos
         const [{ data: results, error }, photoById] = await Promise.all([
             supabase.rpc('get_admin_election_summary', { election_id: election.id }),
-            fetchCandidatePhotos(supabase),
+            fetchCandidatePhotos(supabase, election.id),
         ]);
 
         if (error) {
