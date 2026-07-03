@@ -197,18 +197,8 @@ async function loadPage() {
         return;
     }
 
-    if (upcomingElections?.length) {
-        activeElection = upcomingElections[0];
-        renderEligibility();
-        renderStatusPage({
-            icon: '⏳',
-            title: 'Voting has not started',
-            message: `<strong>${escapeHtml(activeElection.title)}</strong> will open soon. Come back when the admin opens voting.`,
-            tone: 'waiting',
-        });
-        return;
-    }
-
+    // Show published results before other non-voting states so a newer
+    // upcoming/closed election does not hide the election members should see.
     if (publishedClosed?.length) {
         activeElection = publishedClosed[0];
         await loadElectionBallot();
@@ -218,6 +208,18 @@ async function loadPage() {
     if (closedWaiting?.length) {
         activeElection = closedWaiting[0];
         await loadElectionBallot();
+        return;
+    }
+
+    if (upcomingElections?.length) {
+        activeElection = upcomingElections[0];
+        renderEligibility();
+        renderStatusPage({
+            icon: '⏳',
+            title: 'Voting has not started',
+            message: `<strong>${escapeHtml(activeElection.title)}</strong> will open soon. Come back when the admin opens voting.`,
+            tone: 'waiting',
+        });
         return;
     }
 

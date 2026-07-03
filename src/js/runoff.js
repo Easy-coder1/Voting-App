@@ -3,6 +3,7 @@ export async function fetchValidOpenRunoff(supabase) {
         .from('runoffs')
         .select('*, elections(*)')
         .eq('status', 'open')
+        .order('created_at', { ascending: false })
         .limit(1);
 
     if (error) throw error;
