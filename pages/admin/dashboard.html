@@ -352,7 +352,10 @@
 
             <!-- Vote Tab -->
             <div id="tab-vote" class="tab-content hidden animate-fade-in">
-                <div id="admin-vote-root" class="px-1 sm:px-0"></div>
+                <div id="admin-vote-scope" class="vote-ballot-scope px-2 sm:px-4 pb-8">
+                    <div id="admin-vote-eligibility" class="eligibility-card" role="status"></div>
+                    <div id="admin-vote-root" class="vote-ballot-main"></div>
+                </div>
             </div>
 
             <!-- Candidates Tab -->
@@ -463,22 +466,18 @@
         </div>
     </main>
 
-    <!-- Vote Confirmation Modal -->
-    <div id="vote-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-        <div class="card-premium-lg p-6 max-w-md w-full animate-fade-in max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-            <div class="space-y-4">
-                <div class="text-center">
-                    <div class="w-14 h-14 mx-auto rounded-full bg-church-50 border border-church-100 flex items-center justify-center">
-                        <svg class="w-7 h-7 text-church-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-church-900 mt-4">Confirm your ballot</h3>
-                    <p class="text-sm text-slate-500 font-medium mt-1">You can only submit once per election. Review your choices below.</p>
-                </div>
-                <div id="vote-modal-list" class="rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-2"></div>
-                <div class="flex gap-3 pt-1">
-                    <button type="button" id="vote-modal-cancel" class="flex-1 bg-church-50 hover:bg-church-100 text-church-800 font-bold py-3 rounded-full transition active:scale-95 text-sm">Go back</button>
-                    <button type="button" id="vote-modal-confirm" class="flex-1 btn-wine py-3 rounded-full text-sm">Submit my vote</button>
-                </div>
+    <!-- Vote confirmation modal (member-style) -->
+    <div id="admin-vote-confirm-modal" class="vote-confirm-overlay" aria-hidden="true">
+        <div class="vote-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-vote-confirm-title">
+            <div class="vote-confirm-dialog-head">
+                <span class="vote-confirm-step-badge">Step 2 of 3</span>
+                <h2 id="admin-vote-confirm-title">Check your choices</h2>
+                <p class="vote-confirm-sub">Make sure everything looks right. After you submit, you cannot change your votes.</p>
+            </div>
+            <div id="admin-vote-confirm-list" class="vote-confirm-list"></div>
+            <div class="vote-confirm-actions">
+                <button type="button" id="admin-vote-confirm-cancel" class="vote-btn-modal-secondary">Go back & edit</button>
+                <button type="button" id="admin-vote-confirm-submit" class="vote-btn-modal-primary">Yes, submit my votes</button>
             </div>
         </div>
     </div>

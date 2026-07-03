@@ -1,5 +1,6 @@
 import { sortPositions, candidatePhotoHtml } from './positionOrder.js';
-import { escapeHtml, showToast } from './ui.js';
+import { escapeHtml, showToast, trapFocus } from './ui.js';
+import '../css/vote-ballot.css';
 
 let supabase = null;
 let getUser = () => null;
@@ -13,6 +14,7 @@ let ballotSelections = {};
 let hasSubmitted = false;
 let isRunoff = false;
 let voteModalBound = false;
+let confirmFocusCleanup = null;
 
 export function initAdminVote({ supabaseClient, getCurrentUser, getCurrentProfile }) {
     supabase = supabaseClient;
@@ -21,13 +23,20 @@ export function initAdminVote({ supabaseClient, getCurrentUser, getCurrentProfil
 }
 
 export async function loadAdminVoteTab() {
+    const scope = document.getElementById('admin-vote-scope');
     const root = document.getElementById('admin-vote-root');
-    if (!root) return;
+    const eligibility = document.getElementById('admin-vote-eligibility');
+    if (!scope || !root) return;
+
+    if (eligibility) {
+        eligibility.className = 'eligibility-card';
+        eligibility.innerHTML = '';
+    }
 
     root.innerHTML = `
-        <div class="flex flex-col items-center justify-center py-16 text-center text-slate-400 space-y-3">
-            <div class="animate-spin rounded-full h-9 w-9 border-2 border-slate-200 border-t-church-600"></div>
-            <span class="text-xs font-bold uppercase tracking-wider">Loading ballot…</span>
+        <div class="loading-block">
+            <div class="spinner"></div>
+            <span>Getting your ballot ready…</span>
         </div>
     `;
 
@@ -51,7 +60,7 @@ export async function loadAdminVoteTab() {
 
         if (openElections?.length) {
             activeElection = openElections[0];
-            await loadElectionBallot(root);
+            await loadElectionBallot(root, eligibility);
             return;
         }
 
@@ -67,27 +76,27 @@ export async function loadAdminVoteTab() {
             activeRunoff = openRunoffs[0];
             activeElection = openRunoffs[0].elections;
             isRunoff = true;
-            await loadRunoffBallot(root);
+            await loadRunoffBallot(root, eligibility);
             return;
         }
 
-        renderVoteMessage(root, {
+        renderStatusPage(root, {
             icon: '🗳️',
             title: 'No open ballot',
             message: 'When an election or runoff is open, your ballot will appear here. You can vote once per election.',
-            tone: 'muted',
+            tone: 'info',
         });
     } catch (err) {
-        renderVoteMessage(root, {
+        renderStatusPage(root, {
             icon: '⚠',
             title: 'Could not load ballot',
             message: escapeHtml(err.message || 'Please refresh and try again.'),
-            tone: 'error',
+            tone: 'info',
         });
     }
 }
 
-async function loadElectionBallot(root) {
+async function loadElectionBallot(root, eligibility) {
     const [{ data: posData }, { data: canData }] = await Promise.all([
         supabase.from('positions').select('*'),
         supabase.from('candidates').select('*').eq('election_id', activeElection.id),
@@ -100,40 +109,42 @@ async function loadElectionBallot(root) {
     await syncSubmittedState();
 
     if (hasSubmitted) {
-        renderVoteMessage(root, {
+        renderEligibility(eligibility, 'done');
+        renderStatusPage(root, {
             icon: '✓',
-            title: 'Vote recorded',
-            message: `You have already voted in <strong>${escapeHtml(activeElection.title)}</strong>. Each admin may vote only once per election.`,
+            title: 'You\'re all done!',
+            message: `Thank you for voting in <strong>${escapeHtml(activeElection.title)}</strong>. You can only vote once per election.`,
             tone: 'success',
         });
         return;
     }
 
     if (positions.length === 0) {
-        renderVoteMessage(root, {
+        renderStatusPage(root, {
             icon: '📋',
             title: 'Ballot not ready',
             message: 'This election has no candidates yet. Add candidates on the Candidates tab, then create a new election to include them.',
-            tone: 'muted',
+            tone: 'info',
         });
         return;
     }
 
+    renderEligibility(eligibility, 'ok');
     renderBallot(root);
 }
 
-async function loadRunoffBallot(root) {
+async function loadRunoffBallot(root, eligibility) {
     const [{ data: rcData, error: rcErr }, { data: canData, error: canErr }] = await Promise.all([
         supabase.from('runoff_candidates').select('position_id, candidate_id').eq('runoff_id', activeRunoff.id),
         supabase.from('candidates').select('*').eq('election_id', activeElection.id),
     ]);
 
     if (rcErr || canErr || !rcData?.length) {
-        renderVoteMessage(root, {
+        renderStatusPage(root, {
             icon: '⚠',
             title: 'Runoff ballot not ready',
             message: 'Tied positions are being prepared. Try again shortly.',
-            tone: 'muted',
+            tone: 'info',
         });
         return;
     }
@@ -149,15 +160,17 @@ async function loadRunoffBallot(root) {
     await syncSubmittedState();
 
     if (hasSubmitted) {
-        renderVoteMessage(root, {
+        renderEligibility(eligibility, 'done');
+        renderStatusPage(root, {
             icon: '✓',
             title: 'Runoff vote recorded',
-            message: `You have already voted in the runoff for <strong>${escapeHtml(activeElection.title)}</strong>. Each person may vote only once per runoff.`,
+            message: `Thank you for voting in the runoff for <strong>${escapeHtml(activeElection.title)}</strong>.`,
             tone: 'success',
         });
         return;
     }
 
+    renderEligibility(eligibility, 'ok', true);
     renderBallot(root, { isRunoff: true });
 }
 
@@ -191,18 +204,53 @@ async function syncSubmittedState() {
     }
 }
 
-function renderVoteMessage(root, { icon, title, message, tone = 'muted' }) {
-    const toneClass = {
-        success: 'border-emerald-200 bg-emerald-50/80',
-        error: 'border-red-200 bg-red-50/80',
-        muted: 'border-slate-100 bg-white',
-    }[tone] || 'border-slate-100 bg-white';
+function getFirstName() {
+    return (getProfile()?.full_name || 'Admin').trim().split(' ')[0] || 'Admin';
+}
 
+function renderEligibility(el, mode, runoffMode = false) {
+    if (!el) return;
+
+    if (mode === 'done') {
+        el.className = 'eligibility-card visible done';
+        el.innerHTML = `
+            <div class="eligibility-icon">✓</div>
+            <div class="eligibility-text">
+                <strong>Vote recorded</strong>
+                ${runoffMode || isRunoff
+                    ? `You finished voting in the runoff for ${escapeHtml(activeElection?.title || 'this election')}.`
+                    : `You finished voting in ${escapeHtml(activeElection?.title || 'this election')}.`}
+            </div>
+        `;
+        return;
+    }
+
+    if (mode === 'ok') {
+        el.className = 'eligibility-card visible ok';
+        el.innerHTML = runoffMode || isRunoff
+            ? `
+                <div class="eligibility-icon">🗳️</div>
+                <div class="eligibility-text">
+                    <strong>Runoff voting is open</strong>
+                    These positions were tied. Choose one candidate for each tied role below.
+                </div>
+            `
+            : `
+                <div class="eligibility-icon">🗳️</div>
+                <div class="eligibility-text">
+                    <strong>You're ready to vote!</strong>
+                    Choose one person for each position below, then press the big blue button at the bottom.
+                </div>
+            `;
+    }
+}
+
+function renderStatusPage(root, { icon, title, message, tone = 'info' }) {
     root.innerHTML = `
-        <div class="card-premium border ${toneClass} p-8 sm:p-10 text-center max-w-lg mx-auto">
-            <div class="text-4xl mb-4" aria-hidden="true">${icon}</div>
-            <h3 class="text-lg font-extrabold text-church-900 tracking-tight">${title}</h3>
-            <p class="text-sm font-medium text-slate-500 mt-2 leading-relaxed">${message}</p>
+        <div class="status-card ${tone}">
+            <div class="status-icon">${icon}</div>
+            <h2>${title}</h2>
+            <p>${message}</p>
         </div>
     `;
 }
@@ -212,12 +260,12 @@ function countSelections() {
 }
 
 function renderBallot(root, { isRunoff: runoffMode = false } = {}) {
-    const profile = getProfile();
-    const firstName = (profile?.full_name || 'Admin').trim().split(' ')[0] || 'Admin';
     const chosen = countSelections();
     const total = positions.length;
+    const pct = total > 0 ? Math.round((chosen / total) * 100) : 0;
     const allSelected = total > 0 && chosen >= total;
     const remaining = total - chosen;
+    const firstName = escapeHtml(getFirstName());
     const electionTitle = escapeHtml(activeElection?.title || 'Election');
 
     const positionBlocks = positions.map((pos, index) => {
@@ -229,87 +277,96 @@ function renderBallot(root, { isRunoff: runoffMode = false } = {}) {
         const picks = posCandidates.map(c => {
             const isSelected = selectedId === c.id;
             const avatar = candidatePhotoHtml(c.photo_url, c.full_name, {
-                imgClass: 'admin-ballot-photo',
-                fallbackClass: 'admin-ballot-initials',
+                imgClass: 'pick-photo',
+                fallbackClass: 'pick-initials',
             });
 
             return `
-                <button type="button"
-                    class="admin-ballot-pick${isSelected ? ' is-selected' : ''}"
-                    data-candidate="${c.id}"
-                    data-position="${pos.id}"
+                <button type="button" class="pick-item${isSelected ? ' selected' : ''}"
+                    data-candidate="${c.id}" data-position="${pos.id}"
                     aria-pressed="${isSelected ? 'true' : 'false'}">
                     ${avatar}
-                    <span class="admin-ballot-pick-name">${escapeHtml(c.full_name)}</span>
-                    <span class="admin-ballot-pick-tag">${isSelected ? 'Selected ✓' : 'Tap to select'}</span>
+                    <span class="pick-name">
+                        ${escapeHtml(c.full_name)}
+                        <span class="pick-tag">${isSelected ? 'Your choice ✓' : 'Tap to select'}</span>
+                    </span>
+                    <span class="pick-check">${isSelected ? '✓' : ''}</span>
                 </button>
             `;
         }).join('');
 
         return `
-            <section class="card-premium border border-slate-100 overflow-hidden">
-                <header class="flex items-center gap-3 px-4 sm:px-5 py-4 bg-church-50/80 border-b border-church-100">
-                    <span class="admin-ballot-num">${index + 1}</span>
-                    <div class="min-w-0">
-                        <h4 class="text-base font-extrabold text-church-900 tracking-tight">${escapeHtml(pos.position_name)}</h4>
-                        <p class="text-xs font-semibold text-slate-400 mt-0.5">${isDone ? `Your choice: ${escapeHtml(selectedCand?.full_name || '')}` : 'Choose one candidate'}</p>
+            <section class="position-card${isDone ? ' is-done' : ''}">
+                <div class="position-card-head">
+                    <span class="position-num">${index + 1}</span>
+                    <div class="position-head-text">
+                        <h3>${escapeHtml(pos.position_name)}</h3>
+                        <p>${isDone ? `You chose: ${escapeHtml(selectedCand?.full_name)}` : 'Pick one candidate below'}</p>
                     </div>
-                    ${isDone ? '<span class="ml-auto text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">Done</span>' : ''}
-                </header>
-                <div class="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">${picks}</div>
+                    ${isDone ? '<span class="position-done-badge">Done</span>' : ''}
+                </div>
+                <div class="pick-list">${picks}</div>
             </section>
         `;
     }).join('');
 
+    const submitHint = allSelected
+        ? 'All positions chosen — tap the button below to finish!'
+        : remaining === 1
+            ? 'Just 1 more position to go, then you can submit.'
+            : `${remaining} positions left to choose before you can submit.`;
+
     root.innerHTML = `
-        <div class="space-y-6 max-w-3xl mx-auto">
-            <div class="card-premium border border-church-100 p-5 sm:p-6 bg-gradient-to-br from-church-900 to-church-700 text-white">
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-white/15 border border-white/20 text-[10px] font-extrabold uppercase tracking-wider mb-3">
-                    ${runoffMode ? 'Runoff voting open' : 'Voting open'}
-                </span>
-                <h3 class="text-xl font-extrabold tracking-tight">${electionTitle}${runoffMode ? ' — Runoff' : ''}</h3>
-                <p class="text-sm font-medium text-white/75 mt-2">Hello ${escapeHtml(firstName)} — pick one candidate for each position, then submit. You can only vote once.</p>
+        <div class="vote-shell">
+            <div class="vote-hero">
+                <span class="live-badge">${runoffMode ? 'Runoff voting is open' : 'Voting is open'}</span>
+                <h1 class="vote-hero-title">${electionTitle}${runoffMode ? ' — Runoff' : ''}</h1>
+                <p class="vote-hero-greet">${runoffMode
+                    ? `Hello ${firstName}! These roles were tied — pick one candidate for each position below.`
+                    : `Hello ${firstName}! Take your time and choose one person for each role.`}</p>
             </div>
 
-            <div class="card-premium border border-slate-100 p-4 sm:p-5">
-                <div class="flex items-center justify-between text-sm font-bold text-slate-600 mb-2">
-                    <span>Your progress</span>
-                    <span class="tabular-nums">${chosen} / ${total}</span>
+            <div class="steps-row" aria-hidden="true">
+                <div class="step-pill active">① Choose</div>
+                <div class="step-pill">② Review</div>
+                <div class="step-pill">③ Submit</div>
+            </div>
+
+            <div class="progress-card">
+                <div class="progress-top">
+                    <span class="progress-label">Your progress</span>
+                    <span class="progress-count">${chosen} of ${total}</span>
                 </div>
-                <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div class="h-full rounded-full bg-church-600 transition-all duration-300" style="width:${total ? Math.round((chosen / total) * 100) : 0}%"></div>
+                <div class="progress-track">
+                    <div class="progress-fill" style="width:${pct}%"></div>
                 </div>
             </div>
 
             ${positionBlocks}
 
-            <div class="card-premium border border-slate-100 p-5 sm:p-6 sticky bottom-4 z-20 shadow-card-hover">
-                <p class="text-sm font-semibold text-slate-500 mb-4 text-center">
+            <div class="submit-panel">
+                <p class="submit-panel-hint${allSelected ? ' ready' : ''}">${submitHint}</p>
+                <button type="button" id="admin-vote-submit-btn" class="btn-submit-votes" ${allSelected ? '' : 'disabled'}>
                     ${allSelected
-                        ? 'All positions chosen — review and submit your ballot.'
-                        : remaining === 1
-                            ? 'One more position to go.'
-                            : `${remaining} positions left before you can submit.`}
-                </p>
-                <button type="button" id="admin-vote-submit-btn" class="w-full btn-wine py-3.5" ${allSelected ? '' : 'disabled'}>
-                    ${allSelected
-                        ? (runoffMode ? 'Review & submit runoff vote' : 'Review & submit my vote')
+                        ? (runoffMode ? 'Review & submit runoff vote' : 'Review & submit my votes')
                         : `Choose ${remaining} more to continue`}
                 </button>
             </div>
         </div>
     `;
 
-    root.querySelectorAll('.admin-ballot-pick').forEach(btn => {
+    root.querySelectorAll('.pick-item').forEach(btn => {
         btn.addEventListener('click', () => {
             ballotSelections[btn.dataset.position] = btn.dataset.candidate;
             renderBallot(root, { isRunoff: runoffMode });
         });
     });
 
-    root.querySelector('#admin-vote-submit-btn')?.addEventListener('click', () => {
-        openVoteConfirmModal(runoffMode);
-    });
+    const submitBtn = root.querySelector('#admin-vote-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = !allSelected;
+        submitBtn.addEventListener('click', () => openConfirmModal(runoffMode));
+    }
 }
 
 function getSelections() {
@@ -326,61 +383,66 @@ function setupVoteConfirmModal() {
     if (voteModalBound) return;
     voteModalBound = true;
 
-    const modal = document.getElementById('vote-modal');
-    const cancelBtn = document.getElementById('vote-modal-cancel');
-    const confirmBtn = document.getElementById('vote-modal-confirm');
-
-    cancelBtn?.addEventListener('click', hideVoteConfirmModal);
-    confirmBtn?.addEventListener('click', performVoteSubmit);
+    const modal = document.getElementById('admin-vote-confirm-modal');
+    document.getElementById('admin-vote-confirm-cancel')?.addEventListener('click', hideConfirmModal);
+    document.getElementById('admin-vote-confirm-submit')?.addEventListener('click', performVoteSubmit);
     modal?.addEventListener('click', (e) => {
-        if (e.target === modal) hideVoteConfirmModal();
+        if (e.target === modal) hideConfirmModal();
     });
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal?.classList.contains('flex')) hideVoteConfirmModal();
+        if (e.key === 'Escape' && modal?.classList.contains('open')) hideConfirmModal();
     });
 }
 
-function openVoteConfirmModal(runoffMode) {
+function openConfirmModal(runoffMode) {
     setupVoteConfirmModal();
 
     const selections = getSelections();
     if (selections.length < positions.length) {
-        showToast('warning', 'Please pick one candidate for every position before submitting.');
+        showToast('warning', 'Please pick one person for every position before submitting.');
         return;
     }
 
-    const listEl = document.getElementById('vote-modal-list');
+    const listEl = document.getElementById('admin-vote-confirm-list');
     listEl.innerHTML = selections.map(s => {
         const cand = candidates.find(c => c.id === s.candidateId);
         const avatar = candidatePhotoHtml(cand?.photo_url, cand?.full_name, {
-            imgClass: 'admin-ballot-photo admin-ballot-photo--sm',
-            fallbackClass: 'admin-ballot-initials admin-ballot-initials--sm',
+            imgClass: 'pick-photo',
+            fallbackClass: 'pick-initials',
         });
 
         return `
-            <div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
+            <div class="vote-confirm-row">
                 ${avatar}
-                <div class="min-w-0">
-                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">${escapeHtml(s.positionName)}</p>
-                    <p class="text-sm font-extrabold text-church-900 truncate">${escapeHtml(cand?.full_name || 'Unknown')}</p>
+                <div class="vote-confirm-row-text">
+                    <span class="vote-confirm-row-pos">${escapeHtml(s.positionName)}</span>
+                    <span class="vote-confirm-row-name">${escapeHtml(cand?.full_name || 'Unknown')}</span>
                 </div>
             </div>
         `;
     }).join('');
 
-    const confirmBtn = document.getElementById('vote-modal-confirm');
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = runoffMode ? 'Submit runoff vote' : 'Submit my vote';
+    const submitBtn = document.getElementById('admin-vote-confirm-submit');
+    submitBtn.disabled = false;
+    submitBtn.textContent = runoffMode ? 'Yes, submit runoff vote' : 'Yes, submit my votes';
 
-    const modal = document.getElementById('vote-modal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    const modal = document.getElementById('admin-vote-confirm-modal');
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    if (confirmFocusCleanup) confirmFocusCleanup();
+    confirmFocusCleanup = trapFocus(modal.querySelector('.vote-confirm-dialog'));
+    document.getElementById('admin-vote-confirm-cancel')?.focus();
 }
 
-function hideVoteConfirmModal() {
-    const modal = document.getElementById('vote-modal');
-    modal?.classList.add('hidden');
-    modal?.classList.remove('flex');
+function hideConfirmModal() {
+    const modal = document.getElementById('admin-vote-confirm-modal');
+    modal?.classList.remove('open');
+    modal?.setAttribute('aria-hidden', 'true');
+    if (confirmFocusCleanup) {
+        confirmFocusCleanup();
+        confirmFocusCleanup = null;
+    }
+    document.getElementById('admin-vote-submit-btn')?.focus();
 }
 
 async function performVoteSubmit() {
@@ -390,9 +452,15 @@ async function performVoteSubmit() {
     const selections = getSelections();
     if (selections.length < positions.length) return;
 
-    const confirmBtn = document.getElementById('vote-modal-confirm');
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Submitting…';
+    const submitBtn = document.getElementById('admin-vote-confirm-submit');
+    const pageSubmitBtn = document.getElementById('admin-vote-submit-btn');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+    if (pageSubmitBtn) {
+        pageSubmitBtn.disabled = true;
+        pageSubmitBtn.textContent = 'Submitting…';
+    }
 
     try {
         if (isRunoff && activeRunoff) {
@@ -415,23 +483,27 @@ async function performVoteSubmit() {
             if (error) throw error;
         }
 
-        hideVoteConfirmModal();
+        hideConfirmModal();
         hasSubmitted = true;
-        showToast('success', isRunoff ? 'Your runoff vote has been recorded.' : 'Your vote has been recorded.');
+        showToast('success', isRunoff ? 'Your runoff vote has been recorded.' : 'Your votes have been submitted.');
         await loadAdminVoteTab();
     } catch (err) {
         const msg = (err.message || '').toLowerCase();
         if (msg.includes('duplicate') || msg.includes('unique')) {
-            hideVoteConfirmModal();
+            hideConfirmModal();
             hasSubmitted = true;
             showToast('warning', isRunoff
                 ? 'You have already submitted your runoff vote.'
-                : 'You have already voted in this election.');
+                : 'You have already submitted your votes for this election.');
             await loadAdminVoteTab();
             return;
         }
-        showToast('error', 'Could not submit vote: ' + (err.message || 'Unknown error'));
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = isRunoff ? 'Submit runoff vote' : 'Submit my vote';
+        showToast('error', 'Could not submit votes. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = isRunoff ? 'Yes, submit runoff vote' : 'Yes, submit my votes';
+        if (pageSubmitBtn) {
+            pageSubmitBtn.disabled = false;
+            pageSubmitBtn.textContent = isRunoff ? 'Review & submit runoff vote' : 'Review & submit my votes';
+        }
     }
 }

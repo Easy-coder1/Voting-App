@@ -249,7 +249,7 @@ const TAB_META = {
     },
     vote: {
         title: 'Cast Your Vote',
-        subtitle: 'Vote once when an election or runoff is open — same rules as members',
+        subtitle: 'Same voting experience as members — choose, review, and submit once',
     },
     candidates: {
         title: 'Candidate Management',
