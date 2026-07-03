@@ -1,5 +1,6 @@
 import { sortPositions, candidatePhotoHtml } from './positionOrder.js';
 import { escapeHtml, showToast, trapFocus } from './ui.js';
+import { fetchValidOpenRunoff } from './runoff.js';
 import '../css/vote-ballot.css';
 
 let supabase = null;
@@ -64,17 +65,10 @@ export async function loadAdminVoteTab() {
             return;
         }
 
-        const { data: openRunoffs, error: runoffErr } = await supabase
-            .from('runoffs')
-            .select('*, elections(*)')
-            .eq('status', 'open')
-            .limit(1);
-
-        if (runoffErr) throw runoffErr;
-
-        if (openRunoffs?.length) {
-            activeRunoff = openRunoffs[0];
-            activeElection = openRunoffs[0].elections;
+        const validRunoff = await fetchValidOpenRunoff(supabase);
+        if (validRunoff) {
+            activeRunoff = validRunoff.runoff;
+            activeElection = validRunoff.election;
             isRunoff = true;
             await loadRunoffBallot(root, eligibility);
             return;
