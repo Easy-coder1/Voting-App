@@ -113,7 +113,7 @@ async function loadElectionBallot(root) {
         renderVoteMessage(root, {
             icon: '📋',
             title: 'Ballot not ready',
-            message: 'This election has no candidates yet. Add candidates to the roster, then create a new election to snapshot them.',
+            message: 'This election has no candidates yet. Add candidates on the Candidates tab, then create a new election to include them.',
             tone: 'muted',
         });
         return;

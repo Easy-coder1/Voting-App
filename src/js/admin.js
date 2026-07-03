@@ -253,7 +253,7 @@ const TAB_META = {
     },
     candidates: {
         title: 'Candidate Management',
-        subtitle: 'Manage the shared candidate roster used by all elections',
+        subtitle: 'Add and manage candidates for upcoming elections',
     },
     results: {
         title: 'Election Results',
@@ -840,7 +840,7 @@ function setupForms() {
             return;
         }
 
-        showToast('success', 'Election created with a snapshot of the current candidate roster.');
+        showToast('success', 'Election created — current candidates were copied to this election.');
         e.target.reset();
         loadElections();
     });
@@ -862,7 +862,7 @@ function setupForms() {
             return;
         }
 
-        showToast('success', 'Candidate added to the roster.');
+        showToast('success', 'Candidate added.');
         e.target.reset();
         resetImageUpload();
         loadCandidates();
@@ -985,7 +985,7 @@ async function loadElections() {
     if (!elections || elections.length === 0) {
         list.innerHTML = `
             <div class="member-empty py-12">
-                <p>No elections yet. Add candidates to the roster first, then create an election — it will snapshot whoever is on the roster at that moment.</p>
+                <p>No elections yet. Add candidates first, then create an election — it will save a copy of whoever is listed at that moment.</p>
             </div>
         `;
         return;
@@ -1152,7 +1152,7 @@ async function loadCandidates() {
                 </div>
                 <div>
                     <p class="text-sm font-bold text-slate-600">No candidates yet</p>
-                    <p class="text-xs font-semibold text-slate-400 mt-1">Build the roster here. Each new election copies these candidates at creation time.</p>
+                    <p class="text-xs font-semibold text-slate-400 mt-1">Add candidates here. Each new election saves a copy of whoever is listed at creation time.</p>
                 </div>
             </div>
         `;
@@ -1184,7 +1184,7 @@ async function loadCandidates() {
 }
 
 window.deleteCandidate = async (id) => {
-    if (!(await showConfirm('Delete this candidate from the roster?', {
+    if (!(await showConfirm('Delete this candidate?', {
         title: 'Delete candidate',
         confirmLabel: 'Delete',
         cancelLabel: 'Cancel',

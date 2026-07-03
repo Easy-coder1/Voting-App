@@ -35,11 +35,11 @@ UPDATE public.votes v
 SET candidate_id = ec.id
 FROM public.candidates g
 JOIN public.candidates ec
-  ON ec.election_id = v.election_id
- AND ec.position_id = g.position_id
+  ON ec.position_id = g.position_id
  AND ec.full_name = g.full_name
 WHERE v.candidate_id = g.id
-  AND g.election_id IS NULL;
+  AND g.election_id IS NULL
+  AND ec.election_id = v.election_id;
 
 -- ── 4. Point runoff rows at election-scoped candidate copies ───────────────────
 DO $$
@@ -51,22 +51,24 @@ BEGIN
     UPDATE public.runoff_candidates rc
     SET candidate_id = ec.id
     FROM public.runoffs r
-    JOIN public.candidates g ON g.id = rc.candidate_id AND g.election_id IS NULL
+    JOIN public.candidates g ON g.election_id IS NULL
     JOIN public.candidates ec
       ON ec.election_id = r.election_id
-     AND ec.position_id = rc.position_id
+     AND ec.position_id = g.position_id
      AND ec.full_name = g.full_name
-    WHERE rc.runoff_id = r.id;
+    WHERE rc.runoff_id = r.id
+      AND rc.candidate_id = g.id;
 
     UPDATE public.runoff_votes rv
     SET candidate_id = ec.id
     FROM public.runoffs r
-    JOIN public.candidates g ON g.id = rv.candidate_id AND g.election_id IS NULL
+    JOIN public.candidates g ON g.election_id IS NULL
     JOIN public.candidates ec
       ON ec.election_id = r.election_id
-     AND ec.position_id = rv.position_id
+     AND ec.position_id = g.position_id
      AND ec.full_name = g.full_name
-    WHERE rv.runoff_id = r.id;
+    WHERE rv.runoff_id = r.id
+      AND rv.candidate_id = g.id;
   END IF;
 END $$;
 
