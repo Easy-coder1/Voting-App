@@ -1556,6 +1556,7 @@ async function renderResults(election) {
 
         // Render tallies
         const runoffBanner = await buildRunoffBanner(election);
+        const topBadgeLabel = election.results_published ? 'Winner' : 'Leading';
         let html = runoffBanner + '<div class="space-y-6">';
         for (const [posName, cans] of sortPositionEntries(grouped)) {
             const totalInPos = cans[0]?.total_votes_in_position || 0;
@@ -1596,7 +1597,7 @@ async function renderResults(election) {
                                     <div class="min-w-0 flex-1">
                                         <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                                             <span class="font-extrabold text-sm sm:text-base ${isWinner ? 'text-church-900' : 'text-slate-700'} break-words leading-snug">${escapeHtml(c.candidate_name)}</span>
-                                            ${isWinner ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-gold-100 text-gold-800 uppercase tracking-wider shrink-0">Leading</span>' : ''}
+                                            ${isWinner ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-gold-100 text-gold-800 uppercase tracking-wider shrink-0">${topBadgeLabel}</span>` : ''}
                                         </div>
                                     </div>
                                     <div class="text-right shrink-0 pl-1">

@@ -15,6 +15,56 @@ let hasSubmitted = false;
 
 let confirmFocusCleanup = null;
 
+async function pickMemberElection({ status, resultsPublished = null }) {
+    let query = supabase
+        .from('elections')
+        .select('*')
+        .eq('status', status)
+        .order('end_date', { ascending: false });
+
+    if (resultsPublished === true) query = query.eq('results_published', true);
+    if (resultsPublished === false) query = query.eq('results_published', false);
+
+    const { data: elections, error } = await query;
+    if (error) throw error;
+    if (!elections?.length) return null;
+
+    const electionIds = elections.map(e => e.id);
+    const { data: voteRows, error: voteErr } = await supabase
+        .from('votes')
+        .select('election_id, voter_id')
+        .in('election_id', electionIds);
+
+    if (voteErr) throw voteErr;
+
+    const votesByElection = new Map();
+    for (const row of voteRows || []) {
+        if (!votesByElection.has(row.election_id)) votesByElection.set(row.election_id, new Set());
+        votesByElection.get(row.election_id).add(row.voter_id);
+    }
+
+    if (currentUser?.id) {
+        const match = elections.find(e => votesByElection.get(e.id)?.has(currentUser.id));
+        if (match) return match;
+    }
+
+    const withActivity = elections.filter(e => votesByElection.has(e.id));
+    if (withActivity.length) return withActivity[0];
+
+    return elections[0];
+}
+
+async function pickUpcomingElection() {
+    const { data: elections, error } = await supabase
+        .from('elections')
+        .select('*')
+        .eq('status', 'upcoming')
+        .order('start_date', { ascending: true });
+
+    if (error) throw error;
+    return elections?.[0] || null;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         const { data: currentUserData, error: sessionError } = await getCurrentUser();
@@ -131,17 +181,27 @@ async function loadPage() {
     positions = [];
     candidates = [];
 
-    const [
-        { data: openElections, error: openErr },
-        { data: publishedClosed, error: publishedErr },
-        { data: upcomingElections, error: upcomingErr },
-        { data: closedWaiting, error: closedErr },
-    ] = await Promise.all([
-        supabase.from('elections').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(1),
-        supabase.from('elections').select('*').eq('status', 'closed').eq('results_published', true).order('created_at', { ascending: false }).limit(1),
-        supabase.from('elections').select('*').eq('status', 'upcoming').order('created_at', { ascending: false }).limit(1),
-        supabase.from('elections').select('*').eq('status', 'closed').eq('results_published', false).order('created_at', { ascending: false }).limit(1),
-    ]);
+    const { data: openElections, error: openErr } = await supabase
+        .from('elections')
+        .select('*')
+        .eq('status', 'open')
+        .order('end_date', { ascending: false })
+        .limit(1);
+
+    let publishedElection = null;
+    let closedWaitingElection = null;
+    let upcomingElection = null;
+    let secondaryErr = null;
+
+    try {
+        [publishedElection, closedWaitingElection, upcomingElection] = await Promise.all([
+            pickMemberElection({ status: 'closed', resultsPublished: true }),
+            pickMemberElection({ status: 'closed', resultsPublished: false }),
+            pickUpcomingElection(),
+        ]);
+    } catch (err) {
+        secondaryErr = err;
+    }
 
     let validRunoff = null;
     let runoffErr = null;
@@ -186,7 +246,7 @@ async function loadPage() {
         return;
     }
 
-    if (publishedErr || upcomingErr || closedErr) {
+    if (secondaryErr) {
         renderEligibility();
         renderStatusPage({
             icon: '⚠',
@@ -199,20 +259,20 @@ async function loadPage() {
 
     // Show published results before other non-voting states so a newer
     // upcoming/closed election does not hide the election members should see.
-    if (publishedClosed?.length) {
-        activeElection = publishedClosed[0];
+    if (publishedElection) {
+        activeElection = publishedElection;
         await loadElectionBallot();
         return;
     }
 
-    if (closedWaiting?.length) {
-        activeElection = closedWaiting[0];
+    if (closedWaitingElection) {
+        activeElection = closedWaitingElection;
         await loadElectionBallot();
         return;
     }
 
-    if (upcomingElections?.length) {
-        activeElection = upcomingElections[0];
+    if (upcomingElection) {
+        activeElection = upcomingElection;
         renderEligibility();
         renderStatusPage({
             icon: '⏳',
@@ -778,6 +838,86 @@ async function performSubmit() {
     }
 }
 
+function outcomePendingMessage(outcome) {
+    if (outcome === 'runoff_pending') return 'Tied — runoff election pending';
+    if (outcome === 'runoff_open') return 'Tied — runoff voting is in progress';
+    if (outcome === 'tie_unresolved') return 'Still tied after runoff — committee decision required';
+    if (outcome === 'no_votes') return 'No votes recorded';
+    return null;
+}
+
+function renderPublishedPositionCard(posName, candidates, outcomeRow, photoById) {
+    const outcome = outcomeRow?.outcome || 'winner';
+    const pendingMsg = outcomePendingMessage(outcome);
+    const winnerId = (outcome === 'winner' || outcome === 'runoff_winner') ? outcomeRow?.candidate_id : null;
+    const totalInPos = candidates[0]?.total_votes_in_position || 0;
+    const sorted = [...candidates].sort((a, b) => b.vote_count - a.vote_count);
+    const voteLabel = totalInPos === 1 ? '1 vote' : `${totalInPos} votes`;
+
+    let bodyHtml = '';
+    if (pendingMsg) {
+        bodyHtml = `<p class="results-pos-pending">${escapeHtml(pendingMsg)}</p>`;
+    }
+
+    bodyHtml += sorted.map((c, index) => {
+        const isWinner = winnerId && c.candidate_id === winnerId;
+        const pct = totalInPos > 0 ? Math.round((c.vote_count / totalInPos) * 100) : 0;
+        const rankBadge = isWinner
+            ? '<span class="results-rank results-rank--winner" aria-hidden="true">👑</span>'
+            : `<span class="results-rank">${index + 1}</span>`;
+
+        const avatar = candidatePhotoHtml(photoById[c.candidate_id], c.candidate_name, {
+            imgClass: 'results-cand-photo',
+            fallbackClass: 'results-cand-initials',
+        });
+
+        const winnerBadge = isWinner
+            ? `<span class="results-leading-badge">${outcome === 'runoff_winner' ? 'Runoff winner' : 'Winner'}</span>`
+            : '';
+
+        return `
+            <div class="results-cand-row${isWinner ? ' is-winner' : ''}">
+                <div class="results-cand-main">
+                    ${rankBadge}
+                    ${avatar}
+                    <div class="results-cand-body">
+                        <div class="results-cand-top">
+                            <div class="results-cand-name-wrap">
+                                <span class="results-cand-name">${escapeHtml(c.candidate_name)}</span>
+                                ${winnerBadge}
+                            </div>
+                            <div class="results-cand-stats">
+                                <span class="results-cand-votes${isWinner ? ' is-winner' : ''}">${c.vote_count}</span>
+                                <span class="results-cand-pct">${pct}%</span>
+                            </div>
+                        </div>
+                        <div class="results-bar-track">
+                            <div class="results-bar-fill${isWinner ? ' is-winner' : ''}" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <section class="results-pos-card">
+            <header class="results-pos-header">
+                <div class="results-pos-title">
+                    <svg class="results-pos-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                    </svg>
+                    <h3 class="results-pos-name">${escapeHtml(posName)}</h3>
+                </div>
+                <span class="results-pos-total">${voteLabel.toUpperCase()}</span>
+            </header>
+            <div class="results-pos-body">
+                ${bodyHtml}
+            </div>
+        </section>
+    `;
+}
+
 async function renderResults() {
     renderMain(`
         <div class="loading-block">
@@ -786,12 +926,13 @@ async function renderResults() {
         </div>
     `);
 
-    const [{ data: results, error }, photoById] = await Promise.all([
+    const [{ data: summary, error: summaryError }, { data: outcomes, error: outcomesError }, photoById] = await Promise.all([
+        supabase.rpc('get_published_election_summary', { p_election_id: activeElection.id }),
         supabase.rpc('get_election_results', { election_id: activeElection.id }),
         fetchCandidatePhotos(supabase, activeElection.id),
     ]);
 
-    if (error) {
+    if (summaryError || outcomesError) {
         renderEligibility();
         renderStatusPage({
             icon: '⚠',
@@ -802,68 +943,16 @@ async function renderResults() {
         return;
     }
 
-    const rows = results || [];
+    const outcomeByPosition = Object.fromEntries((outcomes || []).map(r => [r.position_name, r]));
+    const grouped = {};
+    for (const row of summary || []) {
+        if (!grouped[row.position_name]) grouped[row.position_name] = [];
+        grouped[row.position_name].push(row);
+    }
 
-    const groups = sortPositionEntries(
-        Object.fromEntries(rows.map(r => [r.position_name, [r]]))
-    ).map(([posName, [row]]) => {
-        const outcome = row.outcome || 'winner';
-
-        if (outcome === 'runoff_pending') {
-            return `
-                <div class="result-group result-group--pending">
-                    <div class="result-pos-label">${escapeHtml(posName)}</div>
-                    <p class="result-pending-msg">Tied — runoff election pending</p>
-                </div>
-            `;
-        }
-        if (outcome === 'runoff_open') {
-            return `
-                <div class="result-group result-group--pending">
-                    <div class="result-pos-label">${escapeHtml(posName)}</div>
-                    <p class="result-pending-msg">Tied — runoff voting is in progress</p>
-                </div>
-            `;
-        }
-        if (outcome === 'tie_unresolved') {
-            return `
-                <div class="result-group result-group--pending">
-                    <div class="result-pos-label">${escapeHtml(posName)}</div>
-                    <p class="result-pending-msg">Still tied after runoff — committee decision required</p>
-                </div>
-            `;
-        }
-        if (outcome === 'no_votes' || !row.candidate_id) {
-            return `
-                <div class="result-group result-group--pending">
-                    <div class="result-pos-label">${escapeHtml(posName)}</div>
-                    <p class="result-pending-msg">No votes recorded</p>
-                </div>
-            `;
-        }
-
-        const avatar = candidatePhotoHtml(photoById[row.candidate_id], row.candidate_name, {
-            imgClass: 'pick-photo',
-            fallbackClass: 'pick-initials',
-        });
-        const voteLabel = row.vote_count === 1 ? '1 vote' : `${row.vote_count} votes`;
-        const runoffNote = outcome === 'runoff_winner'
-            ? '<span class="result-runoff-badge">Runoff winner</span>'
-            : '';
-
-        return `
-            <div class="result-group">
-                <div class="result-pos-label">${escapeHtml(posName)}</div>
-                <div class="result-row">
-                    ${avatar}
-                    <div>
-                        <div class="result-winner-name">${escapeHtml(row.candidate_name)} ${runoffNote}</div>
-                        <span class="result-vote-count">${voteLabel}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
+    const positionCards = sortPositionEntries(grouped)
+        .map(([posName, candidates]) => renderPublishedPositionCard(posName, candidates, outcomeByPosition[posName], photoById))
+        .join('');
 
     renderMain(`
         <div class="result-shell">
@@ -872,7 +961,9 @@ async function renderResults() {
                 <h2>Election results</h2>
                 <p class="result-shell-sub">Final outcomes for each position are shown below.</p>
             </div>
-            ${groups || '<p class="result-empty">No results to show yet.</p>'}
+            <div class="results-pos-list">
+                ${positionCards || '<p class="result-empty">No results to show yet.</p>'}
+            </div>
         </div>
     `);
 }
