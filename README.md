@@ -64,12 +64,15 @@ npm run dev
 ```
 Open your browser to `http://localhost:3000/` to view the application!
 
-### 6. Supabase Auth URLs (production)
+### 6. Supabase Auth URLs (password reset)
 In Supabase → **Authentication** → **URL Configuration**, set:
-- **Site URL:** your production domain (e.g. `https://your-app.vercel.app`)
-- **Redirect URLs:** include `https://your-app.vercel.app/pages/reset-password.html` (and the same path on localhost for testing)
+- **Site URL:** your production domain (e.g. `https://your-app.vercel.app`) — recovery links may land here first; the app forwards them to the reset page automatically.
+- **Redirect URLs:** add every URL that may receive auth callbacks:
+  - `http://localhost:3000/pages/reset-password.html` (local dev)
+  - `http://localhost:3000/**` (optional — covers links that land on the site root during testing)
+  - `https://your-app.vercel.app/pages/reset-password.html` (production)
 
-This is required for password reset emails to work.
+Password reset emails use `/pages/reset-password.html` as the redirect target. If Supabase falls back to the Site URL root, the app still detects `type=recovery` in the link and opens the reset form.
 
 ---
 

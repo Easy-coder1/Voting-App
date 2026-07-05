@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { showConfirm, showToast } from './ui.js'
+import { redirectPasswordRecoveryToResetPage } from './authRecovery.js'
+
+// Recovery emails may land on the Site URL root — route to the reset page first.
+redirectPasswordRecoveryToResetPage()
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY

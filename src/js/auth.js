@@ -1,4 +1,5 @@
 import { supabase, isMisconfigured, getCurrentUser, signOut, ensureProfile, profileErrorMessage } from './supabase.js';
+import { getPasswordResetRedirectUrl } from './authRecovery.js';
 
 // ── PASSWORD TOGGLE ──────────────────────────────────────────────────────
 function initPasswordToggles() {
@@ -446,7 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
         forgotSubmit.disabled = true;
         forgotSubmit.textContent = 'Sending…';
 
-        const redirectTo = `${window.location.origin}/pages/reset-password.html`;
+        const redirectTo = getPasswordResetRedirectUrl();
         const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
         forgotSubmit.disabled = false;
