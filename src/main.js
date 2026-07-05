@@ -1,8 +1,11 @@
 import './style.css'
+import { redirectPasswordRecoveryToResetPage, isPasswordRecoveryCallback } from './js/authRecovery.js'
 import { supabase, getCurrentUser } from './js/supabase.js'
 
 // Simple auth state listener to redirect appropriately
 document.addEventListener('DOMContentLoaded', async () => {
+    if (redirectPasswordRecoveryToResetPage()) return
+
     // Give the SDK a moment to rehydrate the session from localStorage on mobile
     // (localStorage writes can lag behind page navigation on slow devices)
     let currentUserData = null
@@ -17,10 +20,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authPages = ['/pages/member/dashboard.html', '/pages/admin/dashboard.html']
     const isPreAuth = preAuthPages.includes(window.location.pathname)
     const isAuthRequired = authPages.includes(window.location.pathname)
+    const onResetPasswordPage = window.location.pathname === '/pages/reset-password.html'
 
     // Pre-auth pages: if a user is already signed in and visits the landing,
     // login, or register page, redirect them straight to their dashboard.
-    if (currentUserData?.user && isPreAuth) {
+    // Skip during password recovery (hash tokens or dedicated reset page).
+    if (currentUserData?.user && isPreAuth && !isPasswordRecoveryCallback() && !onResetPasswordPage) {
         const user = currentUserData.user
         // Fetch role from profile using maybeSingle (doesn't throw on no rows)
         const { data: profile } = await supabase

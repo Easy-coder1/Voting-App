@@ -1,19 +1,6 @@
 import { supabase } from './supabase.js';
+import { redirectPasswordRecoveryToResetPage } from './authRecovery.js';
 import { showAlert } from './auth.js';
-
-function initPasswordToggles() {
-  document.querySelectorAll('button[data-password-toggle]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const container = btn.closest('.m-field');
-      const input = container?.querySelector('input[data-password-input]');
-      if (!input) return;
-      const isPassword = input.type === 'password';
-      input.type = isPassword ? 'text' : 'password';
-      btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
-    });
-  });
-}
 
 function setLoading(loading) {
   const btn = document.getElementById('submit-btn');
@@ -35,34 +22,34 @@ function showInvalidLink(message) {
   showAlert('error', message);
 }
 
+async function waitForRecoverySession() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) return true;
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      subscription.unsubscribe();
+      resolve(value);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
+      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && sess) {
+        finish(true);
+      }
+    });
+
+    setTimeout(() => finish(false), 8000);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-  initPasswordToggles();
+  if (redirectPasswordRecoveryToResetPage()) return;
 
   const form = document.getElementById('reset-password-form');
-  let ready = false;
-
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    ready = true;
-    showForm();
-  }
-
-  if (!ready) {
-    await new Promise((resolve) => {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
-        if (event === 'PASSWORD_RECOVERY' && sess) {
-          ready = true;
-          showForm();
-          subscription.unsubscribe();
-          resolve();
-        }
-      });
-      setTimeout(() => {
-        subscription.unsubscribe();
-        resolve();
-      }, 4000);
-    });
-  }
+  const ready = await waitForRecoverySession();
 
   if (!ready) {
     showInvalidLink(
@@ -70,6 +57,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     );
     return;
   }
+
+  showForm();
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
