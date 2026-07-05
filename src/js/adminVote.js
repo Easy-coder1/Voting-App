@@ -173,12 +173,16 @@ async function syncSubmittedState() {
     if (!user) return;
 
     if (isRunoff && activeRunoff) {
-        const { count } = await supabase
+        const { data } = await supabase
             .from('runoff_votes')
-            .select('*', { count: 'exact', head: true })
+            .select('position_id, candidate_id')
             .eq('voter_id', user.id)
             .eq('runoff_id', activeRunoff.id);
-        hasSubmitted = (count || 0) > 0;
+
+        (data || []).forEach(v => {
+            ballotSelections[v.position_id] = v.candidate_id;
+        });
+        hasSubmitted = positions.length > 0 && (data?.length || 0) >= positions.length;
         return;
     }
 
@@ -190,12 +194,10 @@ async function syncSubmittedState() {
         .eq('voter_id', user.id)
         .eq('election_id', activeElection.id);
 
-    if (data?.length) {
-        hasSubmitted = true;
-        data.forEach(v => {
-            ballotSelections[v.position_id] = v.candidate_id;
-        });
-    }
+    (data || []).forEach(v => {
+        ballotSelections[v.position_id] = v.candidate_id;
+    });
+    hasSubmitted = positions.length > 0 && (data?.length || 0) >= positions.length;
 }
 
 function getFirstName() {
