@@ -1120,12 +1120,15 @@ window.updateElectionStatus = async (id, status) => {
         }
 
         showToast('success', status === 'open' ? 'Election is now open for voting.' : status === 'closed' ? 'Election closed.' : 'Election marked as upcoming.');
+        if (selectedResultsElection?.id === id) {
+            selectedResultsElection.status = status;
+        }
         loadElections();
         loadAnalytics();
         if (status === 'open') {
             loadResultsTab(id);
         } else if (!document.getElementById('tab-results').classList.contains('hidden')) {
-            loadResultsTab(selectedResultsElection?.id);
+            loadResultsTab(selectedResultsElection?.id || id);
         }
     } catch (err) {
         showToast('error', 'Exception updating election status: ' + err.message);
@@ -1628,7 +1631,7 @@ async function renderResults(election) {
 
         // Render tallies
         const runoffBanner = await buildRunoffBanner(election);
-        const topBadgeLabel = election.results_published ? 'Winner' : 'Leading';
+        const topBadgeLabel = election.status === 'closed' ? 'Winner' : 'Leading';
         let html = runoffBanner + '<div class="space-y-6">';
         for (const [posName, cans] of sortPositionEntries(grouped)) {
             const totalInPos = cans[0]?.total_votes_in_position || 0;
